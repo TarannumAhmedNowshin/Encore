@@ -108,6 +108,11 @@ function AccountsPage() {
         </div>
         <div className="flex gap-2">
           {has && <Button variant="outline" onClick={exportCsv}><Download /> Export CSV</Button>}
+          {!readOnly && sum.qualified > 0 && (
+            <Button variant="outline" onClick={() => void findDepsBulk()} disabled={!!bulk?.running || d.active}>
+              {bulk?.running ? `Finding departments ${bulk.done} of ${bulk.total}…` : "Find departments for top 5"}
+            </Button>
+          )}
           {!readOnly && has && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button>}
         </div>
       </div>
@@ -119,6 +124,11 @@ function AccountsPage() {
         </Card>
       )}
       {d.timeline && <Card className="mt-6"><RunTimeline steps={d.timeline} /></Card>}
+      {bulk && (
+        <Card className="mt-6">
+          <RunTimeline steps={[{ label: "Finding departments for the top 5 qualified companies", state: bulk.running ? "running" : "done", elapsed: `${bulk.done} of ${bulk.total}` }]} />
+        </Card>
+      )}
 
       {!has ? (
         <section className="mt-8">
