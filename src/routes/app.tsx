@@ -96,11 +96,13 @@ function SignedInShell() {
           <div className="ml-auto flex items-center gap-3">
             <RunsPill />
             <UsageMeter />
-            <Button asChild size="sm">
-              <Link to="/app/new">
-                <Plus /> <span className="hidden sm:inline">New analysis</span>
-              </Link>
-            </Button>
+            {pathname !== "/app" && (
+              <Button asChild size="sm">
+                <Link to="/app/new">
+                  <Plus /> <span className="hidden sm:inline">New analysis</span>
+                </Link>
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger className="rounded-full" aria-label="Account menu">
                 <Avatar className="size-8">

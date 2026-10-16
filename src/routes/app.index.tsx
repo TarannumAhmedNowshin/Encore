@@ -206,13 +206,14 @@ function Dashboard() {
         </div>
       )}
       <ConfirmDialog
-        open={!!deleteRow}
+        request={deleteRow ? {
+          title: `Delete “${deleteRow.title ?? "this analysis"}”?`,
+          body: "This permanently deletes the analysis and all its facts, accounts, people and drafts. This cannot be undone.",
+          action: deleting ? "Deleting…" : "Delete analysis",
+          destructive: true,
+          onConfirm: () => void confirmDelete(),
+        } : null}
         onClose={() => setDeleteRow(null)}
-        onConfirm={() => void confirmDelete()}
-        busy={deleting}
-        title={`Delete “${deleteRow?.title ?? "this analysis"}”?`}
-        body="This permanently deletes the analysis and all its facts, accounts, people and drafts. This cannot be undone."
-        confirmLabel="Delete analysis"
       />
     </main>
   );
