@@ -94,15 +94,6 @@ export const SLOTS: [string, string][] = [
   ["technical_influencer", "Technical influencer"], ["end_user", "End user"],
 ];
 
-/** Cut a long body at a sentence end, never mid-word. */
-function firstSentences(t: string, max: number): string {
-  if (t.length <= max) return t;
-  const parts = t.match(/[^.!?]+[.!?]+(\s|$)/g) ?? [t];
-  let out = "";
-  for (const p of parts) { if ((out + p).length > max && out) break; out += p; }
-  return out.trim();
-}
-
 export function storyData(s: DemoSnapshot): StoryData {
   const docFacts = s.facts.filter((f) => f["status"] === "active" && f["origin"] === "document");
   const cit = new Map<string, string>();
@@ -136,7 +127,7 @@ export function storyData(s: DemoSnapshot): StoryData {
   const dr = good.find((x) => contactIds.has(x["contact_id"])) ?? good[0];
   let email: StoryData["email"] = null;
   if (dr) {
-    const body = firstSentences(String(dr["body"]).replace(/\s+/g, " ").trim(), 420);
+    const body = String(dr["edited_body"] ?? dr["body"]);
     const claims = (Array.isArray(dr["claims"]) ? (dr["claims"] as Record<string, unknown>[]) : [])
       .filter((c) => c["verified"] && typeof c["claim"] === "string" && body.includes(c["claim"] as string)).map((c) => c["claim"] as string);
     email = { subject: String(dr["subject"] ?? ""), body, claims };

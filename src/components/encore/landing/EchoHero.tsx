@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { loadDemo } from "@/lib/encore/demo-db";
 import { heroData, keyPhrase, numberWord, type HeroData } from "@/lib/encore/hero";
@@ -26,6 +26,8 @@ export function EchoHero() {
   const [data, setData] = useState<HeroData | null>(null);
   const [failed, setFailed] = useState(false);
   const [page, setPage] = useState(0);
+  const documentRef = useRef<HTMLDivElement>(null);
+  const documentVisible = useInView(documentRef, { once: true, amount: 0.25 });
 
   useEffect(() => {
     let alive = true;
@@ -46,7 +48,11 @@ export function EchoHero() {
   const sentence = data?.sentence ?? "";
   const [a, b] = data?.highlight ?? keyPhrase(sentence);
   const [on, setOn] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setOn(true), 500); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (!documentVisible || !sentence) return;
+    const t = setTimeout(() => setOn(true), 150);
+    return () => clearTimeout(t);
+  }, [documentVisible, sentence]);
   const count = useCountTo(data?.qualified ?? 0, !reduced && !!data);
 
   return (
@@ -84,7 +90,8 @@ export function EchoHero() {
           )}
         </div>
 
-        <div className="min-w-0">
+        <div ref={documentRef} className="min-w-0">
+          {!data && !failed && <div role="status" aria-label="Loading sample document" className="hero-doc rounded-md border border-border bg-card p-5 md:p-6"><div aria-hidden className="animate-pulse space-y-4"><div className="h-3 w-3/4 rounded bg-muted" /><div className="h-5 w-full rounded bg-muted" /><div className="h-5 w-full rounded bg-muted" /><div className="h-5 w-2/3 rounded bg-muted" /></div></div>}
           {sentence && <div className="hero-doc rounded-md border border-border bg-card p-5 shadow-[0_18px_40px_-24px_rgb(22_22_29/.35)] md:p-6">
             <div className="flex justify-between gap-3 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               <span className="truncate">{data?.filename ?? "Won SOW"}</span>

@@ -3,20 +3,21 @@ import { loadDemo } from "@/lib/encore/demo-db";
 import { storyData, type StoryData, type StoryQuote } from "@/lib/encore/hero";
 import { Link } from "@tanstack/react-router";
 import {
-  motion, useScroll, useTransform, useMotionValue, useMotionValueEvent, useReducedMotion,
+  animate, motion, useInView, useScroll, useTransform, useMotionValue, useMotionValueEvent, useReducedMotion,
   type MotionValue,
 } from "framer-motion";
 import { ArrowRight, Check, FileText, Link2 } from "lucide-react";
 import { EchoHero } from "./EchoHero";
 import { Button } from "@/components/ui/button";
 import { EvidenceChip, GapCard, Pill } from "@/components/encore/primitives";
+import { storySegments, typedStorySegments } from "@/lib/encore/story-text";
 
 /* Every quote, name and number in the story comes from the public demo snapshot. */
 const StoryCtx = createContext<StoryData | null>(null);
 const useStory = () => useContext(StoryCtx);
 const initials = (n: string) => n.split(/[\s&]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
-/** Cinematic only on wide screens without reduced motion; otherwise final states, stacked. */
+/** Wide-screen pinning; phones reveal on entry without pinning. */
 function useCinematic() {
   const reduced = useReducedMotion();
   const [wide, setWide] = useState(false);
@@ -34,7 +35,18 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
   cinematic: boolean; vh: number; eyebrow: string; title: string;
   children: (p: MotionValue<number>) => ReactNode;
 }) {
-  const done = useMotionValue(1);
+  const progress = useMotionValue(0);
+  const reduced = useReducedMotion();
+  const ref = useRef<HTMLElement>(null);
+  const visible = useInView(ref, { once: true, amount: 0.15 });
+  const data = useStory();
+  useEffect(() => {
+    if (cinematic) return;
+    if (reduced) { progress.set(1); return; }
+    if (!visible || !data) return;
+    const playback = animate(progress, 1, { duration: eyebrow.startsWith("05") ? Math.max(4, (data.email?.body.length ?? 0) / 65) : 2.4, ease: "linear" });
+    return () => playback.stop();
+  }, [visible, data, cinematic, reduced, progress, eyebrow]);
   const head = (
     <div className="mx-auto max-w-3xl text-center">
       <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-accent">{eyebrow}</p>
@@ -43,10 +55,10 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
   );
   if (!cinematic) {
     return (
-      <section className="overflow-hidden px-gutter py-12">
-        <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.5, ease: "easeOut" }}>
+      <section ref={ref} className="overflow-hidden px-gutter py-12">
+        <motion.div initial={reduced ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: reduced ? 0 : 0.4, ease: "easeOut" }}>
           {head}
-          <div className="mx-auto mt-8 max-w-5xl">{children(done)}</div>
+          <div className="mx-auto mt-8 max-w-5xl">{children(progress)}</div>
         </motion.div>
       </section>
     );
@@ -75,7 +87,7 @@ function QuoteLine({ p, i, text }: { p: MotionValue<number>; i: number; text: st
 function FactCard({ p, i, q }: { p: MotionValue<number>; i: number; q: StoryQuote }) {
   const s = 0.18 + i * 0.25;
   const opacity = useTransform(p, [s, s + 0.1], [0, 1]);
-  const x = useTransform(p, [s, s + 0.12], [-80, 0]);
+  const x = useTransform(p, [s, s + 0.12], [-12, 0]);
   return (
     <motion.div style={{ opacity, x }} className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
@@ -248,43 +260,25 @@ function CommitteeScene({ p }: { p: MotionValue<number> }) {
 }
 
 /* ---------- 6 Email ---------- */
-/** Split a real draft body into plain and verified-claim segments. */
-function segments(body: string, claims: string[]): Array<{ t: string; src?: string }> {
-  const out: Array<{ t: string; src?: string }> = [];
-  let rest = body;
-  while (rest) {
-    const hits = claims.map((c) => ({ c, i: rest.indexOf(c) })).filter((h) => h.i >= 0).sort((a, b) => a.i - b.i);
-    const h = hits[0];
-    if (!h) { out.push({ t: rest }); break; }
-    if (h.i) out.push({ t: rest.slice(0, h.i) });
-    out.push({ t: h.c, src: `Verified claim ${out.filter((x) => x.src).length + 1}` });
-    rest = rest.slice(h.i + h.c.length);
-  }
-  return out;
-}
 function EmailScene({ p }: { p: MotionValue<number> }) {
   const e = useStory()?.email;
-  const EMAIL = e ? segments(e.body, e.claims) : [];
+  const EMAIL = e ? storySegments(e.body, e.claims) : [];
   const total = EMAIL.reduce((n, s) => n + s.t.length, 0);
   const chars = useTransform(p, [0.05, 0.75], [0, total]);
   const [n, setN] = useState(Math.round(chars.get()));
+  useEffect(() => { setN(Math.round(chars.get())); }, [chars, total]);
   useMotionValueEvent(chars, "change", (x) => setN(Math.round(x)));
   const glow = useTransform(p, [0.78, 0.9], ["0 0 0 0 transparent", "0 0 0 8px color-mix(in oklab, var(--accent) 25%, transparent)"]);
-  let left = n;
   const sources = new Set<string>();
   return (
     <div className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-6 shadow-sm">
       <p className="text-sm text-muted-foreground">Subject: <span className="text-foreground">{e?.subject ?? ""}</span></p>
-      <p className="mt-4 min-h-[9rem] text-[15px] leading-7">
-        {EMAIL.map((s, i) => {
-          const shown = s.t.slice(0, Math.max(0, left));
-          const complete = left >= s.t.length;
-          left -= s.t.length;
-          if (!shown) return null;
-          if (s.src && complete) sources.add(s.src);
+      <p data-story-email className="mt-4 min-h-[9rem] whitespace-pre-wrap text-[15px] leading-7">
+        {typedStorySegments(EMAIL, n).map((s, i) => {
+          if (s.src) sources.add(s.src);
           return s.src ? (
-            <span key={i} className={complete ? "underline decoration-accent decoration-2 underline-offset-4" : ""}>{shown}</span>
-          ) : <span key={i}>{shown}</span>;
+            <span key={i} className="underline decoration-accent decoration-2 underline-offset-4">{s.t}</span>
+          ) : <span key={i}>{s.t}</span>;
         })}
         {n < total && <span className="ml-0.5 inline-block h-5 w-px translate-y-1 animate-pulse bg-foreground" aria-hidden />}
       </p>
