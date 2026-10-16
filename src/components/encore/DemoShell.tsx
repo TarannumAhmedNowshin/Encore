@@ -57,7 +57,11 @@ type Note = { id: number; text: string };
 function GuidedTour() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [step, setStep] = useState(0);
+  // Deep links start the tour at that page's first step.
+  const [step, setStep] = useState(() => {
+    const sub = pathname.replace(`/app/a/${DEMO_ID}`, "").replace(/^\//, "").replace(/\/$/, "");
+    return Math.max(0, TOUR_STEPS.findIndex((x) => x.path === sub));
+  });
   const [open, setOpen] = useState(true);
   const [done, setDone] = useState(false);
   const [auto, setAuto] = useState(false);
