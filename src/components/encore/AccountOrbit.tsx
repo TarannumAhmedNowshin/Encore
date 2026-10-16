@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { orbitRadius, faviconUrl, initials, orbitLayout, ringFrac, visibleLabels, type AccountRow, type OrbitGroup } from "@/lib/encore/accounts";
 import { cn } from "@/lib/utils";
+import { usePanZoom, ZoomControls } from "@/components/encore/PanZoom";
 
 type T = AccountRow & { evidence: unknown };
 const FILL: Record<OrbitGroup, string> = {
@@ -38,10 +39,13 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
   const cx = w / 2, cy = h / 2;
   const inner = 48;
   const nodes = orbitLayout(targets, outer, inner);
+  const pz = usePanZoom(w, h);
+  const { k } = pz.view;
+  const sx = (x: number) => x * k + pz.view.x, sy = (y: number) => y * k + pz.view.y;
   const short = (n: string | null) => { const s = n ?? ""; return s.length > 18 ? `${s.slice(0, 18)}…` : s; };
   // Qualified first (best first), then the rest; a label that would overlap one already placed is hidden.
   const labelled = visibleLabels(nodes.filter((n) => n.group === "qualified")
-    .map((n) => ({ id: n.t.id, x: cx + n.x, y: cy + n.y + n.r + 10, w: short(n.t.name).length * 6.2 + 6 })));
+    .map((n) => ({ id: n.t.id, x: (cx + n.x) * k, y: (cy + n.y + n.r) * k + 10, w: short(n.t.name).length * 6.2 + 6 })));
 
   // A bubble animates in only when it is new or its status changed since last render.
   const fresh = new Set<string>();
@@ -50,14 +54,16 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
 
   return (
     <div ref={box} className="relative w-full">
-      <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Companies arranged by similarity to your won deal" className="block">
+      <ZoomControls onIn={() => pz.zoomBy(1.4)} onOut={() => pz.zoomBy(1 / 1.4)} onFit={pz.fit} />
+      <svg ref={pz.ref} width="100%" height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Companies arranged by similarity to your won deal" className="block select-none" {...pz.handlers}>
+        <g transform={pz.transform}>
         {([90, 70, 50] as const).map((sim) => {
           const f = sim; const label = `${sim}%`;
           const r = orbitRadius(ringFrac(sim), inner, outer);
           return (
             <g key={f}>
               <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeDasharray="3 4" />
-              <text x={cx + r * 0.71 + 4} y={cy - r * 0.71 - 4} className="fill-muted-foreground font-mono" fontSize={10}>{label}</text>
+              <text x={cx + r * 0.71 + 4} y={cy - r * 0.71 - 4} className="fill-muted-foreground font-mono" fontSize={10 / Math.sqrt(k)}>{label}</text>
             </g>
           );
         })}
@@ -78,8 +84,8 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
           const s = Math.round(n.r * 1.1);
           return (
             <g key={n.t.id} transform={`translate(${cx + n.x} ${cy + n.y})`} className="cursor-pointer" opacity={faded ? 0.55 : 1}
-              onMouseEnter={() => setHover({ t: n.t, x: cx + n.x, y: cy + n.y })} onMouseLeave={() => setHover(null)}
-              onClick={() => onOpen(n.t.id)} tabIndex={0} role="button" aria-label={n.t.name ?? "Company"}
+              onMouseEnter={() => setHover({ t: n.t, x: sx(cx + n.x), y: sy(cy + n.y) })} onMouseLeave={() => setHover(null)}
+              onClick={() => { if (!pz.moved()) onOpen(n.t.id); }} onDoubleClick={(e) => { e.stopPropagation(); pz.focus(cx + n.x, cy + n.y, Math.max(2.5, k * 1.5)); }} tabIndex={0} role="button" aria-label={n.t.name ?? "Company"}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen(n.t.id)}>
               <g key={replay} className={cn((fresh.has(n.t.id) || replay > 0) && "orbit-in", pending && "animate-run-pulse")}
                 style={replay > 0 ? { animationDelay: `${idx * 220}ms` } : undefined}>
@@ -91,11 +97,12 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
                   : <text textAnchor="middle" dy="0.35em" fontSize={Math.max(9, n.r * 0.6)} fontWeight={600} className="fill-foreground">{initials(n.t.name)}</text>}
               </g>
               {hover?.t.id !== n.t.id && labelled.has(n.t.id) && (
-                <text y={n.r + 14} textAnchor="middle" fontSize={11} className="fill-foreground">{short(n.t.name)}</text>
+                <text y={n.r + 14 / k} textAnchor="middle" fontSize={11 / k} className="fill-foreground">{short(n.t.name)}</text>
               )}
             </g>
           );
         })}
+        </g>
       </svg>
       {hover && (
         <div className="surface pointer-events-none absolute z-10 w-64 p-3 text-xs"
