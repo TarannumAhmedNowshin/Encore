@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PLAN_SYSTEM = "You turn a Sales DNA into short web-search phrases a person would type into Google: 3-8 words, plain nouns, no full sentences, no company names, no quotation marks, no country names. industry_terms: the industry and sub-industry, specific enough to find peers. regulatory_terms: the regulatory regime that shapes the problem, or empty. business_model_terms: the operating model, or empty. problem_terms: 2-3 phrases describing the problem the way companies talk about it publicly. department_terms: 1-4 words naming the owning department as on a careers page. focus_keywords: 8-15 words or short phrases likely to appear in a passage describing this problem or this kind of company.";
-const LEADS_SYSTEM = "You build a long list of look-alike companies worth researching for one successful engagement. You are not qualifying them; each is researched separately afterwards. Recall matters more than precision, but every lead must be a real, specific operating company. Rules: (1) Same kind of company as the source customer, in the same role in the value chain, so it would itself buy this solution. If the customer is a regional insurer, propose other insurers, not claims software vendors, third-party administrators or consultancies; if it is a bank, propose other banks, not core-banking vendors. Competitor lists often mix suppliers in; leave them out. (2) List companies headquartered in the target region first, then at least 3 from elsewhere when the materials or well-known facts show good fits. (3) Set headquarters_country when the materials show it or it is widely known; otherwise leave it empty. (4) Prefer companies the materials connect to the problem or a need signal, then close industry, regulatory or business-model peers. (5) Never propose the source customer or its subsidiaries; no associations, regulators, news sites or generic categories. (6) De-duplicate name variants. (7) why_considered: one sentence. (8) source_urls: URLs copied exactly from the materials that mention the company; empty if added from general knowledge.";
+const LEADS_SYSTEM = "You build a long list of look-alike companies worth researching for one successful engagement. You are not qualifying them; each is researched separately afterwards. Recall matters more than precision, but every lead must be a real, specific operating company. Rules: (1) Same kind of company as the source customer, in the same role in the value chain, so it would itself buy this solution. If the customer is a regional insurer, propose other insurers, not claims software vendors, third-party administrators or consultancies; if it is a bank, propose other banks, not core-banking vendors. Competitor lists often mix suppliers in; leave them out. (2) List companies headquartered in the target region first, then at least 3 from elsewhere when the materials or well-known facts show good fits. (3) Set headquarters_country when the materials show it or it is widely known; otherwise leave it empty. (4) Prefer companies the materials connect to the problem or a need signal, then close industry, regulatory or business-model peers. (5) Never propose the source customer or its subsidiaries; no associations, regulators, news sites or generic categories. (6) De-duplicate name variants. (7) why_considered: one sentence. (8) source_urls: URLs copied exactly from the materials that mention the company; empty if added from general knowledge. (9) Rank comparable scale first: prefer companies of comparable size and ownership type (e.g. a regional mutual insurer → other regional and mutual insurers) before national giants; include at most 3 companies more than 10x larger.";
 
 const DNA_KEYS = ["problem_summary", "current_process_summary", "solution_capabilities_summary", "measurable_outcomes_summary", "primary_buyers_summary",
   "industry_characteristics", "regulatory_characteristics", "operational_characteristics", "organizational_characteristics", "technology_characteristics", "owning_department"] as const;
@@ -25,7 +25,7 @@ export const discoverResearch = createServerFn({ method: "POST" })
     const db = await adminClient();
     const { data: dna } = await db.from("sales_dna").select("*").eq("analysis_id", analysis.id).maybeSingle();
     if (!dna) throw new HttpError(400, "Build the playbook first");
-    await checkQuota(userId, "discovery", 3);
+    await checkQuota(userId, "discovery");
     await recordUsage(userId, "discovery");
     const runId = await startRun(analysis.id, "discover", 3);
     try {
@@ -77,7 +77,7 @@ export const discoverLeads = createServerFn({ method: "POST" })
     const { loadOwnedAnalysis, adminClient } = await import("./auth.server");
     const { checkQuota } = await import("./usage.server");
     const { failRun } = await import("./runs.server");
-    const { generateJson } = await import("./gemini.server");
+    const { generateJsonWithFallback } = await import("./gemini.server");
     const { HttpError } = await import("./http.server");
     const { excerpt } = await import("./text");
     const { REGION_PHRASE, selectCandidates } = await import("./discover");
@@ -87,10 +87,11 @@ export const discoverLeads = createServerFn({ method: "POST" })
     await checkQuota(userId, "ai_call");
     const db = await adminClient();
     const aid = analysis.id;
-    const [{ data: dna }, { data: materials }, { data: run }] = await Promise.all([
+    const [{ data: dna }, { data: materials }, { data: run }, { data: scaleFacts }] = await Promise.all([
       db.from("sales_dna").select("*").eq("analysis_id", aid).maybeSingle(),
       db.from("materials").select("url, title, text").eq("analysis_id", aid).is("target_id", null),
       db.from("runs").select("id").eq("analysis_id", aid).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("facts").select("attribute, value").eq("analysis_id", aid).eq("status", "active").in("subject", ["company", "business_context"]).in("origin", ["document", "user"]),
     ]);
     if (!dna) throw new HttpError(400, "Build the playbook first");
     if (!materials?.length) throw new HttpError(400, "Run the web research first");
@@ -103,12 +104,14 @@ export const discoverLeads = createServerFn({ method: "POST" })
         `Source customer (exclude it): ${customer}`,
         ...DNA_KEYS.map((k) => `${k}: ${dna[k] ?? ""}`),
         `Target region: ${R || "Global"}`,
+        "Customer size, scale and ownership facts (premium, employees, branches, region, ownership):",
+        ...((scaleFacts ?? []).map((f) => `- ${f.attribute}: ${f.value}`)),
         "Maximum leads: 20",
         "",
         materials.map((m) => `[URL: ${m.url}]\n[Title: ${m.title ?? ""}]\n${excerpt(m.text ?? "", plan.focus_keywords ?? [], 1500)}`).join("\n---\n"),
       ].join("\n");
-      const out = await generateJson({
-        tier: "fast", userId, system: LEADS_SYSTEM, user, maxOutputTokens: 8192,
+      const { value: out, usedFallback } = await generateJsonWithFallback({
+        tier: "smart", userId, system: LEADS_SYSTEM, user, maxOutputTokens: 8192,
         responseSchema: { type: "OBJECT", properties: { leads: { type: "ARRAY", items: { type: "OBJECT", properties: {
           name: { type: "STRING" }, website: { type: "STRING", nullable: true }, headquarters_country: { type: "STRING" },
           why_considered: { type: "STRING" }, source_urls: { type: "ARRAY", items: { type: "STRING" } },
@@ -135,7 +138,7 @@ export const discoverLeads = createServerFn({ method: "POST" })
         })));
         if (error) throw new HttpError(500, error.message);
       }
-      if (runId) await db.from("runs").update({ done: 0, total: candidates.length, message: `${candidates.length} companies to research` }).eq("id", runId);
+      if (runId) await db.from("runs").update({ done: 0, total: candidates.length, message: `${candidates.length} companies to research`, ...(usedFallback ? { used_fallback_model: true } : {}) }).eq("id", runId);
       return { targets: candidates.length };
     } catch (e) {
       if (runId) await failRun(runId, e);
@@ -154,7 +157,8 @@ const QUALIFY_SYSTEM = `You judge ONE candidate company against the Sales DNA of
 - technology: high = public signs of the same transformation in this area (automation, AI, modernisation of this process); medium = general digital initiatives; low = no sign or can't tell.
 high for regulatory, operational, organizational or technology REQUIRES a source_url. For industry and business_model a widely known fact may be used without a source; say so in the reason. When you can't tell, rate low; never guess high.
 2. Evidence of the same problem: up to 3 items, strongest first, from different pages where possible. quote = 1-3 sentences copied verbatim and contiguously from one material: no paraphrase, no joining passages, no added ellipses. The page must be about this company (it names the company or is its own site). strength = direct (the company describes this problem or is investing to fix it: initiative, RFP, vendor selection, job posting for this exact work) or adjacent (closely related problem in the same process area, or a strong need signal such as heavy hiring for the manual work).
-3. qualified true only for a buyer with at least one evidence item; otherwise false with a concrete rejection_reason. Set headquarters_country and website from the materials or leave them empty.`;
+3. qualified true only for a buyer with at least one evidence item; otherwise false with a concrete rejection_reason. Set headquarters_country and website from the materials or leave them empty.
+4. Strict rules. business_model must be medium or lower when the company is 10x larger or smaller than the original customer, or has a different ownership type. Evidence must show THIS company has the problem or is investing to fix it. Customer-facing claims instructions, how-to-file guides, law-firm or consumer blogs, and vendor marketing are NOT direct evidence; at most adjacent, and only if they describe the company's own operations. A vendor case study counts as direct only if it names the company as the customer.`;
 
 export const qualifyCompany = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -248,6 +252,10 @@ export const qualifyCompany = createServerFn({ method: "POST" })
         }
       }
       await recomputeTarget(t.id);
+      if (usedFallback) {
+        const { data: run } = await db.from("runs").select("id").eq("analysis_id", analysis.id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (run) await db.from("runs").update({ used_fallback_model: true }).eq("id", run.id);
+      }
       return { status: checked.status, usedFallback };
     } catch (e) {
       const msg = (e instanceof Error ? e.message : String(e)).slice(0, 300);

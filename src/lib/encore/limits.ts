@@ -8,3 +8,14 @@ export const LIMIT_LABELS: Record<LimitedKind, string> = {
   people_search: "People searches",
   ai_call: "AI calls",
 };
+
+/** Temporary higher limits for the app builder's own account while building. */
+const BUILDER_OVERRIDES: Record<string, Partial<Record<LimitedKind, number>>> = {
+  "5cfb1fae-faad-4044-8765-9383bde38407": { discovery: 10 },
+};
+
+export function dailyLimitFor(kind: UsageKind, userId: string): number | undefined {
+  const k = kind as LimitedKind;
+  if (!(k in DAILY_LIMITS)) return undefined;
+  return BUILDER_OVERRIDES[userId]?.[k] ?? DAILY_LIMITS[k];
+}

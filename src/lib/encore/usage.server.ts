@@ -1,6 +1,6 @@
 import { HttpError } from "./http.server";
 import { adminClient } from "./auth.server";
-import { DAILY_LIMITS, type UsageKind } from "./limits";
+import { dailyLimitFor, type UsageKind } from "./limits";
 
 export async function recordUsage(userId: string, kind: UsageKind, units = 1) {
   const db = await adminClient();
@@ -16,7 +16,7 @@ export async function usedToday(userId: string, kind: UsageKind): Promise<number
   return (data ?? []).reduce((s, r) => s + (r.units ?? 1), 0);
 }
 
-export async function checkQuota(userId: string, kind: UsageKind, limitPerDay = DAILY_LIMITS[kind as keyof typeof DAILY_LIMITS]) {
+export async function checkQuota(userId: string, kind: UsageKind, limitPerDay = dailyLimitFor(kind, userId)) {
   if (limitPerDay == null) return;
   if ((await usedToday(userId, kind)) >= limitPerDay)
     throw new HttpError(429, `Daily limit reached for ${kind}, try again tomorrow`);
