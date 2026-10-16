@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AccountOrbit, GROUP_COLOR, OrbitLegend } from "@/components/encore/AccountOrbit";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
@@ -9,7 +11,7 @@ import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmD
 import { useDiscoveryRun } from "@/hooks/useDiscoveryRun";
 import { supabase } from "@/integrations/supabase/client";
 import { REGION_LABEL } from "@/lib/encore/intake";
-import { accountsCsv, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
+import { accountsCsv, bubbleRadius, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/a/$id/accounts")({
@@ -41,7 +43,9 @@ function AccountsPage() {
   const { id } = Route.useParams();
   const d = useDiscoveryRun(id);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
-  const [view, setView] = useState<"quadrant" | "list">("quadrant");
+  const [view, setView] = useState<"orbit" | "quadrant" | "list">("orbit");
+  const mobile = useIsMobile();
+  useEffect(() => { if (mobile) setView("list"); }, [mobile]);
   const [filter, setFilter] = useState<AccountFilter>("qualified");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "default", dir: 1 });
   const [openId, setOpenId] = useState<string | null>(null);
@@ -97,7 +101,7 @@ function AccountsPage() {
       {!has ? (
         <section className="mt-8">
           <EmptyState title="No companies yet"
-            line="Discovery searches the web for companies like your customer, then researches each one for proof of the same problem. It takes about 3–6 minutes."
+            line="Discovery searches the web for companies like your customer, then researches each one for proof of the same problem. It takes about 5–7 minutes."
             action={!readOnly && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Find look-alike companies"}</Button>} />
         </section>
       ) : (
@@ -110,13 +114,18 @@ function AccountsPage() {
           </div>
 
           <div className="mt-6 inline-flex rounded-lg border border-border p-0.5" role="tablist">
-            {(["quadrant", "list"] as const).map((v) => (
+            {(["orbit", "quadrant", "list"] as const).map((v) => (
               <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
                 className={cn("rounded-md px-3 py-1 text-sm capitalize", view === v ? "bg-secondary font-medium" : "text-muted-foreground")}>{v}</button>
             ))}
           </div>
 
-          {view === "quadrant" ? (
+          {view === "orbit" ? (
+            <Card className="mt-4 p-4">
+              <AccountOrbit targets={targets} center={(d.data as { customer?: string | null }).customer || "Your won deal"} onOpen={setOpenId} />
+              <OrbitLegend />
+            </Card>
+          ) : view === "quadrant" ? (
             <Quadrant targets={targets.filter((t) => t.status === "qualified")} onOpen={setOpenId} />
           ) : (
             <Card className="mt-4 p-0">
@@ -201,7 +210,7 @@ function SortTh({ label, onClick }: { label: string; onClick: () => void }) {
 
 function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string) => void }) {
   if (!targets.length) return <Card className="mt-4"><p className="text-sm text-muted-foreground">No qualified accounts yet. The quadrant shows qualified companies only.</p></Card>;
-  const pts = targets.map((t) => ({ id: t.id, name: t.name, x: t.similarity_percent ?? 0, y: t.evidence_score ?? 0, z: Math.max(5, t.opportunity_score ?? 0), opp: t.opportunity_score ?? 0, inR: t.in_target_region !== false }));
+  const pts = targets.map((t) => ({ id: t.id, name: t.name, x: t.similarity_percent ?? 0, y: t.evidence_score ?? 0, z: bubbleRadius(t.opportunity_score), opp: t.opportunity_score ?? 0, inR: t.in_target_region !== false }));
   return (
     <Card className="mt-4 p-4">
       <div className="relative h-[440px]">
@@ -214,7 +223,7 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
             <XAxis type="number" dataKey="x" domain={[0, 100]} name="Similarity" unit="%" tick={{ fontSize: 11 }} label={{ value: "Similarity %", position: "insideBottom", offset: -10, fontSize: 11 }} />
             <YAxis type="number" dataKey="y" domain={[0, 100]} name="Evidence" tick={{ fontSize: 11 }} label={{ value: "Evidence score", angle: -90, position: "insideLeft", fontSize: 11 }} />
-            <ZAxis type="number" dataKey="z" range={[60, 600]} domain={[0, 100]} />
+            <ZAxis type="number" dataKey="z" range={[Math.PI * 100, Math.PI * 576]} domain={[10, 24]} />
             <ReferenceLine x={50} stroke="var(--border)" />
             <ReferenceLine y={50} stroke="var(--border)" />
             <Tooltip cursor={false} content={({ payload }) => {
@@ -223,14 +232,14 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
               return <div className="surface px-3 py-2 text-xs"><div className="font-medium">{p.name}</div>
                 <div className="font-mono">Similarity {p.x}% · Evidence {p.y} · Opportunity {p.opp}</div></div>;
             }} />
-            <Scatter data={pts.filter((p) => p.inR)} fill="var(--primary)" fillOpacity={0.75} onClick={(p: any) => onOpen(p.id ?? p.payload?.id)} className="cursor-pointer" />
-            <Scatter data={pts.filter((p) => !p.inR)} fill="var(--muted-foreground)" fillOpacity={0.45} onClick={(p: any) => onOpen(p.id ?? p.payload?.id)} className="cursor-pointer" />
+            <Scatter data={pts.filter((p) => p.inR)} fill={GROUP_COLOR.qualified} fillOpacity={0.9} stroke="var(--primary)" strokeWidth={2} onClick={(p: any) => onOpen(p.id ?? p.payload?.id)} className="cursor-pointer" />
+            <Scatter data={pts.filter((p) => !p.inR)} fill={GROUP_COLOR.qualified} fillOpacity={0.9} stroke="var(--card)" onClick={(p: any) => onOpen(p.id ?? p.payload?.id)} className="cursor-pointer" />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
       <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-primary" /> In target region</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-muted-foreground/50" /> Other regions</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-verified" /> Qualified</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2 border-primary" /> In target region</span>
         <span>Bubble size = opportunity score</span>
       </div>
     </Card>
@@ -259,6 +268,7 @@ function Dossier({ t }: { t: Target }) {
   return (
     <div className="space-y-6 text-sm">
       <div className="space-y-1">
+        {faviconUrl(t.website) && <img src={faviconUrl(t.website)!} alt="" className="mb-2 size-8 rounded-md border border-border" />}
         {t.website && <a href={/^https?:/.test(t.website) ? t.website : `https://${t.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 font-mono text-xs text-primary hover:underline">{t.website} <ExternalLink className="size-3" /></a>}
         {t.linkedin_url && <a href={t.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline"><Linkedin className="size-3" /> LinkedIn</a>}
         <div className="text-xs text-muted-foreground">HQ: {t.hq_country ?? "unknown"} {t.in_target_region && <Pill tone="primary" className="ml-1">In region</Pill>}</div>

@@ -152,3 +152,7 @@
 @utility animate-run-pulse {
   animation: encore-pulse 1.6s ease-in-out infinite;
 }
+
+@keyframes orbit-in { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.orbit-in { transform-box: fill-box; transform-origin: center; animation: orbit-in 400ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .orbit-in, .animate-run-pulse { animation: none; } }
