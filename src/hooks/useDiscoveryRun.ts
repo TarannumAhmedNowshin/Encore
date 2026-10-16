@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect } from "react";
+import { clearJob, getRun, setJob, setRun, useRunState } from "@/lib/encore/run-store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -31,11 +32,22 @@ export function useDiscoveryRun(id: string) {
   const leads = useServerFn(discoverLeads);
   const qualify = useServerFn(qualifyCompany);
   const end = useServerFn(endDiscovery);
-  const [steps, setSteps] = useState<{ plan: S; search: S; list: S; each: S; verify: S } | null>(null);
-  const [message, setMessage] = useState<string>();
-  const [active, setActive] = useState(false);
-  const [working, setWorking] = useState<Set<string>>(new Set());
-  const busyRef = useRef(false);
+  // Shared app-wide so a run keeps going (and stays visible) when you switch stages.
+  const [steps, setSteps] = useRunState<{ plan: S; search: S; list: S; each: S; verify: S } | null>(`disc-steps:${id}`, null);
+  const [message, setMessage] = useRunState<string | undefined>(`disc-msg:${id}`, undefined);
+  const [active, setActiveState] = useRunState(`disc-active:${id}`, false);
+  const [working, setWorking] = useRunState<Set<string>>(`disc-working:${id}`, new Set());
+  const busyKey = `disc-busy:${id}`;
+  const busyRef = {
+    get current() { return getRun(busyKey, false); },
+    set current(v: boolean) { setRun(busyKey, v, false); },
+  };
+  const jobKey = `discovery:${id}`;
+  const setActive = useCallback((v: boolean) => {
+    setActiveState(v);
+    if (v) setJob({ key: jobKey, analysisId: id, label: "Discovery running…", done: 0, total: 0 });
+    else clearJob(jobKey);
+  }, [setActiveState, jobKey, id]);
 
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ["targets", id] });
@@ -65,13 +77,19 @@ export function useDiscoveryRun(id: string) {
       return true;
     } catch { return false; } // the server already marked it failed
     finally { setWorking((w) => { const n = new Set(w); n.delete(tid); return n; }); refresh(); }
-  }, [qualify, refresh]);
+  }, [qualify, refresh, setWorking]);
 
   const researchAll = useCallback(async (ids: string[]) => {
     setSteps((s) => ({ ...(s ?? { plan: "done", search: "done", list: "done", each: "waiting", verify: "waiting" }), each: "running" }));
     const queue = [...ids];
+    let finishedCount = 0;
+    setJob({ key: jobKey, analysisId: id, label: "Discovery running…", done: 0, total: ids.length });
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
-      while (queue.length) await qualifyOne(queue.shift()!);
+      while (queue.length) {
+        await qualifyOne(queue.shift()!);
+        finishedCount++;
+        setJob({ key: jobKey, analysisId: id, label: "Discovery running…", done: finishedCount, total: ids.length });
+      }
     }));
     setSteps((s) => s && { ...s, each: "done", verify: "running" });
     await end({ data: { analysis_id: id } }).catch(() => undefined);
@@ -79,7 +97,7 @@ export function useDiscoveryRun(id: string) {
     const { data: done } = await supabase.from("targets").select("status").eq("analysis_id", id);
     if (done?.length) toast(`${done.filter((t) => t.status === "qualified").length} of ${done.length} qualified`);
     refresh();
-  }, [qualifyOne, end, id, refresh]);
+  }, [qualifyOne, end, id, refresh, jobKey, setSteps]);
 
   const start = useCallback(async () => {
     if (busyRef.current) return;
@@ -103,7 +121,7 @@ export function useDiscoveryRun(id: string) {
       const m = e instanceof Error ? e.message : "Discovery failed";
       setMessage(m); toast.error(m);
     } finally { busyRef.current = false; setActive(false); refresh(); }
-  }, [research, leads, end, id, refresh, researchAll]);
+  }, [research, leads, end, id, refresh, researchAll, setActive, setSteps, setMessage]);
 
   const resume = useCallback(async () => {
     if (busyRef.current) return;
@@ -111,7 +129,7 @@ export function useDiscoveryRun(id: string) {
     const left = (q.data?.targets ?? []).filter((t) => ["queued", "researching", "failed"].includes(t.status)).map((t) => t.id);
     setSteps({ plan: "done", search: "done", list: "done", each: "running", verify: "waiting" });
     try { await researchAll(left); } finally { busyRef.current = false; setActive(false); }
-  }, [q.data, researchAll]);
+  }, [q.data, researchAll, setActive, setSteps]);
 
   const recheck = useCallback(async (tid: string) => { await qualifyOne(tid); }, [qualifyOne]);
 
