@@ -49,6 +49,7 @@ const outreachQuery = (id: string) => queryOptions({
     const facts = factIds.length
       ? await supabase.from("facts").select("id, value, subject, target_id, citations(quote, source_title, source_url, verified)").in("id", factIds)
       : { data: [] };
+    const { data: u } = await supabase.auth.getUser();
     return {
       readOnly: !u.user || a.data?.user_id !== u.user.id,
       contacts: (contacts.data ?? []) as Contact[],
