@@ -22,7 +22,7 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
 
   useEffect(() => {
     const el = box.current; if (!el) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(320, e.contentRect.width)));
+    const ro = new ResizeObserver(([e]) => e && setW(Math.max(320, e.contentRect.width)));
     ro.observe(el); return () => ro.disconnect();
   }, []);
 
