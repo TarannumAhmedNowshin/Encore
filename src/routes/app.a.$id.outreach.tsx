@@ -108,6 +108,7 @@ function OutreachPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const [noEvidence, setNoEvidence] = useState<Record<string, boolean>>({});
   const [bulk, setBulk] = useRunState<{ done: number; total: number; running: boolean } | null>(`outreach-bulk:${id}`, null);
   const [busy, setBusy] = useRunState<string[]>(`outreach-busy:${id}`, []);
 
@@ -147,6 +148,7 @@ function OutreachPage() {
     try {
       const r = await draftFn({ data: { contact_id: cid } });
       if (r.flagged) toast(`${r.flagged} draft${r.flagged > 1 ? "s" : ""} need edits: some claims couldn't be tied to a fact.`);
+      setNoEvidence((m) => ({ ...m, [cid]: !!r.noTargetEvidence }));
       return true;
     } catch (e) { toast.error(e instanceof Error ? e.message : "Drafting failed"); return false; }
     finally { setBusy((b) => b.filter((x) => x !== cid)); await refresh(); }
@@ -300,6 +302,11 @@ function OutreachPage() {
                         <AlertTriangle className="size-4 shrink-0" aria-hidden /> Some claims couldn't be tied to a fact — edit before approving.
                       </div>
                     )}
+                    {noEvidence[current.c.id] && (
+                      <p className="rounded-md bg-secondary px-3 py-2 text-xs text-muted-foreground">
+                        No verified evidence about {current.t.name} yet — this draft can't reference their situation. Qualify the account with evidence first.
+                      </p>
+                    )}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       Status: <Pill>{draft.status === "edited" ? "Edited" : draft.status[0]!.toUpperCase() + draft.status.slice(1)}</Pill>
                       {draft.rejection_reason && draft.status === "rejected" && <span>— {draft.rejection_reason}</span>}
@@ -354,10 +361,10 @@ function OutreachPage() {
                     <li key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
                       className={cn("rounded-md border p-2 text-xs", hover === i ? "border-primary bg-primary/5" : "border-border")}>
                       <p className="font-medium">"{c.claim}"</p>
-                      {f ? <p className="mt-1 text-muted-foreground">{f.value}</p> : <p className="mt-1 text-risk">Not tied to a fact</p>}
+                      {f ? <p className="mt-1 text-muted-foreground">{f.value}</p> : <p className="mt-1 text-risk">{(c as { ungrounded?: boolean }).ungrounded ? "Factual sentence with no backing fact" : "Not tied to a fact"}</p>}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         {f && <Pill>{about}</Pill>}
-                        <EvidenceChip kind={c.verified ? "verified" : "unverified"} label={c.verified ? "Grounded" : "Unverified"} onClick={f ? () => setDrawer(f) : undefined} />
+                        <EvidenceChip kind={c.verified ? "verified" : "unverified"} label={c.verified ? "Grounded" : "Unverified"} {...(f ? { onClick: () => setDrawer(f) } : {})} />
                       </div>
                     </li>
                   );
