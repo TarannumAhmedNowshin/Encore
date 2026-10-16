@@ -4,7 +4,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { loadDemo } from "@/lib/encore/demo-db";
 import { heroData, keyPhrase, numberWord, type HeroData } from "@/lib/encore/hero";
-import { SOW_QUOTES } from "./Story";
 
 const initials = (n: string) => n.split(/[\s&]+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 const INDENT = ["ml-0", "ml-[10px] md:ml-[18px]", "ml-[20px] md:ml-[36px]"];
@@ -44,7 +43,7 @@ export function EchoHero() {
   const shown = echoes.slice(page * 3, page * 3 + 3);
 
   // Before data arrives (or if it fails) the document card shows the sample's own SOW sentence.
-  const sentence = data?.sentence ?? SOW_QUOTES[0]!.text;
+  const sentence = data?.sentence ?? "";
   const [a, b] = data?.highlight ?? keyPhrase(sentence);
   const [on, setOn] = useState(false);
   useEffect(() => { const t = setTimeout(() => setOn(true), 500); return () => clearTimeout(t); }, []);
@@ -86,7 +85,7 @@ export function EchoHero() {
         </div>
 
         <div className="min-w-0">
-          <div className="hero-doc rounded-md border border-border bg-card p-5 shadow-[0_18px_40px_-24px_rgb(22_22_29/.35)] md:p-6">
+          {sentence && <div className="hero-doc rounded-md border border-border bg-card p-5 shadow-[0_18px_40px_-24px_rgb(22_22_29/.35)] md:p-6">
             <div className="flex justify-between gap-3 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               <span className="truncate">{data?.filename ?? "Won SOW"}</span>
               <span className="shrink-0 normal-case">your won deal</span>
@@ -96,7 +95,7 @@ export function EchoHero() {
               <span className={`hero-mark ${reduced ? "is-on is-instant" : on ? "is-on" : ""}`}>{sentence.slice(a, b)}</span>
               {sentence.slice(b)}
             </p>
-          </div>
+          </div>}
 
           {!failed && shown.length > 0 && (
             <div className="relative mt-5 pl-5 md:pl-6">

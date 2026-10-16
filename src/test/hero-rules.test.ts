@@ -27,3 +27,18 @@ describe("landing hero data", () => {
     expect(h.qualified).toBe(1);
   });
 });
+
+import { storyData } from "@/lib/encore/hero";
+describe("landing story data", () => {
+  it("shows only verified verbatim document quotes", () => {
+    const snap = {
+      facts: [
+        { id: "a", status: "active", origin: "document", attribute: "pain_points" },
+        { id: "b", status: "active", origin: "document", attribute: "pain_points" },
+      ],
+      citations: [{ fact_id: "a", verified: true, quote: "Exact SOW words." }, { fact_id: "b", verified: false, quote: "Not checked." }],
+      sales_dna: [], personas: [], targets: [], contacts: [], outreach_drafts: [], documents: [],
+    } as unknown as DemoSnapshot;
+    expect(storyData(snap).quotes).toEqual([{ attr: "Pain point", text: "Exact SOW words." }]);
+  });
+});

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeStages, isPlaceholderName, overallConfidence, stakeholderKey } from "@/lib/encore/deal";
 
-const base = { facts: 0, extractRunning: false, hasSalesDna: false, personas: 0, qualified: 0, contacts: 0, approvedDrafts: 0 };
+const base = { facts: 0, extractRunning: false, hasSalesDna: false, personas: 0, qualified: 0, contacts: 0, drafts: 0 };
 
 describe("journey rail", () => {
   it("deal done with a fact", () => expect(computeStages({ ...base, facts: 3 }).deal).toEqual({ status: "done", count: 3 }));
@@ -14,7 +14,7 @@ describe("journey rail", () => {
   it("accounts done when qualified", () => expect(computeStages({ ...base, hasSalesDna: true, qualified: 2 }).accounts).toEqual({ status: "done", count: 2 }));
   it("people blocked until qualified", () => expect(computeStages({ ...base, hasSalesDna: true }).people.status).toBe("blocked"));
   it("outreach blocked until contact", () => expect(computeStages({ ...base, qualified: 1 }).outreach.status).toBe("blocked"));
-  it("outreach done when approved", () => expect(computeStages({ ...base, contacts: 1, approvedDrafts: 1 }).outreach.status).toBe("done"));
+  it("outreach done when drafts exist", () => expect(computeStages({ ...base, contacts: 1, drafts: 1 }).outreach.status).toBe("done"));
 });
 
 describe("deal rules", () => {

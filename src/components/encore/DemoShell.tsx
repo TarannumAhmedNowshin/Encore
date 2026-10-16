@@ -15,12 +15,12 @@ export function DemoShell() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-card">
-        <div className="flex h-12 flex-wrap items-center gap-x-3 gap-y-1 px-4 text-sm sm:px-gutter">
+        <div className="flex h-12 flex-nowrap items-center gap-x-3 gap-y-1 px-4 text-sm sm:px-gutter">
           <Link to="/" className="rounded-md" aria-label="Encore home"><Logo /></Link>
-          <span className="min-w-0 truncate text-muted-foreground">
-            Guided demo · Harrowgate Mutual <span className="hidden sm:inline">(fictional)</span>
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">
+            Guided demo<span className="hidden sm:inline"> · Harrowgate Mutual (fictional)</span>
           </span>
-          <Link to="/auth" className="ml-auto inline-flex items-center gap-1 rounded-md font-medium text-primary hover:underline">
+          <Link to="/auth" className="ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md font-medium text-primary hover:underline">
             <span className="hidden sm:inline">Run it on your own deal</span><span className="sm:hidden">Try yours</span> <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>

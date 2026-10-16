@@ -14,11 +14,11 @@ export const stagesQuery = (id: string) => queryOptions({
       dbFor(id).from("personas").select("id", head).eq("analysis_id", id),
       dbFor(id).from("targets").select("id", head).eq("analysis_id", id).eq("status", "qualified"),
       dbFor(id).from("contacts").select("id", head).eq("analysis_id", id),
-      dbFor(id).from("outreach_drafts").select("id", head).eq("analysis_id", id).eq("status", "approved"),
+      dbFor(id).from("outreach_drafts").select("id", head).eq("analysis_id", id),
     ]);
     return computeStages({
       facts: facts.count ?? 0, extractRunning: (runs.count ?? 0) > 0, playbookRunning: (pbRuns.count ?? 0) > 0, hasSalesDna: (dna.count ?? 0) > 0,
-      personas: personas.count ?? 0, qualified: qualified.count ?? 0, contacts: contacts.count ?? 0, approvedDrafts: drafts.count ?? 0,
+      personas: personas.count ?? 0, qualified: qualified.count ?? 0, contacts: contacts.count ?? 0, drafts: drafts.count ?? 0,
     });
   },
   refetchInterval: (q) => (q.state.data?.deal.status === "running" || q.state.data?.playbook.status === "running" ? 3000 : false),
