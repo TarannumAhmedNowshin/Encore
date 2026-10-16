@@ -1,6 +1,6 @@
 /** Pure rules for not starting the same pipeline step twice. */
 
-export type RunLike = { step: string; status: string; updated_at?: string | null; created_at?: string | null };
+export type RunLike = { step: string | null; status: string | null; updated_at?: string | null; created_at?: string | null };
 
 export const ACTIVE_WINDOW_MS = 10 * 60 * 1000; // a "running" row older than this is considered abandoned
 
