@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Card, EmptyState, EvidenceChip, Pill, RunTimeline, type RunStep } from "@/components/encore/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { extractDeal } from "@/lib/encore/deal.functions";
-import { FIELD_GROUPS, FIELD_LABEL, findQuoteRange, overallConfidence, type FieldSubject } from "@/lib/encore/deal";
+import { checkDocQuote, FIELD_GROUPS, FIELD_LABEL, findQuoteRange, overallConfidence, type FieldSubject } from "@/lib/encore/deal";
+import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
 import { REGION_LABEL } from "@/lib/encore/intake";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ const dealQuery = (id: string) => ({
     const [a, d, f, s, r] = await Promise.all([
       supabase.from("analyses").select("*").eq("id", id).single(),
       supabase.from("documents").select("filename, page_count, text").eq("analysis_id", id).order("created_at").limit(1).maybeSingle(),
-      supabase.from("facts").select("*, citations(quote, verified)").eq("analysis_id", id).eq("status", "active").in("subject", ["company", "business_problem", "solution"]).order("created_at"),
+      supabase.from("facts").select("*, citations(id, quote, verified)").eq("analysis_id", id).eq("status", "active").in("subject", ["company", "business_problem", "solution"]).order("created_at"),
       supabase.from("stakeholders").select("*").eq("analysis_id", id).order("created_at"),
       supabase.from("runs").select("*").eq("analysis_id", id).eq("step", "extract").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
@@ -52,7 +53,29 @@ function DealPage() {
   const { data } = useQuery({ ...dealQuery(id), enabled: typeof window !== "undefined" });
   const extract = useServerFn(extractDeal);
   const [busy, setBusy] = useState(false);
-  const [quote, setQuote] = useState<string | null>(null);
+  const [quote, setQuote] = useState<QuoteTarget | null>(null);
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
+  const [gapEdit, setGapEdit] = useState<{ attr: string; value: string } | null>(null);
+  const rechecked = useRef(false);
+
+  // Re-check stored quotes against the current document-quote rule (owner only).
+  useEffect(() => {
+    if (!data?.doc?.text || !data.analysis || data.analysis.is_showcase || rechecked.current) return;
+    rechecked.current = true;
+    const text = data.doc.text;
+    const jobs: PromiseLike<unknown>[] = [];
+    for (const f of data.facts) for (const c of ((f as any).citations ?? []) as { id: string; quote: string | null; verified: boolean | null }[]) {
+      if (!c.quote) continue;
+      const ok = checkDocQuote(c.quote, text) === "found";
+      if (ok !== c.verified) jobs.push(supabase.from("citations").update({ verified: ok }).eq("id", c.id));
+    }
+    for (const sh of data.stakeholders) {
+      if (!sh.quote) continue;
+      const ok = checkDocQuote(sh.quote, text) === "found";
+      if (ok !== sh.quote_verified) jobs.push(supabase.from("stakeholders").update({ quote_verified: ok }).eq("id", sh.id));
+    }
+    if (jobs.length) void Promise.all(jobs).then(() => qc.invalidateQueries({ queryKey: ["deal", id] }));
+  }, [data, id, qc]);
 
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["deal", id] }); void qc.invalidateQueries({ queryKey: ["stages", id] }); void qc.invalidateQueries({ queryKey: ["usage-today"] }); };
 
@@ -62,8 +85,11 @@ function DealPage() {
   const hasFacts = facts.length > 0;
   const canEdit = !!analysis && !analysis.is_showcase;
 
-  async function onExtract() {
-    if (hasFacts && !confirm("Re-extract replaces the earlier facts and stakeholders found in the document. Continue?")) return;
+  function onExtract() {
+    if (!hasFacts) return void runExtract();
+    setAsk({ title: "Re-extract this deal?", body: "This replaces the earlier facts and stakeholders found in the document. Facts and stakeholders you added stay.", action: "Re-extract", onConfirm: () => void runExtract() });
+  }
+  async function runExtract() {
     setBusy(true);
     setTimeout(refresh, 800);
     try {
@@ -84,12 +110,14 @@ function DealPage() {
   const byOrigin = facts.reduce<Record<string, number>>((m, f) => ({ ...m, [f.origin ?? "document"]: (m[f.origin ?? "document"] ?? 0) + 1 }), {});
   const byConf = facts.reduce<Record<string, number>>((m, f) => ({ ...m, [f.confidence ?? "low"]: (m[f.confidence ?? "low"] ?? 0) + 1 }), {});
 
-  async function addGap(attr: string) {
-    const value = prompt(`${FIELD_LABEL[attr]}:`)?.trim();
+  async function addGap(attr: string, raw: string) {
+    const value = raw.trim();
     if (!value || !analysis) return;
     const subject = (Object.entries(FIELD_GROUPS).find(([, ks]) => (ks as readonly string[]).includes(attr))![0]) as FieldSubject;
     const { error } = await supabase.from("facts").insert({ analysis_id: id, user_id: analysis.user_id, subject, attribute: attr, value, origin: "user", label: "user", confidence: "high", agent: "user" });
-    if (error) toast.error(error.message); else refresh();
+    if (error) { toast.error(error.message); return; }
+    setGapEdit(null);
+    refresh();
   }
 
   return (
@@ -104,6 +132,10 @@ function DealPage() {
         </div>
         {canEdit && <Button onClick={onExtract} disabled={running}>{running ? "Extracting…" : hasFacts ? "Re-extract" : "Extract deal facts"}</Button>}
       </div>
+
+      {!running && run?.status === "done" && run.used_fallback_model && (
+        <p className="mt-3 text-xs text-muted-foreground">Extracted with the fast model because the main model was busy.</p>
+      )}
 
       {(running || run?.status === "failed") && <Card className="mt-6"><RunTimeline steps={steps} /></Card>}
 
@@ -140,7 +172,7 @@ function DealPage() {
                           {pill && <Pill tone={pill.tone}>{pill.text}</Pill>}
                           <span title={`${f.confidence} confidence`} className={cn("size-2 rounded-full", CONF_DOT[f.confidence ?? "low"])} />
                           {f.origin !== "user" && (c?.quote
-                            ? <EvidenceChip kind={c.verified ? "verified" : "unverified"} onClick={() => setQuote(c.quote)} />
+                            ? <EvidenceChip kind={c.verified ? "verified" : "unverified"} onClick={() => setQuote({ quote: c.quote!, label: f.label, value: f.value, field: FIELD_LABEL[f.attribute ?? ""] ?? f.attribute })} />
                             : <EvidenceChip kind="inference" />)}
                         </div>
                       </li>
@@ -156,9 +188,15 @@ function DealPage() {
               <p className="text-sm text-muted-foreground">Not found in the document.</p>
               <ul className="mt-3 divide-y divide-border">
                 {gaps.map((g) => (
-                  <li key={g} className="flex items-center justify-between py-2 text-sm">
-                    {FIELD_LABEL[g]}
-                    {canEdit && <Button size="sm" variant="secondary" onClick={() => addGap(g)}>Add it yourself</Button>}
+                  <li key={g} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                    <span>{FIELD_LABEL[g]}</span>
+                    {gapEdit?.attr === g ? (
+                      <form className="flex w-full gap-2 sm:w-auto sm:flex-1 sm:justify-end" onSubmit={(e) => { e.preventDefault(); void addGap(g, gapEdit.value); }}>
+                        <Input autoFocus aria-label={FIELD_LABEL[g]} className="sm:max-w-sm" value={gapEdit.value} onChange={(e) => setGapEdit({ attr: g, value: e.target.value })} />
+                        <Button size="sm" type="submit" disabled={!gapEdit.value.trim()}>Save</Button>
+                        <Button size="sm" type="button" variant="ghost" onClick={() => setGapEdit(null)}>Cancel</Button>
+                      </form>
+                    ) : canEdit && <Button size="sm" variant="secondary" onClick={() => setGapEdit({ attr: g, value: "" })}>Add it yourself</Button>}
                   </li>
                 ))}
               </ul>
@@ -167,22 +205,38 @@ function DealPage() {
         </>
       )}
 
-      {analysis && <Stakeholders rows={stakeholders} analysisId={id} userId={analysis.user_id} canEdit={canEdit} onChange={refresh} onQuote={setQuote} />}
+      {analysis && <Stakeholders rows={stakeholders} analysisId={id} userId={analysis.user_id} canEdit={canEdit} onChange={refresh} onQuote={setQuote} onAsk={setAsk} />}
 
-      {quote !== null && <QuoteView text={doc?.text ?? ""} quote={quote} onClose={() => setQuote(null)} />}
+      {quote !== null && <QuoteView text={doc?.text ?? ""} target={quote} onClose={() => setQuote(null)} />}
+      <ConfirmDialog request={ask} onClose={() => setAsk(null)} />
     </main>
   );
 }
 
-function QuoteView({ text, quote, onClose }: { text: string; quote: string; onClose: () => void }) {
-  const range = useMemo(() => findQuoteRange(text, quote), [text, quote]);
+type QuoteTarget = { quote: string; label: string | null; value: string | null; field?: string | null };
+const CHECK_TEXT = { found: "Found word for word in the document", not_found: "Not found word for word", too_short: "Too short to verify" } as const;
+
+function QuoteView({ text, target, onClose }: { text: string; target: QuoteTarget; onClose: () => void }) {
+  const { quote } = target;
+  const check = checkDocQuote(quote, text);
+  const range = useMemo(() => (check === "too_short" ? null : findQuoteRange(text, quote)), [text, quote, check]);
+  const pill = LABEL_PILL[target.label ?? ""];
   return (
     <div className="fixed inset-0 z-50 flex bg-foreground/20" onClick={onClose}>
       <div className="ml-auto grid h-full w-full max-w-5xl grid-cols-1 bg-card md:grid-cols-[1fr_1.4fr]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Quote in document">
         <div className="border-b border-border p-6 md:border-r md:border-b-0">
           <div className="flex items-center justify-between"><h2 className="font-semibold">Quote</h2><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close"><X /></Button></div>
+          <p className={cn("mt-4 rounded-lg border px-3 py-2 text-sm font-medium", check === "found" ? "border-verified/25 bg-verified/10 text-verified" : "border-risk/25 bg-risk/10 text-risk")}>
+            {CHECK_TEXT[check]}
+          </p>
+          {(target.value || pill) && (
+            <div className="mt-4">
+              {target.field && <div className="text-xs text-muted-foreground">{target.field}</div>}
+              {target.value && <p className="text-sm">{target.value}</p>}
+              {pill && <Pill tone={pill.tone} className="mt-1.5">{pill.text}</Pill>}
+            </div>
+          )}
           <blockquote className="mt-4 rounded-lg border border-border bg-background p-4 font-mono text-sm">“{quote}”</blockquote>
-          {!range && <p className="mt-3 text-sm text-risk">This quote was not found word for word in the document</p>}
         </div>
         <div className="overflow-y-auto p-6 font-mono text-xs leading-relaxed whitespace-pre-wrap">
           {range ? (<>
@@ -197,7 +251,7 @@ function QuoteView({ text, quote, onClose }: { text: string; quote: string; onCl
 }
 
 type SRow = { id: string; name: string | null; title: string | null; department: string | null; project_role: string | null; user_provided: boolean | null; quote: string | null; quote_verified: boolean | null };
-function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote }: { rows: SRow[]; analysisId: string; userId: string; canEdit: boolean; onChange: () => void; onQuote: (q: string) => void }) {
+function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote, onAsk }: { rows: SRow[]; analysisId: string; userId: string; canEdit: boolean; onChange: () => void; onQuote: (q: QuoteTarget) => void; onAsk: (r: ConfirmRequest) => void }) {
   const [edit, setEdit] = useState<Partial<SRow> | null>(null);
   async function save() {
     if (!edit) return;
@@ -208,10 +262,14 @@ function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote }: 
     if (error) { toast.error(error.message); return; }
     setEdit(null); onChange();
   }
-  async function del(id: string) {
-    if (!confirm("Delete this stakeholder?")) return;
-    const { error } = await supabase.from("stakeholders").delete().eq("id", id);
-    if (error) toast.error(error.message); else onChange();
+  function del(r: SRow) {
+    onAsk({
+      title: "Delete this stakeholder?", body: `${r.name ?? r.title ?? "This person"} will be removed from this analysis.`, action: "Delete", destructive: true,
+      onConfirm: async () => {
+        const { error } = await supabase.from("stakeholders").delete().eq("id", r.id);
+        if (error) toast.error(error.message); else onChange();
+      },
+    });
   }
   const F = ["name", "title", "department", "project_role"] as const;
   return (
@@ -227,10 +285,10 @@ function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote }: 
           {rows.map((r) => edit?.id === r.id ? <EditRow key={r.id} edit={edit} setEdit={setEdit} save={save} fields={F} /> : (
             <tr key={r.id}>
               <td className="py-2">{r.name ?? "—"}</td><td>{r.title ?? "—"}</td><td>{r.department ?? "—"}</td><td>{r.project_role ?? "—"}</td>
-              <td>{r.user_provided ? <Pill tone="primary">Added by you</Pill> : r.quote ? <EvidenceChip kind={r.quote_verified ? "verified" : "unverified"} onClick={() => onQuote(r.quote!)} /> : <EvidenceChip kind="inference" />}</td>
+              <td>{r.user_provided ? <Pill tone="primary">Added by you</Pill> : r.quote ? <EvidenceChip kind={r.quote_verified ? "verified" : "unverified"} onClick={() => onQuote({ quote: r.quote!, label: "explicitly_stated", value: [r.name, r.title].filter(Boolean).join(", "), field: "Stakeholder" })} /> : <EvidenceChip kind="inference" />}</td>
               <td className="whitespace-nowrap text-right">{canEdit && <>
                 <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setEdit(r)}><Pencil /></Button>
-                <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del(r.id)}><Trash2 /></Button>
+                <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del(r)}><Trash2 /></Button>
               </>}</td>
             </tr>
           ))}
