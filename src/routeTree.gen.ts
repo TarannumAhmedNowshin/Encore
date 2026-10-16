@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppNewRouteImport } from './routes/app.new'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppAIdRouteImport } from './routes/app.a.$id'
 import { Route as AppAIdAccountsRouteImport } from './routes/app.a.$id.accounts'
 import { Route as AppAIdDealRouteImport } from './routes/app.a.$id.deal'
@@ -50,6 +51,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppNewRoute = AppNewRouteImport.update({
   id: '/new',
   path: '/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAIdRoute = AppAIdRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/app/new': typeof AppNewRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/': typeof AppIndexRoute
   '/app/a/$id': typeof AppAIdRouteWithChildren
   '/app/a/$id/accounts': typeof AppAIdAccountsRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/app/new': typeof AppNewRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app': typeof AppIndexRoute
   '/app/a/$id': typeof AppAIdRouteWithChildren
   '/app/a/$id/accounts': typeof AppAIdAccountsRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/app/new': typeof AppNewRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/': typeof AppIndexRoute
   '/app/a/$id': typeof AppAIdRouteWithChildren
   '/app/a/$id/accounts': typeof AppAIdAccountsRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/how-it-works'
     | '/app/new'
+    | '/app/settings'
     | '/app/'
     | '/app/a/$id'
     | '/app/a/$id/accounts'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/how-it-works'
     | '/app/new'
+    | '/app/settings'
     | '/app'
     | '/app/a/$id'
     | '/app/a/$id/accounts'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/how-it-works'
     | '/app/new'
+    | '/app/settings'
     | '/app/'
     | '/app/a/$id'
     | '/app/a/$id/accounts'
@@ -218,6 +230,13 @@ declare module '@tanstack/react-router' {
       path: '/new'
       fullPath: '/app/new'
       preLoaderRoute: typeof AppNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/a/$id': {
@@ -286,12 +305,14 @@ const AppAIdRouteWithChildren =
 
 interface AppRouteChildren {
   AppNewRoute: typeof AppNewRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAIdRoute: typeof AppAIdRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppNewRoute: AppNewRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppAIdRoute: AppAIdRouteWithChildren,
 }
