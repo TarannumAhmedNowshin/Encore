@@ -76,7 +76,7 @@ export const draftOutreach = createServerFn({ method: "POST" })
       const { value } = await generateJsonWithFallback({ tier: "smart", userId, system, user, responseSchema: SCHEMA, zodSchema: zod });
       const seen = new Set<string>();
       const ds = value.drafts.filter((d) => !seen.has(d.channel) && seen.add(d.channel));
-      return ds.map((d) => ({ d, v: verifyDraft(d, facts, { anonymous, customerName: analysis.customer_name, targetName: t.name }) }));
+      return ds.map((d) => ({ d, v: verifyDraft(d, facts, { anonymous, customerName: analysis.customer_name, targetName: t.name ?? undefined }) }));
     };
     let out = await run();
     if (!out.length || out.some((x) => !x.v.all_claims_verified)) out = await run();

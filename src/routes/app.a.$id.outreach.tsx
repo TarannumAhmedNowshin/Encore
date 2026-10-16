@@ -364,7 +364,7 @@ function OutreachPage() {
                       {f ? <p className="mt-1 text-muted-foreground">{f.value}</p> : <p className="mt-1 text-risk">{(c as { ungrounded?: boolean }).ungrounded ? "Factual sentence with no backing fact" : "Not tied to a fact"}</p>}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         {f && <Pill>{about}</Pill>}
-                        <EvidenceChip kind={c.verified ? "verified" : "unverified"} label={c.verified ? "Grounded" : "Unverified"} onClick={f ? () => setDrawer(f) : undefined} />
+                        <EvidenceChip kind={c.verified ? "verified" : "unverified"} label={c.verified ? "Grounded" : "Unverified"} {...(f ? { onClick: () => setDrawer(f) } : {})} />
                       </div>
                     </li>
                   );
