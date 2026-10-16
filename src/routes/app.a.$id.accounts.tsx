@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
 import { useDiscoveryRun } from "@/hooks/useDiscoveryRun";
+import { findDepartments } from "@/lib/encore/departments.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { REGION_LABEL } from "@/lib/encore/intake";
 import { accountsCsv, bubbleRadius, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
@@ -49,7 +52,26 @@ function AccountsPage() {
   const [filter, setFilter] = useState<AccountFilter>("qualified");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "default", dir: 1 });
   const [openId, setOpenId] = useState<string | null>(null);
+  const [bulk, setBulk] = useState<{ running: boolean; done: number; total: number } | null>(null);
+  const findDeps = useServerFn(findDepartments);
   const targets = d.targets as unknown as Target[];
+
+  const findDepsBulk = async () => {
+    const top = targets.filter((t) => t.status === "qualified").sort(defaultOrder).slice(0, 5);
+    if (!top.length || bulk?.running) return;
+    setBulk({ running: true, done: 0, total: top.length });
+    const queue = [...top];
+    let done = 0;
+    await Promise.all(Array.from({ length: Math.min(2, queue.length) }, async () => {
+      while (queue.length) {
+        const t = queue.shift()!;
+        try { const r = await findDeps({ data: { target_id: t.id } }); if (r.message) toast(`${t.name}: ${r.message}`); }
+        catch (e) { toast.error(`${t.name}: ${e instanceof Error ? e.message : "Department search failed"}`); }
+        done++; setBulk({ running: true, done, total: top.length });
+      }
+    }));
+    setBulk(null);
+  };
   const rows = useMemo(() => {
     const list = targets.filter((t) => matchesFilter(t, filter));
     if (sort.key === "default") return [...list].sort(defaultOrder);
@@ -86,6 +108,11 @@ function AccountsPage() {
         </div>
         <div className="flex gap-2">
           {has && <Button variant="outline" onClick={exportCsv}><Download /> Export CSV</Button>}
+          {!readOnly && sum.qualified > 0 && (
+            <Button variant="outline" onClick={() => void findDepsBulk()} disabled={!!bulk?.running || d.active}>
+              {bulk?.running ? `Finding departments ${bulk.done} of ${bulk.total}…` : "Find departments for top 5"}
+            </Button>
+          )}
           {!readOnly && has && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button>}
         </div>
       </div>
@@ -97,6 +124,11 @@ function AccountsPage() {
         </Card>
       )}
       {d.timeline && <Card className="mt-6"><RunTimeline steps={d.timeline} /></Card>}
+      {bulk && (
+        <Card className="mt-6">
+          <RunTimeline steps={[{ label: "Finding departments for the top 5 qualified companies", state: bulk.running ? "running" : "done", elapsed: `${bulk.done} of ${bulk.total}` }]} />
+        </Card>
+      )}
 
       {!has ? (
         <section className="mt-8">
@@ -197,7 +229,7 @@ function AccountsPage() {
         </>
       )}
       <EvidenceDrawer open={!!open} onClose={() => setOpenId(null)} title={open?.name ?? "Account"}>
-        {open && <Dossier t={open} />}
+        {open && <Dossier t={open} readOnly={readOnly} />}
       </EvidenceDrawer>
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </main>
@@ -246,17 +278,31 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
   );
 }
 
-function Dossier({ t }: { t: Target }) {
+type Dept = { id: string; name: string | null; rank: string | null; rationale: string | null; quote: string | null; source_url: string | null; verified: boolean | null };
+
+function Dossier({ t, readOnly }: { t: Target; readOnly: boolean }) {
+  const findDeps = useServerFn(findDepartments);
+  const [finding, setFinding] = useState(false);
+  const [noEvidence, setNoEvidence] = useState<string | null>(null);
   const extras = useQuery({
     queryKey: ["dossier", t.id],
     queryFn: async () => {
       const [deps, people] = await Promise.all([
-        supabase.from("departments").select("id, name, rationale").eq("target_id", t.id),
+        supabase.from("departments").select("id, name, rank, rationale, quote, source_url, verified").eq("target_id", t.id),
         supabase.from("contacts").select("id, name, title").eq("target_id", t.id),
       ]);
-      return { deps: deps.data ?? [], people: (people.data ?? []) as { id: string; name: string | null; title: string | null }[] };
+      return { deps: (deps.data ?? []) as Dept[], people: (people.data ?? []) as { id: string; name: string | null; title: string | null }[] };
     },
   });
+  const onFindDeps = async () => {
+    setFinding(true); setNoEvidence(null);
+    try {
+      const r = await findDeps({ data: { target_id: t.id } });
+      if (r.message) setNoEvidence(r.message);
+      await extras.refetch();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Department search failed"); }
+    finally { setFinding(false); }
+  };
   const dims = (t.dimensions ?? {}) as Record<string, Dim>;
   const ev = (Array.isArray(t.evidence) ? t.evidence : []) as Ev[];
   const sim = t.similarity_percent ?? 0, evs = t.evidence_score ?? 0, buyer = BUYER_POINTS[t.buyer_fit ?? ""] ?? 50;
@@ -326,9 +372,31 @@ function Dossier({ t }: { t: Target }) {
       </section>
 
       <section>
-        <div className="mb-2 flex items-center justify-between"><h3 className="font-semibold">Departments</h3><Button size="sm" variant="outline" disabled title="Coming next">Find department</Button></div>
-        {extras.data?.deps.length ? <ul className="space-y-1 text-xs">{extras.data.deps.map((x) => <li key={x.id}><span className="font-medium">{x.name}</span> {x.rationale && <span className="text-muted-foreground">— {x.rationale}</span>}</li>)}</ul>
-          : <p className="text-xs text-muted-foreground">No department found yet.</p>}
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="font-semibold">Departments</h3>
+          {!readOnly && t.status === "qualified" && (
+            <Button size="sm" variant="outline" onClick={() => void onFindDeps()} disabled={finding}>{finding ? "Finding…" : "Find department"}</Button>
+          )}
+        </div>
+        {noEvidence && <p className="mb-2 text-xs text-muted-foreground">{noEvidence}</p>}
+        {extras.data?.deps.length ? (
+          <div className="space-y-3">
+            {extras.data.deps.map((x) => (
+              <div key={x.id} className="rounded-lg border border-border p-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{x.name}</span>
+                  <Pill tone={x.rank === "primary" ? "primary" : "neutral"}>{x.rank ?? "secondary"}</Pill>
+                </div>
+                {x.rationale && <p className="mt-1 text-xs text-muted-foreground">{x.rationale}</p>}
+                {x.quote && <blockquote className="mt-1.5 border-l-2 border-border pl-2 font-mono text-[11px] text-muted-foreground">"{x.quote}"</blockquote>}
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <EvidenceChip kind={x.verified ? "verified" : "unverified"} />
+                  {x.source_url && <a href={x.source_url} target="_blank" rel="noreferrer" className="truncate text-xs text-primary hover:underline">{x.source_url}</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-xs text-muted-foreground">No department found yet.</p>}
       </section>
       <section>
         <div className="mb-2 flex items-center justify-between"><h3 className="font-semibold">People</h3><Button size="sm" variant="outline" disabled title="Coming next">Find people</Button></div>

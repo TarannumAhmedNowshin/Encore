@@ -60,3 +60,19 @@ describe("qualify-company checks", () => {
   });
   it("detects busy errors", () => { expect(isBusyError("The AI service is busy, try again in a minute")).toBe(true); });
 });
+
+import { owningFunctions } from "@/lib/encore/discover";
+describe("owning functions", () => {
+  it("cleans and title-cases the owning department", () => {
+    expect(owningFunctions("Transport Planning Department", [])).toEqual(["Transport Planning"]);
+  });
+  it("adds persona functions shared by 2 or more personas", () => {
+    expect(owningFunctions("Claims", ["Claims/Operations", "operations", "IT"])).toEqual(["Claims", "Operations"]);
+  });
+  it("falls back to the most common persona function when nothing else", () => {
+    expect(owningFunctions("", ["IT", "Risk", "IT"])).toEqual(["IT"]);
+  });
+  it("returns empty when there is nothing to go on", () => {
+    expect(owningFunctions(null, [])).toEqual([]);
+  });
+});
