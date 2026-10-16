@@ -24,3 +24,19 @@ describe("discovery quality rules", () => {
     expect(out.map((x) => x.id)).toEqual(["d", "c", "b", "a"]);
   });
 });
+
+import { bubbleRadius, orbitDistance, orbitGroup } from "@/lib/encore/accounts";
+describe("orbit rules", () => {
+  it("places an 80% similar company at 20% of the radius", () => {
+    expect(orbitDistance({ status: "qualified", on_watch_list: false, similarity_percent: 80 })).toBeCloseTo(0.2);
+  });
+  it("places a 50% similar company halfway out", () => {
+    expect(orbitDistance({ status: "rejected", on_watch_list: false, similarity_percent: 50 })).toBe(0.5);
+  });
+  it("puts watch-list companies in the watch group", () => {
+    expect(orbitGroup({ status: "rejected", on_watch_list: true })).toBe("watch");
+  });
+  it("gives a zero-opportunity company the minimum bubble size", () => {
+    expect(bubbleRadius(0)).toBe(10);
+  });
+});

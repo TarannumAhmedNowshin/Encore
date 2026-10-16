@@ -56,3 +56,41 @@ export function faviconUrl(website: string | null): string | null {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(/^https?:/.test(website) ? website : `https://${website}`).hostname}&sz=32`; }
   catch { return null; }
 }
+
+// ---------- Orbit layout ----------
+export type OrbitGroup = "qualified" | "watch" | "rejected" | "failed" | "pending";
+export function orbitGroup(t: Pick<AccountRow, "status" | "on_watch_list">): OrbitGroup {
+  if (t.on_watch_list) return "watch";
+  if (t.status === "qualified" || t.status === "rejected" || t.status === "failed") return t.status;
+  return "pending";
+}
+/** Arc per group in degrees (0 = right, -90 = top, SVG y grows downward). */
+const ARCS: Record<OrbitGroup, [number, number]> = {
+  qualified: [-160, -20], watch: [-10, 40], rejected: [55, 125], failed: [130, 160], pending: [170, 200],
+};
+/** Distance from the centre as a 0..1 fraction of the outer radius: (100 − similarity) / 100; pending sits at the edge. */
+export function orbitDistance(t: Pick<AccountRow, "status" | "on_watch_list" | "similarity_percent">): number {
+  if (orbitGroup(t) === "pending") return 1;
+  return Math.max(0.12, Math.min(1, (100 - (t.similarity_percent ?? 0)) / 100));
+}
+export const bubbleRadius = (opp: number | null) => 10 + Math.max(0, Math.min(100, opp ?? 0)) * 0.14;
+
+/** inner = radius kept clear for the won-deal node; distances scale between inner and outer. */
+export const orbitRadius = (frac: number, inner: number, outer: number) => inner + frac * (outer - inner);
+export function orbitLayout<T extends AccountRow>(ts: T[], outer: number, inner = 0) {
+  const groups = new Map<OrbitGroup, T[]>();
+  for (const t of [...ts].sort(defaultOrder)) { const g = orbitGroup(t); groups.set(g, [...(groups.get(g) ?? []), t]); }
+  const out: { t: T; group: OrbitGroup; x: number; y: number; r: number; dist: number }[] = [];
+  for (const [g, list] of groups) {
+    const [a0, a1] = ARCS[g];
+    list.forEach((t, i) => {
+      const deg = list.length === 1 ? (a0 + a1) / 2 : a0 + ((a1 - a0) * i) / (list.length - 1);
+      const rad = (deg * Math.PI) / 180;
+      const dist = orbitRadius(orbitDistance(t), inner, outer);
+      out.push({ t, group: g, x: Math.cos(rad) * dist, y: Math.sin(rad) * dist, r: bubbleRadius(t.opportunity_score), dist });
+    });
+  }
+  return out;
+}
+
+export const initials = (name: string | null) => (name ?? "?").replace(/\([^)]*\)/g, "").split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w)).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";

@@ -18,9 +18,9 @@ export const targetsQuery = (id: string) => ({
     const [t, run, a] = await Promise.all([
       supabase.from("targets").select("*").eq("analysis_id", id).order("created_at"),
       supabase.from("runs").select("id, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("analyses").select("is_showcase, target_region").eq("id", id).single(),
+      supabase.from("analyses").select("is_showcase, target_region, customer_name, anonymise_customer").eq("id", id).single(),
     ]);
-    return { targets: t.data ?? [], run: run.data, readOnly: !!a.data?.is_showcase, region: a.data?.target_region ?? "global" };
+    return { targets: t.data ?? [], run: run.data, readOnly: !!a.data?.is_showcase, region: a.data?.target_region ?? "global", customer: a.data?.anonymise_customer ? null : a.data?.customer_name ?? null };
   },
 });
 
@@ -76,6 +76,8 @@ export function useDiscoveryRun(id: string) {
     setSteps((s) => s && { ...s, each: "done", verify: "running" });
     await end({ data: { analysis_id: id } }).catch(() => undefined);
     setSteps((s) => s && { ...s, verify: "done" });
+    const { data: done } = await supabase.from("targets").select("status").eq("analysis_id", id);
+    if (done?.length) toast(`${done.filter((t) => t.status === "qualified").length} of ${done.length} qualified`);
     refresh();
   }, [qualifyOne, end, id, refresh]);
 
