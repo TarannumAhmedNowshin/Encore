@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Pill } from "@/components/encore/primitives";
 import { REGION_LABEL } from "@/lib/encore/intake";
+import { funnelSteps, type FunnelCounts } from "@/lib/encore/overview";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/")({
@@ -11,16 +12,54 @@ export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
 
-type Row = { id: string; title: string | null; target_region: string; created_at: string; status: string };
+type Row = { id: string; title: string | null; target_region: string; created_at: string; status: string; user_id: string; is_showcase: boolean };
 const STAGE_LABEL: Record<string, string> = { draft: "Deal · draft", extracting: "Deal · reading", needs_review: "Deal · review", ready: "Playbook" };
+
+async function funnelFor(id: string): Promise<FunnelCounts> {
+  const head = { count: "exact" as const, head: true };
+  const [t, q, dep, c, dr, ap] = await Promise.all([
+    supabase.from("targets").select("id", head).eq("analysis_id", id),
+    supabase.from("targets").select("id", head).eq("analysis_id", id).eq("status", "qualified"),
+    supabase.from("departments").select("id", head).eq("analysis_id", id),
+    supabase.from("contacts").select("id", head).eq("analysis_id", id),
+    supabase.from("outreach_drafts").select("id", head).eq("analysis_id", id),
+    supabase.from("outreach_drafts").select("id", head).eq("analysis_id", id).in("status", ["approved", "edited"]),
+  ]);
+  return { found: t.count ?? 0, qualified: q.count ?? 0, withDepartment: dep.count ?? 0, contacts: c.count ?? 0, drafts: dr.count ?? 0, approved: ap.count ?? 0 };
+}
+
+function MiniFunnel({ counts }: { counts: FunnelCounts }) {
+  const steps = funnelSteps(counts);
+  const max = Math.max(1, ...steps.map((s) => s.count));
+  return (
+    <ol className="mt-4 space-y-1" aria-label="Funnel">
+      {steps.map((s) => (
+        <li key={s.key} className="flex items-center gap-2">
+          <span className="w-28 shrink-0 truncate text-[11px] text-muted-foreground">{s.label}</span>
+          <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+            <span className="absolute inset-y-0 left-0 rounded-full bg-primary/70" style={{ width: `${Math.max(s.count ? 6 : 0, (s.count / max) * 100)}%` }} />
+          </span>
+          <span className="w-6 text-right font-mono text-[11px] text-muted-foreground">{s.count}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 function Dashboard() {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [showcase, setShowcase] = useState<Row[]>([]);
+  const [funnels, setFunnels] = useState<Record<string, FunnelCounts>>({});
   useEffect(() => {
     void supabase.auth.getUser().then(async ({ data: u }) => {
       if (!u.user) return setRows([]);
-      const { data } = await supabase.from("analyses").select("id,title,target_region,created_at,status").eq("user_id", u.user.id).order("created_at", { ascending: false });
-      setRows(data ?? []);
+      const { data } = await supabase.from("analyses").select("id,title,target_region,created_at,status,user_id,is_showcase").order("created_at", { ascending: false });
+      const all = data ?? [];
+      setRows(all.filter((r) => r.user_id === u.user!.id));
+      setShowcase(all.filter((r) => r.is_showcase && r.user_id !== u.user!.id));
+      const own = all.filter((r) => r.user_id === u.user!.id);
+      const entries = await Promise.all(own.map(async (r) => [r.id, await funnelFor(r.id)] as const));
+      setFunnels(Object.fromEntries(entries));
     });
   }, []);
 
@@ -33,6 +72,17 @@ function Dashboard() {
         </div>
         {rows && rows.length > 0 && <Button asChild><Link to="/app/new"><Plus /> New analysis</Link></Button>}
       </div>
+      {showcase.length > 0 && (
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
+          {showcase.map((r) => (
+            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface block border-dashed p-5 transition-colors hover:border-primary/40">
+              <div className="flex items-center gap-2 text-xs font-medium text-primary"><Eye className="size-3.5" aria-hidden /> See a finished example</div>
+              <h2 className="mt-2 font-semibold">{r.title ?? "Example analysis"}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">{REGION_LABEL[r.target_region] ?? r.target_region} · read only</p>
+            </Link>
+          ))}
+        </div>
+      )}
       {rows === null ? (
         <div className="grid gap-4 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="surface h-28 animate-pulse" />)}</div>
       ) : rows.length === 0 ? (
@@ -49,7 +99,7 @@ function Dashboard() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {rows.map((r) => (
-            <Link key={r.id} to="/app/a/$id/deal" params={{ id: r.id }} className="surface block p-5 transition-colors hover:border-primary/40">
+            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface block p-5 transition-colors hover:border-primary/40">
               <h2 className="font-semibold">{r.title ?? "Untitled analysis"}</h2>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Pill tone="primary">{STAGE_LABEL[r.status] ?? "Deal"}</Pill>
@@ -57,6 +107,7 @@ function Dashboard() {
                 <span aria-hidden>·</span>
                 <span className="font-mono">{new Date(r.created_at).toLocaleDateString()}</span>
               </div>
+              {funnels[r.id] && <MiniFunnel counts={funnels[r.id]!} />}
             </Link>
           ))}
         </div>
