@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buyerFit, contactScore, evidenceScore, opportunityScore, similarityPercent } from "@/lib/encore/scoring";
 import { canon, companyAliases, normalizeCompany, quoteVerified } from "@/lib/encore/text";
-import { CAPACITY_MESSAGE, DAILY_LIMITS, GLOBAL_DAILY_LIMITS, dailyLimitFor, OWNER_USER_ID } from "@/lib/encore/limits";
+import { CAPACITY_MESSAGE, DAILY_LIMITS, GLOBAL_DAILY_LIMITS, dailyLimitFor, nextUsageReset, OWNER_USER_ID } from "@/lib/encore/limits";
 
 describe("scoring", () => {
   it("similarity is mean of ratings x100", () =>
@@ -31,5 +31,8 @@ describe("global caps", () => {
   it("capacity message is friendly", () =>
     expect(CAPACITY_MESSAGE).toBe("Today's live demo capacity is used up — explore the finished example analysis instead, or try again tomorrow."));
   it("owner keeps higher discovery limit", () => expect(dailyLimitFor("discovery", OWNER_USER_ID)).toBe(10));
+  it("owner has 25 daily company searches", () => expect(dailyLimitFor("people_search", OWNER_USER_ID)).toBe(25));
+  it("other users keep 10 daily company searches", () => expect(dailyLimitFor("people_search", "other")).toBe(10));
+  it("rolling usage resets when the oldest counted search expires", () => expect(nextUsageReset([{ created_at: "2026-10-16T01:00:00Z" }, { created_at: "2026-10-16T02:00:00Z" }])).toBe("2026-10-17T01:00:00.000Z"));
   it("other users get the standard limit", () => expect(dailyLimitFor("discovery", "someone-else")).toBe(3));
 });

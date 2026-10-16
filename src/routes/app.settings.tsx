@@ -83,6 +83,7 @@ function SettingsPage() {
               <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
                 <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (u.used / u.limit) * 100)}%` }} />
               </div>
+              {u.resetsAt && <p className="text-xs text-muted-foreground">Capacity starts resetting at {new Date(u.resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (local time)</p>}
             </div>
           ))}
         </CardContent>

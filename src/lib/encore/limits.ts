@@ -25,11 +25,17 @@ export const OWNER_USER_ID = "5cfb1fae-faad-4044-8765-9383bde38407";
 
 /** Temporary higher limits for the app builder's own account while building. */
 const BUILDER_OVERRIDES: Record<string, Partial<Record<LimitedKind, number>>> = {
-  [OWNER_USER_ID]: { discovery: 10 },
+  [OWNER_USER_ID]: { discovery: 10, people_search: 25 },
 };
 
 export function dailyLimitFor(kind: UsageKind, userId: string): number | undefined {
   const k = kind as LimitedKind;
   if (!(k in DAILY_LIMITS)) return undefined;
   return BUILDER_OVERRIDES[userId]?.[k] ?? DAILY_LIMITS[k];
+}
+
+/** Rolling limits free capacity when the oldest counted event expires. */
+export function nextUsageReset(events: { created_at: string }[]): string | null {
+  const oldest = events.map((e) => Date.parse(e.created_at)).filter(Number.isFinite).sort((a, b) => a - b)[0];
+  return oldest === undefined ? null : new Date(oldest + 24 * 3600 * 1000).toISOString();
 }

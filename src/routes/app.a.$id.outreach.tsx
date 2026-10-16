@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { dbFor } from "@/lib/encore/demo-db";
 import { isDemoId } from "@/lib/encore/demo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowRight, Check, Copy, Download, Mail, Pencil, Send, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Copy, Download, Loader2, Mail, Pencil, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { MobileActionBar, Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline } from "@/components/encore/primitives";
 import { draftOutreach } from "@/lib/encore/outreach.functions";
 import { CHANNELS, CHANNEL_LABELS, type Channel } from "@/lib/encore/outreach";
+import { finalBody, matchesFilter, recheckEditedBody } from "@/lib/encore/outreach-review";
 import { toastError } from "@/lib/encore/toast";
 import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { cn } from "@/lib/utils";
@@ -67,8 +68,8 @@ const outreachQuery = (id: string) => queryOptions({
 type CStatus = "none" | "pending" | "approved" | "rejected";
 const statusOf = (ds: Draft[]): CStatus => {
   if (!ds.length) return "none";
-  if (ds.some((d) => d.status === "approved" || d.status === "edited")) return "approved";
-  if (ds.some((d) => d.status === "pending")) return "pending";
+  if (ds.some((d) => ["pending", "edited", "error"].includes(d.status))) return "pending";
+  if (ds.some((d) => d.status === "approved")) return "approved";
   return "rejected";
 };
 const DOT: Record<CStatus, string> = { none: "bg-muted-foreground/40", pending: "bg-inference", approved: "bg-verified", rejected: "bg-risk" };
@@ -76,7 +77,6 @@ const STATUS_LABEL: Record<CStatus, string> = { none: "Not drafted", pending: "P
 type Filter = "all" | "pending" | "approved" | "rejected" | "none";
 const FILTERS: [Filter, string][] = [["all", "All"], ["pending", "Needs review"], ["approved", "Approved"], ["rejected", "Rejected"], ["none", "Not drafted"]];
 
-const finalBody = (d: Draft) => (d.status === "edited" ? d.edited_body : d.body) ?? "";
 const csvCell = (v: string | null | undefined) => `"${(v ?? "").replace(/"/g, '""')}"`;
 
 /** Splits the body into plain text and underlined claim spans (first match of each claim). */
@@ -112,6 +112,8 @@ function OutreachPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
+  const savingRef = useRef(false);
   const [noEvidence, setNoEvidence] = useState<Record<string, boolean>>({});
   const [bulk, setBulk] = useRunState<{ done: number; total: number; running: boolean } | null>(`outreach-bulk:${id}`, null);
   const [busy, setBusy] = useRunState<string[]>(`outreach-busy:${id}`, []);
@@ -152,9 +154,11 @@ function OutreachPage() {
   }
 
   const all = groups.flatMap((g) => g.contacts.map((x) => ({ ...x, t: g.t })));
-  const current = all.find((x) => x.c.id === selected) ?? all[0];
-  const draft = current?.drafts.find((x) => x.channel === channel);
-  const approved = all.flatMap((x) => x.drafts.filter((dr) => dr.status === "approved" || dr.status === "edited").map((dr) => ({ ...x, dr })));
+  const visible = all.filter((x) => matchesFilter(x.drafts, filter));
+  const current = visible.find((x) => x.c.id === selected) ?? visible[0];
+  const visibleDrafts = current?.drafts.filter((x) => filter === "all" || filter === "none" || matchesFilter([x], filter)) ?? [];
+  const draft = visibleDrafts.find((x) => x.channel === channel) ?? visibleDrafts[0];
+  const approved = all.flatMap((x) => x.drafts.filter((dr) => dr.status === "approved").map((dr) => ({ ...x, dr })));
 
   const draftOne = async (cid: string) => {
     if (busy.includes(cid)) return false; // never draft the same contact twice at once
@@ -168,9 +172,9 @@ function OutreachPage() {
     finally { setBusy((b) => b.filter((x) => x !== cid)); await refresh(); }
   };
 
-  const draftAll = async () => {
+  const draftAll = async (redraft = false) => {
     if (bulk?.running) return;
-    const list = all.filter((x) => d.scores.has(x.c.id)).map((x) => x.c.id);
+    const list = all.filter((x) => d.scores.has(x.c.id) && (redraft ? x.drafts.some((dr) => dr.status !== "approved") : !x.drafts.length)).map((x) => x.c.id);
     if (!list.length) { toast("Score contacts on the People page first."); return; }
     const key = `outreach:${id}`;
     let done = 0;
@@ -179,7 +183,9 @@ function OutreachPage() {
     const queue = [...list];
     await Promise.all(Array.from({ length: Math.min(2, queue.length) }, async () => {
       while (queue.length) {
-        await draftOne(queue.shift()!);
+        const cid = queue.shift();
+        if (!cid) break;
+        await draftOne(cid);
         done++;
         setBulk({ done, total: list.length, running: true });
         setJob({ key, analysisId: id, label: "Drafting outreach…", done, total: list.length });
@@ -190,12 +196,18 @@ function OutreachPage() {
   };
 
   const update = async (did: string, patch: Partial<Draft> & { decided_at?: string }) => {
-    const { error } = await supabase.from("outreach_drafts").update(patch as never).eq("id", did);
-    if (error) toast.error(error.message);
-    else {
+    if (savingRef.current) return false;
+    savingRef.current = true;
+    setSaving(did);
+    try {
+      const { error } = await supabase.from("outreach_drafts").update(patch as never).eq("id", did);
+      if (error) throw error;
       if (patch.status === "approved") toast.success("Draft approved");
+      qc.setQueryData(outreachQuery(id).queryKey, (old) => old ? { ...old, drafts: old.drafts.map((x) => x.id === did ? { ...x, ...patch } : x) } : old);
       await refresh();
-    }
+      return true;
+    } catch (e) { toastError(e, "Couldn't save draft", () => void update(did, patch)); return false; }
+    finally { savingRef.current = false; setSaving(null); }
   };
 
   const exportCsv = () => {
@@ -205,8 +217,8 @@ function OutreachPage() {
     const link = document.createElement("a"); link.href = url; link.download = "approved-outreach.csv"; link.click(); URL.revokeObjectURL(url);
   };
 
-  const claims = draft?.claims ?? [];
   const shownBody = draft ? finalBody(draft) : "";
+  const claims = draft?.edited_body != null ? recheckEditedBody(shownBody, draft.claims ?? []).claims : draft?.claims ?? [];
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-gutter">
@@ -217,6 +229,7 @@ function OutreachPage() {
           <p className="mt-1 text-sm text-muted-foreground">Every claim is tied to a fact. Nothing is ever sent automatically.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {!d.readOnly && all.some((x) => x.drafts.some((dr) => dr.status !== "approved")) && <Button variant="outline" onClick={() => void draftAll(true)} disabled={!!bulk?.running}>{bulk?.running && <Loader2 className="animate-spin" />}Re-draft all</Button>}
           <div className="flex rounded-lg border border-border p-0.5">
             {(["studio", "approved"] as const).map((v) => (
               <button key={v} type="button" onClick={() => setTab(v)}
@@ -262,12 +275,12 @@ function OutreachPage() {
           <aside className="surface min-w-0 p-3">
             <div className="mb-3 flex flex-wrap gap-1">
               {FILTERS.map(([f, l]) => (
-                <button key={f} type="button" onClick={() => setFilter(f)}
-                  className={cn("chip", filter === f ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground")}>{l}</button>
+                <Button key={f} size="sm" variant="ghost" onClick={() => { setFilter(f); setSelected(null); setEditing(null); setRejecting(null); }}
+                  className={cn("chip", filter === f ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground")}>{l} ({all.filter((x) => matchesFilter(x.drafts, f)).length})</Button>
               ))}
             </div>
             {groups.map((g) => {
-              const list = g.contacts.filter((x) => filter === "all" || x.status === filter);
+              const list = g.contacts.filter((x) => matchesFilter(x.drafts, filter));
               if (!list.length) return null;
               return (
                 <div key={g.t.id} className="mb-3">
@@ -306,7 +319,7 @@ function OutreachPage() {
                 <div className="mt-4 flex flex-wrap gap-1 border-b border-border">
                   {CHANNELS.map((ch) => (
                     <button key={ch} type="button" onClick={() => { setChannel(ch); setEditing(null); setRejecting(null); }}
-                      className={cn("-mb-px border-b-2 px-3 py-1.5 text-sm", channel === ch ? "border-accent font-medium text-accent" : "border-transparent text-muted-foreground")}>
+                      className={cn("-mb-px border-b-2 px-3 py-1.5 text-sm", (draft?.channel ?? channel) === ch ? "border-accent font-medium text-accent" : "border-transparent text-muted-foreground")}>
                       {CHANNEL_LABELS[ch]}
                     </button>
                   ))}
@@ -326,7 +339,7 @@ function OutreachPage() {
                       </p>
                     )}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      Status: <Pill>{draft.status === "edited" ? "Edited" : draft.status[0]!.toUpperCase() + draft.status.slice(1)}</Pill>
+                      Status: <Pill>{draft.status === "edited" ? "Edited" : (draft.status[0] ?? "").toUpperCase() + draft.status.slice(1)}</Pill>
                       {draft.rejection_reason && draft.status === "rejected" && <span>— {draft.rejection_reason}</span>}
                     </div>
                     {draft.subject && <div className="text-sm"><span className="text-muted-foreground">Subject: </span><span className="font-medium">{draft.subject}</span></div>}
@@ -334,30 +347,30 @@ function OutreachPage() {
                       <div className="space-y-2">
                         <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={10} aria-label="Edit draft" />
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => { void update(draft.id, { status: "edited", edited_body: text, decided_at: new Date().toISOString() }); setEditing(null); }}>Save</Button>
+                          <Button size="sm" disabled={!!saving || !text.trim()} onClick={async () => { const checked = recheckEditedBody(text, draft.claims ?? []); if (await update(draft.id, { status: "edited", edited_body: text, ...checked, decided_at: new Date().toISOString() })) setEditing(null); }}>{saving && <Loader2 className="animate-spin" />}{saving ? "Saving…" : "Save"}</Button>
                           <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
                         </div>
                       </div>
                     ) : (
                       <p data-tour="draft" className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {draft.status === "edited" ? shownBody : segments(shownBody, claims).map((sg, k) => sg.i === undefined ? <span key={k}>{sg.text}</span> : (
-                          <span key={k} onMouseEnter={() => setHover(sg.i!)} onMouseLeave={() => setHover(null)}
-                            className={cn("underline decoration-2 underline-offset-4", claims[sg.i]?.verified ? "decoration-verified/60" : "decoration-risk/60", hover === sg.i && "bg-accent/10")}>{sg.text}</span>
+                        {segments(shownBody, claims).map((sg, k) => sg.i === undefined ? <span key={k}>{sg.text}</span> : (
+                          <span key={k} title={claims[sg.i]?.verified ? "Grounded" : "Not grounded"} onMouseEnter={() => setHover(sg.i ?? null)} onMouseLeave={() => setHover(null)}
+                            className={cn("underline underline-offset-4", claims[sg.i]?.verified ? "decoration-2 decoration-verified/60" : "decoration-dotted decoration-muted-foreground/60", hover === sg.i && "bg-accent/10")}>{sg.text}</span>
                         ))}
                       </p>
                     )}
                     {rejecting === draft.id && (
                       <div className="flex gap-2">
                         <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Why reject this draft?" aria-label="Rejection reason" />
-                        <Button size="sm" disabled={!text.trim()} onClick={() => { void update(draft.id, { status: "rejected", rejection_reason: text.trim(), decided_at: new Date().toISOString() }); setRejecting(null); }}>Reject</Button>
+                        <Button size="sm" disabled={!text.trim() || !!saving} onClick={async () => { if (await update(draft.id, { status: "rejected", rejection_reason: text.trim(), decided_at: new Date().toISOString() })) setRejecting(null); }}>{saving ? "Rejecting…" : "Reject"}</Button>
                         <Button size="sm" variant="ghost" onClick={() => setRejecting(null)}>Cancel</Button>
                       </div>
                     )}
                     {!d.readOnly && editing !== draft.id && rejecting !== draft.id && (
                       <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-                        <Button size="sm" onClick={() => void update(draft.id, { status: "approved", decided_at: new Date().toISOString() })} disabled={draft.status === "approved"}><Check /> Approve</Button>
-                        <Button size="sm" variant="outline" onClick={() => { setText(finalBody(draft)); setEditing(draft.id); }}><Pencil /> Edit</Button>
-                        <Button size="sm" variant="outline" onClick={() => { setText(""); setRejecting(draft.id); }}><X /> Reject</Button>
+                        <Button size="sm" onClick={() => void update(draft.id, { status: "approved", decided_at: new Date().toISOString() })} disabled={draft.status === "approved" || !!saving}>{saving === draft.id ? <Loader2 className="animate-spin" /> : <Check />}{saving === draft.id ? "Saving…" : "Approve"}</Button>
+                        <Button size="sm" variant="outline" disabled={!!saving} onClick={() => { setText(finalBody(draft)); setEditing(draft.id); }}><Pencil /> Edit</Button>
+                        <Button size="sm" variant="outline" disabled={!!saving} onClick={() => { setText(""); setRejecting(draft.id); }}><X /> Reject</Button>
                         {(draft.status === "approved" || draft.status === "edited") && <CopyActions d={draft} />}
                       </div>
                     )}

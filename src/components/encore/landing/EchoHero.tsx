@@ -51,7 +51,7 @@ export function EchoHero() {
 
   return (
     <section className="hero-ruled relative overflow-hidden">
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-gutter pb-16 pt-8 md:grid-cols-[1.05fr_1fr] md:gap-10 md:pb-20 md:pt-12 lg:min-h-[calc(100svh-4rem)]">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-gutter pb-16 pt-8 min-[1100px]:grid-cols-[1.05fr_1fr] md:gap-10 md:pb-20 md:pt-12 min-[1100px]:min-h-[calc(100svh-4rem)]">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-wider text-muted-foreground md:whitespace-nowrap">
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-verified" />
@@ -69,7 +69,7 @@ export function EchoHero() {
           <p className="mt-6 max-w-[34em] text-[17px] leading-relaxed text-muted-foreground md:text-[19px]">
             Drop in one won statement of work. Encore reads why they bought, finds companies saying the same thing in public, quotes them word for word and drafts outreach you approve.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row [&>a]:whitespace-nowrap">
             <Link to="/demo" className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-6 text-[15px] font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
               See it work — no sign-up →
             </Link>

@@ -1,4 +1,9 @@
 # Roadmap
+- [x] Preserve edited approvals and recheck claim highlights; correct status filters and counts
+- [x] Fix first-click actions and immediate pending feedback
+- [x] Surface people-search failures, consistent usage/reset time, owner limit 25
+- [x] Prevent scope/target overclaims and add Re-draft all excluding Approved
+- [x] Stack landing hero below 1100px and verify flows
 - [x] Playbook: Ideal customer card, need-signals table, persona cards, hover-only pencils
 - [x] Overview: story header, 5-step pipeline, highlights, funnel with conversion %, next action + runs
 - [x] Accounts: orbit zoom/pan/fit, quadrant padding+labels+zoom, list HQ code + cards on phone, stat chips, "Find departments for all qualified"

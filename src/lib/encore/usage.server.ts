@@ -44,6 +44,12 @@ export async function checkGlobalQuota(userId: string, kind: UsageKind) {
 export async function checkQuota(userId: string, kind: UsageKind, limitPerDay = dailyLimitFor(kind, userId)) {
   await checkGlobalQuota(userId, kind);
   if (limitPerDay == null) return;
-  if ((await usedToday(userId, kind)) >= limitPerDay)
-    throw new HttpError(429, `Daily limit reached for ${kind}, try again tomorrow`);
+  if ((await usedToday(userId, kind)) >= limitPerDay) {
+    const db = await adminClient();
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data } = await db.from("usage_events").select("created_at").eq("user_id", userId).eq("kind", kind).gte("created_at", since).order("created_at").limit(1);
+    const { nextUsageReset } = await import("./limits");
+    const reset = nextUsageReset(data ?? []);
+    throw new HttpError(429, `Daily limit reached for ${kind}${reset ? ` — capacity starts resetting at ${new Date(reset).toISOString().slice(11, 16)} UTC` : ", try again tomorrow"}`);
+  }
 }

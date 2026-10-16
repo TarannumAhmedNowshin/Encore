@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFactList, customerDescriptor, verifyDraft } from "@/lib/encore/outreach";
+import { buildFactList, channelsToDraft, customerDescriptor, verifyDraft } from "@/lib/encore/outreach";
 
 const tf = [
   { id: "t1", value: "Plans routes by hand", subject: "target_evidence", attribute: "adjacent", status: "active", target_id: "x", verified: false },
@@ -12,6 +12,9 @@ const df = [
 ];
 
 describe("outreach fact list", () => {
+  it("re-drafting skips approved channels but includes edited and rejected drafts", () => {
+    expect(channelsToDraft([{ channel: "email", status: "approved" }, { channel: "executive_intro", status: "edited" }, { channel: "linkedin_message", status: "rejected" }])).toEqual(["executive_intro", "linkedin_message", "talking_points"]);
+  });
   it("lists verified target evidence first, then verified engagement facts, indexed from 0", () => {
     expect(buildFactList("Acme", tf, df).map((f) => f.line)).toEqual([
       "[0] (about Acme) Hiring route planners",
@@ -64,6 +67,17 @@ describe("claim verification", () => {
   it("passes an aim-phrased claim on a TARGET fact", () => {
     const r = verifyDraft({ ...base, body: "The engagement is designed to cut planning time by 40%.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
     expect(r.claims[0]!.verified).toBe(true);
+  });
+  it.each(["built", "ingested", "delivered", "implemented", "achieved"])("rejects %s for signed scope that is not completed", (verb) => {
+    const scope = buildFactList("Acme", [], [{ id: "scope", value: "Classify documents", subject: "solution", attribute: "solution_capabilities", status: "active", target_id: null, verified: true }]);
+    const claim = `We ${verb} a document system`;
+    expect(verifyDraft({ channel: "email", subject: "", body: `${claim}.`, claims: [{ claim, fact_index: 0 }] }, scope, { anonymous: false, customerName: null }).claims[0]?.verified).toBe(false);
+  });
+  it("allows present-tense scope and explicitly completed work", () => {
+    const scope = buildFactList("Acme", [], [{ id: "scope", value: "Classify documents", subject: "solution", attribute: "solution_capabilities", status: "active", target_id: null, verified: true }]);
+    expect(verifyDraft({ channel: "email", subject: "", body: "We are building a document system.", claims: [{ claim: "We are building a document system", fact_index: 0 }] }, scope, { anonymous: false, customerName: null }).claims[0]?.verified).toBe(true);
+    const completed = buildFactList("Acme", [], [{ id: "done", value: "Delivered a document system", subject: "solution", attribute: "completed_work", status: "active", target_id: null, verified: true }]);
+    expect(verifyDraft({ channel: "email", subject: "", body: "We delivered a document system.", claims: [{ claim: "We delivered a document system", fact_index: 0 }] }, completed, { anonymous: false, customerName: null }).claims[0]?.verified).toBe(true);
   });
   it("flags factual sentences not covered by any claim", () => {
     const r = verifyDraft({ ...base, body: "We cut planning time by 40%. It also eliminated 4 hours of nightly manual planning.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });

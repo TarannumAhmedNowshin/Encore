@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { dbFor } from "@/lib/encore/demo-db";
 import { isDemoId } from "@/lib/encore/demo";
 import { Loader2 } from "lucide-react";
@@ -78,6 +78,8 @@ function PeoplePage() {
   const scoreFn = useServerFn(scoreContacts);
   const [bulk, setBulk] = useRunState<Bulk>(`people-bulk:${id}`, null);
   const [busyId, setBusyId] = useRunState<string | null>(`people-busy:${id}`, null);
+  const actionRef = useRef(false);
+  const [errors, setErrors] = useRunState<Record<string, string>>(`people-errors:${id}`, {});
 
   const d = q.data;
   const byTarget = useMemo(() => {
@@ -100,19 +102,28 @@ function PeoplePage() {
   })();
 
   const runFind = async (targetId: string) => {
+    if (actionRef.current || busyId || bulk?.running) return;
+    actionRef.current = true;
     setBusyId(targetId);
+    setErrors((prev) => ({ ...prev, [targetId]: "" }));
     try {
       const r = await findFn({ data: { target_id: targetId } });
       if (r.message) toast(r.message);
       await refresh();
-    } catch (e) { toastError(e, "People search failed", () => void runFind(targetId)); }
-    finally { setBusyId(null); }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "People search failed";
+      setErrors((prev) => ({ ...prev, [targetId]: message }));
+      toastError(e, "People search failed", () => void runFind(targetId));
+    }
+    finally { await refresh(); actionRef.current = false; setBusyId(null); }
   };
   const runScore = async (targetId: string) => {
+    if (actionRef.current || busyId || bulk?.running) return;
+    actionRef.current = true;
     setBusyId(targetId);
     try { await scoreFn({ data: { target_id: targetId } }); await refresh(); }
     catch (e) { toastError(e, "Scoring failed", () => void runScore(targetId)); }
-    finally { setBusyId(null); }
+    finally { actionRef.current = false; setBusyId(null); }
   };
 
   // One company at a time: Apify free credit and the free AI tier can't take parallel load.
@@ -131,7 +142,8 @@ function PeoplePage() {
         if ("message" in r && r.message) toast(`${t.name}: ${r.message}`);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Failed";
-        toast.error(`${t.name}: ${msg}`);
+        setErrors((prev) => ({ ...prev, [t.id]: msg }));
+        toastError(e, `${t.name}: ${msg}`, () => void runBulk(kind));
         if (isCreditError(msg)) {
           toast.error("Stopped: the people-search provider says its credit or limit is exhausted.");
           setBulk({ kind, done: i, total: list.length, running: false });
@@ -210,17 +222,19 @@ function PeoplePage() {
                   </div>
                   {!d.readOnly && (
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => void runFind(t.id)} disabled={busy || !!bulk?.running}>
-                        {busy ? "Working…" : contacts.length ? "Search again" : "Find people"}
+                      <Button size="sm" variant="outline" onClick={() => void runFind(t.id)} disabled={!!busyId || !!bulk?.running}>
+                        {busy && <Loader2 className="animate-spin" />}{busy ? "Searching…" : contacts.length ? "Search again" : "Find people"}
                       </Button>
                       {contacts.length > 0 && (
-                        <Button size="sm" variant="outline" onClick={() => void runScore(t.id)} disabled={busy || !!bulk?.running}>
+                        <Button size="sm" variant="outline" onClick={() => void runScore(t.id)} disabled={!!busyId || !!bulk?.running}>
                           Score contacts
                         </Button>
                       )}
                     </div>
                   )}
                 </div>
+
+                {errors[t.id] && <div role="alert" className="mt-3 flex flex-wrap items-center gap-2 text-sm text-risk"><span>{errors[t.id]}</span><Button size="sm" variant="outline" disabled={!!busyId || !!bulk?.running} onClick={() => void runFind(t.id)}>Retry</Button></div>}
 
                 <div data-tour="board" className="mt-4 space-y-3">
                   {ROLE_SLOTS.map((slot) => {
@@ -252,7 +266,8 @@ function PeoplePage() {
 
       <p className="mt-6 text-xs text-muted-foreground">
         People data from LinkedIn via Apify. Shown only to you.
-        {peopleLeft != null && ` ${peopleLeft} of 10 people searches left today.`}
+        {peopleLeft != null && ` ${peopleLeft} of ${usage.data?.find((u) => u.kind === "people_search")?.limit} company searches left today (one company = one search).`}
+        {usage.data?.find((u) => u.kind === "people_search")?.resetsAt && ` Capacity starts resetting at ${new Date(usage.data.find((u) => u.kind === "people_search")?.resetsAt ?? "").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} (local time).`}
       </p>
       {!d.readOnly && d.targets.length > 0 && <MobileActionBar><Button onClick={() => void runBulk("find")} disabled={!!bulk?.running || !!busyId}>{bulk?.running && bulk.kind === "find" ? `Finding ${bulk.done} of ${bulk.total}…` : "Find people at top 3"}</Button></MobileActionBar>}
     </main>

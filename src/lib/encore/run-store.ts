@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 
 /**
  * App-level store for long-running browser-orchestrated jobs (discovery, departments, people).
@@ -23,8 +23,9 @@ export function setRun<T>(key: string, v: T | ((prev: T) => T), initial: T) {
 
 /** Like useState, but the value is shared app-wide and survives unmounting. */
 export function useRunState<T>(key: string, initial: T): [T, (v: T | ((prev: T) => T)) => void] {
-  const value = useSyncExternalStore(subscribe, () => getRun(key, initial), () => initial);
-  const set = useCallback((v: T | ((prev: T) => T)) => setRun(key, v, initial), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const initialRef = useRef(initial);
+  const value = useSyncExternalStore(subscribe, () => getRun(key, initialRef.current), () => initialRef.current);
+  const set = useCallback((v: T | ((prev: T) => T)) => setRun(key, v, initialRef.current), [key]);
   return [value, set];
 }
 
