@@ -64,7 +64,7 @@ function NewAnalysis() {
     try {
       const kind = checkFile(file.name, file.size);
       setBusy("Reading your document…");
-      const ex = await import("@/lib/encore/extract.client");
+      const ex = await import("@/lib/encore/extract-browser");
       const r = kind === "pdf" ? await ex.extractPdf(file) : await ex.extractDocx(file);
       if (isTooLittleText(r.text)) throw new Error(LITTLE_TEXT_MESSAGE);
       setLoaded({ ...r, file, filename: file.name, mime: file.type || kind, size: file.size });
