@@ -4,7 +4,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { loadDemo } from "@/lib/encore/demo-db";
 import { heroData, keyPhrase, numberWord, type HeroData } from "@/lib/encore/hero";
-import { SOW_QUOTES } from "./Story";
 
 const initials = (n: string) => n.split(/[\s&]+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 const INDENT = ["ml-0", "ml-[10px] md:ml-[18px]", "ml-[20px] md:ml-[36px]"];
@@ -44,7 +43,7 @@ export function EchoHero() {
   const shown = echoes.slice(page * 3, page * 3 + 3);
 
   // Before data arrives (or if it fails) the document card shows the sample's own SOW sentence.
-  const sentence = data?.sentence ?? SOW_QUOTES[0]!.text;
+  const sentence = data?.sentence ?? "";
   const [a, b] = data?.highlight ?? keyPhrase(sentence);
   const [on, setOn] = useState(false);
   useEffect(() => { const t = setTimeout(() => setOn(true), 500); return () => clearTimeout(t); }, []);

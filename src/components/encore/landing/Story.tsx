@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { loadDemo } from "@/lib/encore/demo-db";
+import { storyData, type StoryData, type StoryQuote } from "@/lib/encore/hero";
 import { Link } from "@tanstack/react-router";
 import {
   motion, useScroll, useTransform, useMotionValue, useMotionValueEvent, useReducedMotion,
@@ -9,17 +11,9 @@ import { EchoHero } from "./EchoHero";
 import { Button } from "@/components/ui/button";
 import { EvidenceChip, Pill } from "@/components/encore/primitives";
 
-/* Real lines from the Harrowgate Mutual sample SOW (fictional company). */
-export const SOW_QUOTES = [
-  { attr: "Pain point", text: "Claim documents wait an average of 2.6 business days before reaching the adjuster's file." },
-  { attr: "Pain point", text: "About 18 percent of documents are attached to the wrong claim or sent to the wrong queue." },
-  { attr: "Current process", text: "A team of 22 intake specialists manually reads each incoming document and keys the data into the claims system." },
-];
-const PERSONAS = ["VP Claims Operations", "Claims Executive Sponsor", "Intake Team Lead", "Claims IT Architect"];
-const COMPANIES = [
-  "State Farm", "Amica Mutual", "Tokio Marine", "Liberty Mutual", "Universal P&C", "Arbella",
-  "American Family", "Great American", "The Hartford", "Acuity", "Auto-Owners", "American National",
-];
+/* Every quote, name and number in the story comes from the public demo snapshot. */
+const StoryCtx = createContext<StoryData | null>(null);
+const useStory = () => useContext(StoryCtx);
 const initials = (n: string) => n.split(/[\s&]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
 /** Cinematic only on wide screens without reduced motion; otherwise final states, stacked. */
@@ -78,7 +72,7 @@ function QuoteLine({ p, i, text }: { p: MotionValue<number>; i: number; text: st
   const bg = useTransform(p, [s, s + 0.08], ["color-mix(in oklab, var(--primary) 0%, transparent)", "color-mix(in oklab, var(--primary) 18%, transparent)"]);
   return <motion.span style={{ backgroundColor: bg }} className="rounded px-0.5 text-foreground">{text}</motion.span>;
 }
-function FactCard({ p, i, q }: { p: MotionValue<number>; i: number; q: (typeof SOW_QUOTES)[number] }) {
+function FactCard({ p, i, q }: { p: MotionValue<number>; i: number; q: StoryQuote }) {
   const s = 0.18 + i * 0.25;
   const opacity = useTransform(p, [s, s + 0.1], [0, 1]);
   const x = useTransform(p, [s, s + 0.12], [-80, 0]);
@@ -93,32 +87,34 @@ function FactCard({ p, i, q }: { p: MotionValue<number>; i: number; q: (typeof S
   );
 }
 function DocScene({ p }: { p: MotionValue<number> }) {
+  const d = useStory();
   const filler = "w-full h-2 rounded bg-muted";
+  const quotes = d?.quotes ?? [];
   return (
     <div className="grid items-center gap-8 lg:grid-cols-2">
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4" aria-hidden /> Harrowgate_SOW.pdf · page 3</div>
+        <div className="mb-4 flex min-w-0 items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4 shrink-0" aria-hidden /> <span className="truncate">{d?.filename ?? "Won SOW"}</span></div>
         <div className="space-y-3 text-[13px] leading-relaxed text-muted-foreground">
           <div className={filler} /><div className={`${filler} w-4/5`} />
-          {SOW_QUOTES.map((q, i) => (
-            <p key={i}>Current state. <QuoteLine p={p} i={i} text={q.text} /> {i === 0 ? "Escalations rise in peak season." : ""}</p>
+          {quotes.map((q, i) => (
+            <div key={i} className="space-y-3"><p><QuoteLine p={p} i={i} text={q.text} /></p><div className={`${filler} w-3/5`} /></div>
           ))}
-          <div className={`${filler} w-3/5`} /><div className={filler} />
+          <div className={filler} />
         </div>
       </div>
-      <div className="space-y-4">{SOW_QUOTES.map((q, i) => <FactCard key={i} p={p} i={i} q={q} />)}</div>
+      <div className="space-y-4">{quotes.map((q, i) => <FactCard key={i} p={p} i={i} q={q} />)}</div>
     </div>
   );
 }
 
 /* ---------- 3 DNA ---------- */
-function MiniFact({ p, i }: { p: MotionValue<number>; i: number }) {
+function MiniFact({ p, i, text }: { p: MotionValue<number>; i: number; text: string }) {
   const y = useTransform(p, [0, 0.4], [(i - 1) * 90, 0]);
   const x = useTransform(p, [0, 0.4], [(i - 1) * 220, 0]);
   const opacity = useTransform(p, [0.3, 0.45], [1, 0]);
   return (
     <motion.div style={{ x, y, opacity }} className="absolute left-1/2 top-1/2 w-56 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-3 font-mono text-[11px] shadow-sm">
-      “{SOW_QUOTES[i]!.text.slice(0, 60)}…”
+      “{text}”
     </motion.div>
   );
 }
@@ -134,37 +130,40 @@ function PersonaChip({ p, i, name }: { p: MotionValue<number>; i: number; name: 
   );
 }
 function DnaCard({ p }: { p: MotionValue<number> }) {
+  const dna = useStory()?.dna;
   const opacity = useTransform(p, [0.35, 0.5], [0, 1]);
   const scale = useTransform(p, [0.35, 0.5], [0.85, 1]);
   return (
     <motion.div style={{ opacity, scale }} className="mx-auto w-full max-w-md rounded-xl border border-primary/30 bg-card p-6 shadow-sm">
-      <p className="font-mono text-[13px] text-primary">Sales DNA</p>
+      <div className="flex items-center justify-between gap-2"><p className="font-mono text-[13px] text-primary">Sales DNA</p><EvidenceChip kind="inference" /></div>
       <dl className="mt-3 space-y-2 text-sm">
-        <div><dt className="text-muted-foreground">Problem</dt><dd>Claim documents sit for days and land in the wrong queue.</dd></div>
-        <div><dt className="text-muted-foreground">Driver</dt><dd>Board-approved Claims 2028 program.</dd></div>
-        <div><dt className="text-muted-foreground">Owner</dt><dd>Claims Operations</dd></div>
+        {dna && <>
+          <div><dt className="text-muted-foreground">Problem</dt><dd>{dna.problem}</dd></div>
+          <div><dt className="text-muted-foreground">Outcome</dt><dd>{dna.outcome}</dd></div>
+          <div><dt className="text-muted-foreground">Owner</dt><dd>{dna.owner}</dd></div>
+        </>}
       </dl>
     </motion.div>
   );
 }
 function DnaScene({ p }: { p: MotionValue<number> }) {
+  const d = useStory();
   return (
     <div className="relative mx-auto max-w-md py-10">
-      <div className="hidden lg:block">{[0, 1, 2].map((i) => <MiniFact key={i} p={p} i={i} />)}</div>
+      <div className="hidden lg:block">{(d?.quotes ?? []).map((q, i) => <MiniFact key={i} p={p} i={i} text={q.text.length > 60 ? `${q.text.slice(0, q.text.lastIndexOf(" ", 60))}…` : q.text} />)}</div>
       <DnaCard p={p} />
       <div className="mt-6 flex flex-wrap justify-center gap-2 lg:mt-0">
-        {PERSONAS.map((n, i) => <PersonaChip key={n} p={p} i={i} name={n} />)}
+        {(d?.personas ?? []).map((n, i) => <PersonaChip key={n} p={p} i={i} name={n} />)}
       </div>
     </div>
   );
 }
 
 /* ---------- 4 Orbit ---------- */
-function Bubble({ p, i, name }: { p: MotionValue<number>; i: number; name: string }) {
+function Bubble({ p, i, name, qualified, total }: { p: MotionValue<number>; i: number; name: string; qualified: boolean; total: number }) {
   const s = 0.15 + i * 0.055;
-  const qualified = i < 11;
   const ring = [110, 150, 190][i % 3] ?? 110;
-  const a = (i / COMPANIES.length) * Math.PI * 2 - Math.PI / 2;
+  const a = (i / Math.max(1, total)) * Math.PI * 2 - Math.PI / 2;
   const cx = 250 + ring * Math.cos(a), cy = 250 + ring * Math.sin(a);
   const opacity = useTransform(p, [s, s + 0.05], [0, qualified ? 1 : 0.4]);
   const tx = useTransform(p, [s, s + 0.06], [(cx - 250) * 1.8, 0]);
@@ -184,35 +183,31 @@ function Counter({ p, from, to, max }: { p: MotionValue<number>; from: number; t
   return <span className="font-mono tabular-nums">{n}</span>;
 }
 function OrbitScene({ p }: { p: MotionValue<number> }) {
+  const d = useStory();
+  const companies = d?.companies ?? [];
   const shrink = useTransform(p, [0, 0.15], [1.6, 1]);
-  const end = 0.15 + 11 * 0.055 + 0.06;
+  const end = 0.15 + Math.max(0, companies.length - 1) * 0.055 + 0.06;
   return (
     <div className="grid items-center gap-8 lg:grid-cols-[1fr_220px]">
-      <svg viewBox="0 0 500 500" className="mx-auto w-full max-w-[460px]" role="img" aria-label="Orbit of 12 look-alike insurers around the won deal">
+      <svg viewBox="0 0 500 500" className="mx-auto w-full max-w-[460px]" role="img" aria-label={`Orbit of ${d?.found ?? 0} look-alike companies around the won deal`}>
         {[110, 150, 190].map((r) => <circle key={r} cx="250" cy="250" r={r} fill="none" className="stroke-border" strokeDasharray="3 6" />)}
         <motion.g style={{ scale: shrink, transformOrigin: "250px 250px" }}>
           <rect x="205" y="225" width="90" height="50" rx="12" className="fill-card stroke-primary" />
           <text x="250" y="255" textAnchor="middle" fontSize="13" className="fill-primary font-mono">DNA</text>
         </motion.g>
-        {COMPANIES.map((c, i) => <Bubble key={c} p={p} i={i} name={c} />)}
+        {companies.map((c, i) => <Bubble key={c.name} p={p} i={i} name={c.name} qualified={c.qualified} total={companies.length} />)}
       </svg>
       <div className="flex justify-center gap-10 lg:flex-col lg:gap-6">
-        <div><p className="text-5xl font-semibold"><Counter p={p} from={0.15} to={end} max={12} /></p><p className="text-sm text-muted-foreground">found</p></div>
-        <div><p className="text-5xl font-semibold text-primary"><Counter p={p} from={0.15} to={end - 0.055} max={11} /></p><p className="text-sm text-muted-foreground">qualified with verified evidence</p></div>
+        <div><p className="text-5xl font-semibold"><Counter p={p} from={0.15} to={end} max={d?.found ?? 0} /></p><p className="text-sm text-muted-foreground">found</p></div>
+        <div><p className="text-5xl font-semibold text-primary"><Counter p={p} from={0.15} to={end - 0.055} max={d?.qualified ?? 0} /></p><p className="text-sm text-muted-foreground">qualified with verified evidence</p></div>
       </div>
     </div>
   );
 }
 
 /* ---------- 5 Committee ---------- */
-const ROLES: Array<[string, string]> = [
-  ["Executive buyer", "Claims Executive Sponsor"],
-  ["Business sponsor", "VP Claims Operations"],
-  ["Operational buyer", "Intake Team Lead"],
-  ["Technical influencer", "Claims IT Architect"],
-  ["End user", "Gap — no match found"],
-];
-function RoleCol({ p, i, role, who }: { p: MotionValue<number>; i: number; role: string; who: string }) {
+function RoleCol({ p, i, role, who: w }: { p: MotionValue<number>; i: number; role: string; who: string | null }) {
+  const who = w ?? "Gap — no match found";
   const s = 0.4 + i * 0.1;
   const opacity = useTransform(p, [s, s + 0.08], [0, 1]);
   const y = useTransform(p, [s, s + 0.08], [16, 0]);
@@ -228,17 +223,18 @@ function RoleCol({ p, i, role, who }: { p: MotionValue<number>; i: number; role:
   );
 }
 function CommitteeScene({ p }: { p: MotionValue<number> }) {
+  const c = useStory()?.committee;
   const bubbleScale = useTransform(p, [0, 0.3], [1, 8]);
   const bubbleOpacity = useTransform(p, [0.2, 0.32], [1, 0]);
   const boardOpacity = useTransform(p, [0.25, 0.38], [0, 1]);
   const boardScale = useTransform(p, [0.25, 0.38], [0.9, 1]);
   return (
     <div className="relative grid place-items-center">
-      <motion.div style={{ scale: bubbleScale, opacity: bubbleOpacity }} className="absolute hidden size-16 place-items-center rounded-full bg-primary font-mono text-primary-foreground lg:grid" aria-hidden>SF</motion.div>
+      <motion.div style={{ scale: bubbleScale, opacity: bubbleOpacity }} className="absolute hidden size-16 place-items-center rounded-full bg-primary font-mono text-primary-foreground lg:grid" aria-hidden>{c ? initials(c.company) : ""}</motion.div>
       <motion.div style={{ opacity: boardOpacity, scale: boardScale }} className="w-full rounded-xl border border-border bg-card p-5 shadow-sm">
-        <p className="mb-4 font-display font-semibold">State Farm · buying committee</p>
+        <p className="mb-4 font-display font-semibold">{c?.company ?? "Top account"} · buying committee</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
-          {ROLES.map(([r, w], i) => <RoleCol key={r} p={p} i={i} role={r} who={w} />)}
+          {(c?.slots ?? []).map((x, i) => <RoleCol key={x.role} p={p} i={i} role={x.role} who={x.who} />)}
         </div>
       </motion.div>
     </div>
@@ -246,16 +242,23 @@ function CommitteeScene({ p }: { p: MotionValue<number> }) {
 }
 
 /* ---------- 6 Email ---------- */
-const EMAIL: Array<{ t: string; src?: string }> = [
-  { t: "Hi [First name], " },
-  { t: "State Farm's own claims pages describe documents arriving by mail, fax and email", src: "statefarm.com" },
-  { t: " — the same mix Harrowgate faced, where " },
-  { t: "claim documents waited 2.6 business days before reaching the adjuster", src: "SOW p.3" },
-  { t: ". Their aim now is to " },
-  { t: "cut intake hours by 50 percent", src: "SOW p.7 · target" },
-  { t: ". Worth a 20-minute look at how they set it up?" },
-];
+/** Split a real draft body into plain and verified-claim segments. */
+function segments(body: string, claims: string[]): Array<{ t: string; src?: string }> {
+  const out: Array<{ t: string; src?: string }> = [];
+  let rest = body;
+  while (rest) {
+    const hits = claims.map((c) => ({ c, i: rest.indexOf(c) })).filter((h) => h.i >= 0).sort((a, b) => a.i - b.i);
+    const h = hits[0];
+    if (!h) { out.push({ t: rest }); break; }
+    if (h.i) out.push({ t: rest.slice(0, h.i) });
+    out.push({ t: h.c, src: `Verified claim ${out.filter((x) => x.src).length + 1}` });
+    rest = rest.slice(h.i + h.c.length);
+  }
+  return out;
+}
 function EmailScene({ p }: { p: MotionValue<number> }) {
+  const e = useStory()?.email;
+  const EMAIL = e ? segments(e.body, e.claims) : [];
   const total = EMAIL.reduce((n, s) => n + s.t.length, 0);
   const chars = useTransform(p, [0.05, 0.75], [0, total]);
   const [n, setN] = useState(Math.round(chars.get()));
@@ -265,7 +268,7 @@ function EmailScene({ p }: { p: MotionValue<number> }) {
   const sources = new Set<string>();
   return (
     <div className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-6 shadow-sm">
-      <p className="text-sm text-muted-foreground">Subject: <span className="text-foreground">How Harrowgate stopped losing claim documents</span></p>
+      <p className="text-sm text-muted-foreground">Subject: <span className="text-foreground">{e?.subject ?? ""}</span></p>
       <p className="mt-4 min-h-[9rem] text-[15px] leading-7">
         {EMAIL.map((s, i) => {
           const shown = s.t.slice(0, Math.max(0, left));
@@ -298,8 +301,10 @@ function EmailScene({ p }: { p: MotionValue<number> }) {
 /* ---------- Page ---------- */
 export function LandingStory() {
   const cinematic = useCinematic();
+  const [data, setData] = useState<StoryData | null>(null);
+  useEffect(() => { let alive = true; loadDemo().then((s) => alive && setData(storyData(s))).catch(() => {}); return () => { alive = false; }; }, []);
   return (
-    <>
+    <StoryCtx.Provider value={data}>
       <EchoHero />
       <Scene cinematic={cinematic} vh={300} eyebrow="01 · Deal" title="It starts with one document.">{(p) => <DocScene p={p} />}</Scene>
       <Scene cinematic={cinematic} vh={200} eyebrow="02 · Playbook" title="We learn why they bought.">{(p) => <DnaScene p={p} />}</Scene>
@@ -310,8 +315,8 @@ export function LandingStory() {
       <section className="border-y border-border bg-card px-gutter py-24">
         <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-3">
           {[
-            ["100%", "of claims link to a source", "Every sentence is a verbatim quote or labelled AI inference."],
-            ["0", "messages sent without you", "Encore drafts. You edit, approve or discard."],
+            [data ? `${data.groundedPct}%` : "—", "of sample drafts fully grounded in sources", "Every sentence is a verbatim quote or labelled AI inference."],
+            [data ? String(data.sent) : "—", "messages sent without you", "Encore drafts. You edit, approve or discard."],
             ["f(x)", "Scores are formulas you can read", "Fit and urgency come from counted signals, shown in full."],
           ].map(([n, h, d]) => (
             <motion.div key={h} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
@@ -327,6 +332,6 @@ export function LandingStory() {
         <h2 className="mx-auto max-w-3xl text-[32px] font-semibold leading-tight sm:text-5xl">See the whole pipeline on a real sample — 2 minutes, no sign-up.</h2>
         <Button asChild size="lg" className="mt-10"><Link to="/demo">See it work <ArrowRight /></Link></Button>
       </section>
-    </>
+    </StoryCtx.Provider>
   );
 }
