@@ -22,7 +22,7 @@ export function fallbackPlan(dna: Record<string, unknown>): SearchPlan {
   };
 }
 
-export function buildQueries(plan: SearchPlan, customer: string, signalQueries: string[], region: string): string[] {
+export function buildQueries(plan: SearchPlan, customer: string, signalQueries: string[], region: string, customerHq = ""): string[] {
   const R = REGION_PHRASE[region] ?? "";
   const q: string[] = [];
   const add = (s: string) => { const t = s.replace(/\s+/g, " ").trim(); if (t) q.push(t); };
@@ -40,6 +40,10 @@ export function buildQueries(plan: SearchPlan, customer: string, signalQueries: 
   for (const s of signalQueries.slice(0, 2)) add(s);
   if (plan.regulatory_terms) add(`companies subject to ${plan.regulatory_terms}`);
   if (plan.business_model_terms) add(plan.business_model_terms);
+  // Peer-finding searches.
+  if (plan.industry_terms) add(`${plan.industry_terms} regional ${R || "companies"}`);
+  if (plan.business_model_terms) add(`${plan.business_model_terms} list ${R}`.trim());
+  if (plan.industry_terms && customerHq) add(`largest ${plan.industry_terms} by state ${customerHq}`);
   const seen = new Set<string>();
   return q.filter((x) => { const k = x.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 14);
 }

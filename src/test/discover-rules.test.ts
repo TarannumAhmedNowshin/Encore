@@ -12,6 +12,12 @@ describe("discovery queries", () => {
   });
   it("global has no region pass", () => expect(buildQueries(plan, "Kilbeggan", [], "global")[0]).toBe("Kilbeggan competitors similar companies"));
   it("caps at 14 queries", () => expect(buildQueries(plan, "K", Array.from({ length: 10 }, (_, i) => `sig ${i}`), "us").length).toBeLessThanOrEqual(14));
+  it("adds the three peer-finding searches", () => {
+    const q = buildQueries({ ...plan, business_model_terms: "regional mutual insurer" }, "K", [], "us", "Iowa");
+    expect(q).toContain("chilled food distribution regional United States");
+    expect(q).toContain("regional mutual insurer list United States");
+    expect(q).toContain("largest chilled food distribution by state Iowa");
+  });
 });
 
 describe("lead selection", () => {

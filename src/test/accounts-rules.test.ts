@@ -27,11 +27,11 @@ describe("discovery quality rules", () => {
 
 import { bubbleRadius, orbitDistance, orbitGroup } from "@/lib/encore/accounts";
 describe("orbit rules", () => {
-  it("places an 80% similar company at 20% of the radius", () => {
-    expect(orbitDistance({ status: "qualified", on_watch_list: false, similarity_percent: 80 })).toBeCloseTo(0.2);
+  it("places a 100% similar company just outside the centre node", () => {
+    expect(orbitDistance({ status: "qualified", on_watch_list: false, similarity_percent: 100 })).toBe(0.15);
   });
-  it("places a 50% similar company halfway out", () => {
-    expect(orbitDistance({ status: "rejected", on_watch_list: false, similarity_percent: 50 })).toBe(0.5);
+  it("places a 40% similar company at the outer ring", () => {
+    expect(orbitDistance({ status: "rejected", on_watch_list: false, similarity_percent: 40 })).toBe(1);
   });
   it("puts watch-list companies in the watch group", () => {
     expect(orbitGroup({ status: "rejected", on_watch_list: true })).toBe("watch");
