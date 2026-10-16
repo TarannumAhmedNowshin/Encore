@@ -3,7 +3,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { HttpError, requireEnv } from "./http.server";
 
 /** Resolve the signed-in user from a Request's bearer token (for /api routes). */
-export async function getUser(req: Request): Promise<{ id: string; email?: string }> {
+export async function getUser(req: Request): Promise<{ id: string; email?: string | undefined }> {
   const header = req.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   if (!token) throw new HttpError(401, "Please sign in first");
