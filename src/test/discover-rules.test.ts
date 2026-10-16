@@ -45,7 +45,8 @@ describe("qualify-company checks", () => {
     Object.fromEntries(["industry", "business_model", "regulatory", "operational", "organizational", "technology"].map((k) => [k, { rating: r, reason: "x", source_url: url }]));
   const ev = { summary: "s", quote: "still plans every delivery route by hand in spreadsheets", source_url: page.url, strength: "direct" as const };
   it("qualifies only with a verified quote", () => {
-    expect(checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [ev], qualified: true, rejection_reason: "" }).status).toBe("qualified");
+    // own-site page (acme.ie) so the quote needn't repeat the name
+    expect(checkQualification({ name: "Acme Haulage", domain: "acme.ie", materials: [page], dimensions: dims("medium", null), evidence: [ev], qualified: true, rejection_reason: "" }).status).toBe("qualified");
     const r = checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [{ ...ev, quote: "routes are planned manually" }], qualified: true, rejection_reason: "" });
     expect(r.status).toBe("rejected");
     expect(r.rejection_reason).toContain("Acme Haulage");

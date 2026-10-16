@@ -94,7 +94,7 @@ export const findDepartments = createServerFn({ method: "POST" })
       }).filter((d) => !!d.quote && !!d.source_url && (
         // LinkedIn employee lists are judged by the job title itself, so they skip the length/contact rules.
         /\(LinkedIn\)/.test(d.title)
-        || isUsableEvidence({ quote: d.quote!, url: d.source_url!, title: d.title, companyName: name, domain: domain || undefined })))
+        || isUsableEvidence({ quote: d.quote!, url: d.source_url!, title: d.title, companyName: name, domain })))
         .map(({ title: _t, ...d }) => d);
     };
 
