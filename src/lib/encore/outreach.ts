@@ -55,7 +55,7 @@ function splitSentences(body: string): string[] {
   return body.split(/(?<=[.!?])\s+|\n+/).map((s) => s.trim()).filter((s) => s.length > 1);
 }
 
-export function verifyDraft(d: DraftIn, facts: ListedFact[], opts: { anonymous: boolean; customerName: string | null; targetName?: string }) {
+export function verifyDraft(d: DraftIn, facts: ListedFact[], opts: { anonymous: boolean; customerName: string | null; targetName?: string | undefined }) {
   const body = ` ${canon(d.body)} `;
   const claims: ClaimOut[] = d.claims.map((c) => {
     const f = Number.isInteger(c.fact_index) && c.fact_index >= 0 && c.fact_index < facts.length ? facts[c.fact_index] : undefined;
