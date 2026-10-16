@@ -109,6 +109,42 @@ export function qualifyQueries(name: string, plan: Partial<SearchPlan>, website:
   return q;
 }
 
+// ---------- evidence filter ----------
+const CONTACT_PAGE = /contact|customer[-_ ]?service|customer[-_ ]?care|support|get[-_ ]?in[-_ ]?touch|locations?\b|find[-_ ]?us/i;
+const CONTACT_BITS = [
+  /\bp\.?\s?o\.?\s*box\s*\d+/gi,
+  /[\w.+-]+@[\w-]+\.[\w.]+/g,
+  /(\+?\d[\d\s().-]{6,}\d)/g,
+  /\b\d{1,6}\s+[A-Z][\w.]*(\s+[A-Z][\w.]*)*\s+(street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|suite|ste|parkway|pkwy|way|plaza|court|ct)\b\.?/gi,
+  /\b(phone|tel|telephone|fax|email|e-mail|toll[- ]free|mailing address|address|suite|zip)\b:?/gi,
+];
+export const NO_EVIDENCE_REASON = "Only contact details or generic mentions were found, not evidence of the problem.";
+const words = (t: string) => t.split(/\s+/).filter((w) => /[A-Za-z0-9]/.test(w));
+
+/** Is this (already located) quote real evidence, not contact details or a generic mention? */
+export function isUsableEvidence(input: {
+  quote: string; url: string; title?: string | null; companyName: string; domain?: string;
+}): boolean {
+  const q = input.quote ?? "";
+  const total = words(q).length;
+  if (total < 8) return false;
+  let stripped = q;
+  for (const re of CONTACT_BITS) stripped = stripped.replace(re, " ");
+  if (words(stripped).length < total / 2) return false;
+  let path = input.url;
+  try { const u = new URL(input.url); path = u.pathname; } catch { /* keep raw */ }
+  if (CONTACT_PAGE.test(path) || CONTACT_PAGE.test(input.title ?? "")) return false;
+  const host = (() => { try { return new URL(input.url).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+  const dom = (input.domain ?? "").replace(/^www\./, "");
+  const own = !!dom && !!host && (host === dom || host.endsWith(`.${dom}`));
+  if (!own) {
+    const lq = q.toLowerCase();
+    const names = [...companyAliases(input.companyName), input.companyName].map((a) => a.toLowerCase()).filter((a) => a.length > 1);
+    if (!names.some((a) => lq.includes(a))) return false;
+  }
+  return true;
+}
+
 export function checkQualification(input: {
   name: string; domain: string; materials: Mat[];
   dimensions: Record<string, DimIn>; evidence: EvidenceIn[]; qualified: boolean; rejection_reason: string;
@@ -126,7 +162,9 @@ export function checkQualification(input: {
     const m = byUrl.get(e.source_url);
     const verified = !!m && quoteVerified(e.quote, m.text ?? "", 5) && mentionsCompany({ url: m.url, title: m.title ?? "", text: m.text ?? "" }, aliases, input.domain || undefined);
     return { ...e, source_title: m?.title ?? "", verified };
-  });
+  }).filter((e) => isUsableEvidence({ quote: e.quote, url: e.source_url, title: e.source_title, companyName: input.name, domain: input.domain }));
+  if (!evidence.length && (input.qualified || input.evidence.length))
+    return { dimensions, evidence, status: "rejected", rejection_reason: NO_EVIDENCE_REASON };
   const anyVerified = evidence.some((e) => e.verified);
   if (input.qualified && anyVerified) return { dimensions, evidence, status: "qualified", rejection_reason: null };
   if (input.qualified) return { dimensions, evidence, status: "rejected",
