@@ -45,13 +45,14 @@ export async function generateJson<T>(opts: {
         if (attempt < BACKOFF_MS.length) { await sleep(BACKOFF_MS[attempt]!); continue; }
         throw new HttpError(503, "The AI service is busy, try again in a minute");
       }
-      if (userId) await recordUsage(userId, "ai_call");
       const body = (await res.json().catch(() => ({}))) as any;
       if (!res.ok) throw new HttpError(res.status >= 500 ? 502 : res.status, `AI request failed: ${body?.error?.message ?? res.statusText}`);
       const cand = body?.candidates?.[0];
       if (cand?.finishReason === "MAX_TOKENS") throw new HttpError(502, "The AI answer was cut off");
       const text = cand?.content?.parts?.[0]?.text;
       if (typeof text !== "string") throw new HttpError(502, `The AI returned no answer (${cand?.finishReason ?? "unknown"})`);
+      // Only successful calls count toward the daily AI limit.
+      if (userId) await recordUsage(userId, "ai_call");
       return text;
     }
   }
