@@ -14,6 +14,7 @@ export const Route = createFileRoute("/app/a/$id")({
 });
 
 const statusLabel: Record<StageStatus, string> = { not_started: "Not started", running: "Running", done: "Done", blocked: "Blocked" };
+const shortStatus: Record<StageStatus, string> = { not_started: "To do", running: "Running", done: "Done", blocked: "Locked" };
 
 function AnalysisLayout() {
   const { id } = Route.useParams();
@@ -68,7 +69,7 @@ function AnalysisLayout() {
                       <StatusDot status={meta.status} /> {meta.reason ?? statusLabel[meta.status]}
                     </span>
                   </span>
-                  <StatusDot status={meta.status} className="md:hidden" />
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground md:hidden"><StatusDot status={meta.status} />{shortStatus[meta.status]}</span>
                   <span className="ml-auto hidden rounded-full border border-border bg-background px-1.5 font-mono text-xs text-muted-foreground md:inline">
                     {meta.count}
                   </span>

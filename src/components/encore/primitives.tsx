@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Check, Quote, Sparkles, AlertTriangle, X } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useCountUp, useMounted } from "@/lib/encore/use-count-up";
@@ -23,7 +24,7 @@ export function Logo({ className }: { className?: string }) {
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("surface p-6", className)}>{children}</div>;
+  return <div className={cn("surface p-4 sm:p-6", className)}>{children}</div>;
 }
 
 type Tone = "neutral" | "primary" | "verified" | "inference" | "risk";
@@ -37,8 +38,8 @@ const toneClass: Record<Tone, string> = {
 
 export function Pill({ tone = "neutral", className, children }: { tone?: Tone; className?: string; children: ReactNode }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", toneClass[tone], className)}>
-      {children}
+    <span className={cn("chip", toneClass[tone], className)}>
+      {typeof children === "string" ? <span className="truncate" title={children}>{children}</span> : children}
     </span>
   );
 }
@@ -57,7 +58,7 @@ export function EvidenceChip({ kind, onClick, label }: { kind: EvidenceKind; onC
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors hover:brightness-95 focus-visible:outline-2",
+        "chip transition-colors hover:brightness-95 focus-visible:outline-2",
         m.cls,
       )}
     >
@@ -172,33 +173,59 @@ export function RunTimeline({ steps }: { steps: RunStep[] }) {
   );
 }
 
+/**
+ * The one side/bottom panel used app-wide (Radix Dialog): closes on outside click and Esc,
+ * traps focus while open and returns focus to whatever opened it.
+ */
+export function Panel({ open, onClose, title, label, side = "right", width = "sm:max-w-[480px]", header, bodyClassName, children }: {
+  open: boolean; onClose: () => void; title: ReactNode; label?: string; side?: "right" | "bottom"; width?: string;
+  header?: ReactNode; bodyClassName?: string; children: ReactNode;
+}) {
+  const opener = useRef<HTMLElement | null>(null);
+  if (open && !opener.current && typeof document !== "undefined") opener.current = document.activeElement as HTMLElement | null;
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-foreground/20 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content
+          data-encore-panel
+          aria-label={label ?? (typeof title === "string" ? title : undefined)}
+          aria-describedby={undefined}
+          onCloseAutoFocus={(e) => { const el = opener.current; opener.current = null; if (el && el.isConnected && el !== document.body) { e.preventDefault(); el.focus(); } }}
+          onInteractOutside={(e) => { if ((e.target as Element | null)?.closest?.("[data-tour-ui]")) e.preventDefault(); }}
+          className={cn(
+            "fixed z-50 flex flex-col border-border bg-card shadow-sm outline-none",
+            side === "right"
+              ? cn("inset-y-0 right-0 w-full border-l data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=open]:duration-200", width)
+              : "inset-x-0 bottom-0 h-[92dvh] rounded-t-xl border-t data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=open]:duration-200",
+          )}
+        >
+          <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
+            <div className="min-w-0 flex-1">
+              <DialogPrimitive.Title className="truncate text-base font-semibold">{title}</DialogPrimitive.Title>
+              {header}
+            </div>
+            <DialogPrimitive.Close asChild>
+              <Button variant="ghost" size="icon" aria-label="Close" className="shrink-0"><X /></Button>
+            </DialogPrimitive.Close>
+          </div>
+          <div className={cn("min-h-0 flex-1 overflow-y-auto p-4 sm:p-6", bodyClassName)}>{children}</div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
 export function EvidenceDrawer({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+  return <Panel open={open} onClose={onClose} title={title}>{children}</Panel>;
+}
+
+/** Phone-only sticky bar holding a stage's main action; desktop keeps the action in the page header. */
+export function MobileActionBar({ children }: { children: ReactNode }) {
   return (
     <>
-      <div
-        aria-hidden
-        onClick={onClose}
-        className={cn("fixed inset-0 z-40 bg-foreground/20 transition-opacity", open ? "opacity-100" : "pointer-events-none opacity-0")}
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        aria-hidden={!open}
-        onKeyDown={(e) => e.key === "Escape" && onClose()}
-        className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[480px] flex-col border-l border-border bg-card transition-transform duration-200 ease-out",
-          open ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-base font-semibold">{title}</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close" tabIndex={open ? 0 : -1}>
-            <X />
-          </Button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6">{children}</div>
-      </aside>
+      <div className="h-20 sm:hidden" aria-hidden />
+      <div className="fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t border-border bg-card/95 p-3 backdrop-blur sm:hidden [&>*]:flex-1">{children}</div>
     </>
   );
 }

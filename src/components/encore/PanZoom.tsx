@@ -75,9 +75,9 @@ export function usePanZoom(w: number, h: number) {
 export function ZoomControls({ onIn, onOut, onFit }: { onIn: () => void; onOut: () => void; onFit: () => void }) {
   return (
     <div className="absolute right-2 top-2 z-10 flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-      <Button size="icon" variant="ghost" className="size-8 rounded-none" aria-label="Zoom in" onClick={onIn}><Plus className="size-4" /></Button>
-      <Button size="icon" variant="ghost" className="size-8 rounded-none border-t border-border" aria-label="Zoom out" onClick={onOut}><Minus className="size-4" /></Button>
-      <Button size="icon" variant="ghost" className="size-8 rounded-none border-t border-border" aria-label="Fit to view" onClick={onFit}><Maximize2 className="size-4" /></Button>
+      <Button size="icon-sm" variant="ghost" className="rounded-none" aria-label="Zoom in" onClick={onIn}><Plus className="size-4" /></Button>
+      <Button size="icon-sm" variant="ghost" className="rounded-none border-t border-border" aria-label="Zoom out" onClick={onOut}><Minus className="size-4" /></Button>
+      <Button size="icon-sm" variant="ghost" className="rounded-none border-t border-border" aria-label="Fit to view" onClick={onFit}><Maximize2 className="size-4" /></Button>
     </div>
   );
 }

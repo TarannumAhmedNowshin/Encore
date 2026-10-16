@@ -88,7 +88,7 @@ export const TOUR_STEPS: TourStep[] = [
         ?? [...document.querySelectorAll<HTMLElement>('[role="button"], tr')].find((x) => x.textContent?.includes("State Farm")) ?? null);
       (b as unknown as { dispatchEvent: (e: Event) => void })?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     },
-    find: () => document.querySelector('aside[role="dialog"][aria-hidden="false"]'),
+    find: () => document.querySelector('[data-encore-panel][data-state="open"]'),
   },
   {
     key: "people", stage: "People", path: "people", title: "Who to talk to, mapped to roles.",

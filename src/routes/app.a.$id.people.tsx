@@ -9,7 +9,7 @@ import { ArrowRight, ChevronDown, Linkedin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, EmptyState, Pill, RunTimeline, ScoreRing } from "@/components/encore/primitives";
+import { MobileActionBar, Card, EmptyState, Pill, RunTimeline, ScoreRing } from "@/components/encore/primitives";
 import { findPeople, scoreContacts } from "@/lib/encore/people.functions";
 import { isCreditError, ROLE_SLOTS, SLOT_LABELS, type RoleSlot } from "@/lib/encore/people";
 import { defaultOrder, type AccountRow } from "@/lib/encore/accounts";
@@ -254,6 +254,7 @@ function PeoplePage() {
         People data from LinkedIn via Apify. Shown only to you.
         {peopleLeft != null && ` ${peopleLeft} of 10 people searches left today.`}
       </p>
+      {!d.readOnly && d.targets.length > 0 && <MobileActionBar><Button onClick={() => void runBulk("find")} disabled={!!bulk?.running || !!busyId}>{bulk?.running && bulk.kind === "find" ? `Finding ${bulk.done} of ${bulk.total}…` : "Find people at top 3"}</Button></MobileActionBar>}
     </main>
   );
 }

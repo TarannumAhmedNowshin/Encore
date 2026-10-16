@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline } from "@/components/encore/primitives";
+import { MobileActionBar, Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline } from "@/components/encore/primitives";
 import { draftOutreach } from "@/lib/encore/outreach.functions";
 import { CHANNELS, CHANNEL_LABELS, type Channel } from "@/lib/encore/outreach";
 import { toastError } from "@/lib/encore/toast";
@@ -263,7 +263,7 @@ function OutreachPage() {
             <div className="mb-3 flex flex-wrap gap-1">
               {FILTERS.map(([f, l]) => (
                 <button key={f} type="button" onClick={() => setFilter(f)}
-                  className={cn("rounded-full border px-2 py-0.5 text-xs", filter === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>{l}</button>
+                  className={cn("chip", filter === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>{l}</button>
               ))}
             </div>
             {groups.map((g) => {
@@ -408,6 +408,7 @@ function OutreachPage() {
           </div>
         )}
       </EvidenceDrawer>
+      {!d.readOnly && all.length > 0 && <MobileActionBar><Button onClick={() => void draftAll()} disabled={!!bulk?.running}>{bulk?.running ? `Drafting ${bulk.done} of ${bulk.total}…` : "Draft for all scored"}</Button></MobileActionBar>}
     </main>
   );
 }

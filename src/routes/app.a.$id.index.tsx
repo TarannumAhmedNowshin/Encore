@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, EvidenceChip, ScoreRing } from "@/components/encore/primitives";
+import { Card, EvidenceChip, Panel, ScoreRing } from "@/components/encore/primitives";
 import { accessQuery } from "@/lib/encore/ownership";
 import { funnelSteps, nextAction, storyLine, type FunnelCounts, type OverviewState } from "@/lib/encore/overview";
 import { overallConfidence } from "@/lib/encore/deal";
@@ -15,6 +15,7 @@ import { REGION_LABEL, REGIONS, REGION_CODE } from "@/lib/encore/intake";
 import { deleteAnalysis, renameAnalysis, updateAnalysisSettings } from "@/lib/encore/analysis.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/app/a/$id/")({
   head: () => ({ meta: [
@@ -139,16 +140,16 @@ function OverviewPage() {
       </ol>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Card className="min-w-0 p-5">
+        <Card className="min-w-0 p-4 sm:p-5">
           <p className="text-xs text-muted-foreground">Top account</p>
           {d.topAccount ? (<div className="mt-2 flex items-center justify-between gap-3"><p className="min-w-0 truncate font-semibold">{d.topAccount.name}</p><ScoreRing value={Math.round(d.topAccount.opportunity_score ?? 0)} size={44} /></div>)
             : <p className="mt-2 text-sm text-muted-foreground">No qualified accounts yet.</p>}
         </Card>
-        <Card className="min-w-0 p-5">
+        <Card className="min-w-0 p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Strongest verified quote</p>{d.strongest && <EvidenceChip kind="verified" label="Verified" />}</div>
           <p className="mt-2 line-clamp-3 font-mono text-[13px] leading-relaxed">{d.strongest ? `“${d.strongest}”` : "—"}</p>
         </Card>
-        <Card className="min-w-0 p-5">
+        <Card className="min-w-0 p-4 sm:p-5">
           <p className="text-xs text-muted-foreground">Best-fit contact</p>
           {d.bestContact ? (<div className="mt-2 flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold capitalize">{(d.bestContact.role ?? "contact").replace(/_/g, " ")}</p><p className="truncate text-xs text-muted-foreground">{d.bestContact.title}</p></div><ScoreRing value={Math.round(d.bestContact.score)} size={44} /></div>)
             : <p className="mt-2 text-sm text-muted-foreground">No scored contacts yet.</p>}
@@ -156,7 +157,7 @@ function OverviewPage() {
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-[1fr_260px]">
-        <Card className="min-w-0 p-5">
+        <Card className="min-w-0 p-4 sm:p-5">
           <h2 data-tour="funnel" className="mb-4 text-sm font-semibold">Funnel</h2>
           <ol className="space-y-1">
             {steps.map((s) => (
@@ -174,19 +175,19 @@ function OverviewPage() {
           </ol>
         </Card>
         <div className="space-y-4">
-          <Card className="p-5">
+          <Card className="p-4 sm:p-5">
             <p className="text-xs text-muted-foreground">Next best action</p>
             {next ? <Button asChild className="mt-3 w-full"><Link to={`/app/a/$id/${next.stage}`} params={{ id }}>{next.label} <ArrowRight /></Link></Button>
               : <p className="mt-2 text-sm">Everything's done — export your approved drafts.</p>}
           </Card>
-          <Card className="p-5 text-center">
+          <Card className="p-4 sm:p-5 text-center">
             <p className="text-xs text-muted-foreground">Overall fact confidence</p>
             <p className="mt-1 font-mono text-3xl font-semibold">{d.confidence}%</p>
           </Card>
         </div>
       </div>
 
-      <Card className="mt-6 p-5">
+      <Card className="mt-6 p-4 sm:p-5">
         <h2 className="mb-3 text-sm font-semibold">Recent runs</h2>
         {d.runs.length === 0 ? (
           <p className="text-sm text-muted-foreground">No runs yet.</p>
@@ -214,6 +215,7 @@ function OverviewPage() {
 function SettingsMenu({ id, title, region, anonymise }: { id: string; title: string; region: string; anonymise: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const mobile = useIsMobile();
   const [name, setName] = useState(title);
   const [reg, setReg] = useState(region);
   const [anon, setAnon] = useState(anonymise);
@@ -253,10 +255,10 @@ function SettingsMenu({ id, title, region, anonymise }: { id: string; title: str
   };
 
   return (
-    <div className="relative">
-      <Button variant="secondary" onClick={() => setOpen((v) => !v)} aria-expanded={open}><Settings2 /> Settings</Button>
-      {open && (
-        <Card className="absolute right-0 z-20 mt-2 w-80 space-y-4 p-5 shadow-lg">
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}><Settings2 /> Settings</Button>
+      <Panel open={open} onClose={() => { setOpen(false); setDeleting(false); setConfirmText(""); }} title="Analysis settings" side={mobile ? "bottom" : "right"} width="sm:max-w-[400px]">
+        <div className="space-y-4">
           <div>
             <label className="text-xs font-medium text-muted-foreground" htmlFor="ov-name">Title</label>
             <Input id="ov-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
@@ -286,8 +288,8 @@ function SettingsMenu({ id, title, region, anonymise }: { id: string; title: str
           ) : (
             <Button variant="ghost" className="w-full text-risk hover:text-risk" onClick={() => setDeleting(true)}><Trash2 /> Delete analysis</Button>
           )}
-        </Card>
-      )}
-    </div>
+        </div>
+      </Panel>
+    </>
   );
 }

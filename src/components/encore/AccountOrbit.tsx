@@ -30,12 +30,12 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
 
   useEffect(() => {
     const el = box.current; if (!el) return;
-    const ro = new ResizeObserver(([e]) => e && setW(Math.max(320, e.contentRect.width)));
+    const ro = new ResizeObserver(([e]) => e && setW(Math.max(280, e.contentRect.width)));
     ro.observe(el); return () => ro.disconnect();
   }, []);
 
-  const h = Math.max(520, Math.min(760, w * 0.7));
-  const outer = Math.min(w, h) / 2 - 40;
+  const h = w < 640 ? Math.round(w * 1.05) : Math.max(520, Math.min(760, w * 0.7));
+  const outer = Math.min(w, h) / 2 - (w < 640 ? 24 : 40);
   const cx = w / 2, cy = h / 2;
   const inner = 48;
   const nodes = orbitLayout(targets, outer, inner);

@@ -8,7 +8,7 @@ import { ArrowRight, ArrowUpDown, Building2, Download, ExternalLink, Linkedin, R
 import { usePanZoom, ZoomControls } from "@/components/encore/PanZoom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
+import { MobileActionBar, Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
 import { useDiscoveryRun } from "@/hooks/useDiscoveryRun";
 import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
@@ -120,7 +120,7 @@ function AccountsPage() {
               {bulk?.running ? `Finding departments ${bulk.done} of ${bulk.total}…` : "Find departments for all qualified"}
             </Button>
           )}
-          {!readOnly && has && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button>}
+          {!readOnly && has && <Button className="hidden sm:inline-flex" onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button>}
         </div>
       </div>
 
@@ -153,7 +153,7 @@ function AccountsPage() {
         <>
           <div className="mt-6 grid grid-cols-3 gap-2 lg:flex lg:flex-wrap lg:items-center">
             {([["Found", sum.found], ["Qualified", sum.qualified], ["Watch list", sum.watch], ["Rejected", sum.rejected], ["Failed", sum.failed]] as const).map(([l, v]) => (
-              <span key={l} className="flex min-w-0 items-baseline justify-between gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs lg:justify-start">
+              <span key={l} className="chip h-7 min-w-0 justify-between gap-2 border-border bg-card lg:justify-start">
                 <span className="truncate text-muted-foreground">{l}</span><span className="font-mono text-sm font-semibold">{v}</span>
               </span>
             ))}
@@ -179,7 +179,7 @@ function AccountsPage() {
               <div className="flex flex-wrap gap-2 border-b border-border p-3">
                 {FILTERS.map(([f, l]) => (
                   <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}
-                    className={cn("rounded-full border px-3 py-1 text-xs", filter === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                    className={cn("chip", filter === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
                     {l} <span className="font-mono">{targets.filter((t) => matchesFilter(t, f)).length}</span>
                   </button>
                 ))}
@@ -262,6 +262,7 @@ function AccountsPage() {
       <EvidenceDrawer open={!!open} onClose={() => setOpenId(null)} title={open?.name ?? "Account"}>
         {open && <Dossier t={open} readOnly={readOnly} />}
       </EvidenceDrawer>
+      {!readOnly && has && <MobileActionBar><Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button></MobileActionBar>}
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </main>
   );

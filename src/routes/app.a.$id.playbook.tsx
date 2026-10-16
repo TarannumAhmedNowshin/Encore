@@ -7,7 +7,7 @@ import { ArrowRight, BookOpen, Building2, Copy, Cpu, Network, Pencil, RotateCw, 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, type RunStep } from "@/components/encore/primitives";
+import { MobileActionBar, Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, type RunStep } from "@/components/encore/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPlaybook, type PlaybookStage } from "@/lib/encore/playbook.functions";
 import { checkDocQuote } from "@/lib/encore/deal";
@@ -130,7 +130,7 @@ function PlaybookPage() {
           <h1 className="mt-1 text-2xl font-semibold">Why they bought, and who to look for next</h1>
           <p className="mt-1 text-sm text-muted-foreground">Everything here is AI inference built from your deal facts.</p>
         </div>
-        {!readOnly && <Button onClick={buildAll} disabled={busy}>{busy ? "Building…" : dna ? "Rebuild playbook" : "Build playbook"}</Button>}
+        {!readOnly && <Button className="hidden sm:inline-flex" onClick={buildAll} disabled={busy}>{busy ? "Building…" : dna ? "Rebuild playbook" : "Build playbook"}</Button>}
       </div>
       {fallbackUsed && <p className="mt-3 text-xs text-muted-foreground">Some sections were written with the fast model because the main model was busy.</p>}
       {showTimeline && <Card className="mt-6"><RunTimeline steps={steps} /></Card>}
@@ -144,7 +144,7 @@ function PlaybookPage() {
               const d = did ? factById.get(did) : undefined;
               const owner = l.stakeholder_id ? shById.get(l.stakeholder_id) : undefined;
               return (
-                <Card key={l.id} className="p-5">
+                <Card key={l.id} className="min-w-0 p-4 sm:p-5">
                   <div className="flex flex-wrap items-center gap-1.5 text-xs">
                     <ChipBtn onClick={() => openFact(pid, "Problem")}>{p?.value ?? "Problem"}</ChipBtn>
                     <ArrowRight className="size-3 text-muted-foreground" aria-hidden />
@@ -214,9 +214,9 @@ function PlaybookPage() {
                 </div>
               </details>
             </Card>
-            <Card className="mt-4 overflow-x-auto p-5">
+            <Card className="mt-4 p-4 sm:p-5">
               <h3 className="font-semibold">Need signals</h3>
-              <table className="mt-3 w-full min-w-[640px] table-fixed text-sm">
+              <table className="mt-3 hidden w-full table-fixed text-sm md:table">
                 <thead className="text-left text-xs text-muted-foreground"><tr><th className="w-[38%] pb-2 font-medium">Signal</th><th className="w-[22%] font-medium">Where it shows up</th><th className="font-medium">Search query</th></tr></thead>
                 <tbody className="divide-y divide-border">
                   {signals.map((s) => (
@@ -227,8 +227,8 @@ function PlaybookPage() {
                         {s.search_query && (
                           <div className="flex min-w-0 items-start gap-1">
                             <code className="min-w-0 flex-1 break-words rounded bg-muted px-1.5 py-0.5 font-mono text-[12px]">{s.search_query}</code>
-                            <Button size="icon" variant="ghost" className="size-7 shrink-0" aria-label="Copy search query" onClick={() => { void navigator.clipboard.writeText(s.search_query!); toast.success("Copied"); }}><Copy className="size-3.5" /></Button>
-                            <Button asChild size="icon" variant="ghost" className="size-7 shrink-0"><a aria-label="Search the web" href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query)}`} target="_blank" rel="noopener noreferrer"><Search className="size-3.5" /></a></Button>
+                            <Button size="icon-sm" variant="ghost" className="shrink-0" aria-label="Copy search query" onClick={() => { void navigator.clipboard.writeText(s.search_query!); toast.success("Copied"); }}><Copy className="size-3.5" /></Button>
+                            <Button asChild size="icon-sm" variant="ghost" className="shrink-0"><a aria-label="Search the web" href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query)}`} target="_blank" rel="noopener noreferrer"><Search className="size-3.5" /></a></Button>
                           </div>
                         )}
                       </td>
@@ -236,11 +236,27 @@ function PlaybookPage() {
                   ))}
                 </tbody>
               </table>
+              <ul className="mt-2 divide-y divide-border md:hidden">
+                {signals.map((s) => (
+                  <li key={s.id} className="space-y-2 py-3">
+                    <p className="text-sm">{s.signal}</p>
+                    <div className="flex flex-wrap gap-1">{(s.observable_at ?? "").split(/[,;]\s*/).filter(Boolean).map((w) => <Pill key={w}>{w}</Pill>)}</div>
+                    {s.search_query && (
+                      <div className="flex min-w-0 items-start gap-1">
+                        <code className="min-w-0 flex-1 break-words rounded bg-muted px-1.5 py-0.5 font-mono text-[12px]">{s.search_query}</code>
+                        <Button size="icon-sm" variant="ghost" aria-label="Copy search query" onClick={() => { void navigator.clipboard.writeText(s.search_query!); toast.success("Copied"); }}><Copy /></Button>
+                        <Button asChild size="icon-sm" variant="ghost"><a aria-label="Search the web" href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query)}`} target="_blank" rel="noopener noreferrer"><Search /></a></Button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </Card>
           </>
         )}
       </Section>
 
+      {!readOnly && <MobileActionBar><Button onClick={buildAll} disabled={busy}>{busy ? "Building…" : dna ? "Rebuild playbook" : "Build playbook"}</Button></MobileActionBar>}
       <EvidenceDrawer open={!!evidence} onClose={() => setEvidence(null)} title={evidence?.title ?? "Evidence"}>
         {evidence && (
           <div className="space-y-4">
@@ -266,7 +282,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
 }
 
 function ChipBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className="max-w-[16rem] truncate rounded-full border border-border bg-secondary px-2 py-0.5 text-left font-medium hover:bg-primary/10">{children}</button>;
+  return <button type="button" onClick={onClick} className="chip block max-w-full truncate border-border bg-secondary text-left hover:bg-primary/10">{children}</button>;
 }
 
 type DnaKey = "problem_summary" | "current_process_summary" | "solution_capabilities_summary" | "measurable_outcomes_summary" | "primary_buyers_summary"
@@ -308,10 +324,10 @@ function OwnerPill({ id, value, readOnly, onSaved }: { id: string; value: string
   );
   return (
     <span className="group inline-flex items-center gap-1">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+      <span className="chip h-7 border-primary/30 bg-primary/10 text-sm font-semibold text-primary">
         <span className="text-xs font-normal opacity-80">Owned by</span> {value || "—"}
       </span>
-      {!readOnly && <Button size="icon" variant="ghost" className="size-7 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label="Edit owning department" onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
+      {!readOnly && <Button size="icon-sm" variant="ghost" className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label="Edit owning department" onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
     </span>
   );
 }
@@ -329,7 +345,7 @@ function DnaField({ id, field, label, value, readOnly, onSaved, single, tile, ic
     <div className="group">
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</span>
-        {!readOnly && draft === null && <Button size="icon" variant="ghost" className="size-6 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label={`Edit ${label}`} onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
+        {!readOnly && draft === null && <Button size="icon-sm" variant="ghost" className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label={`Edit ${label}`} onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
       </div>
       {draft === null ? (tile ? (
         <div className="mt-1 text-sm">

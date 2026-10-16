@@ -22,7 +22,7 @@ function OnboardingCard({ rows, funnels, onDismiss }: { rows: Row[]; funnels: Re
     <div className="surface mb-6 p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Getting started</h2>
-        <Button variant="ghost" size="icon" className="size-7" onClick={onDismiss} aria-label="Dismiss getting started">
+        <Button variant="ghost" size="icon-sm" onClick={onDismiss} aria-label="Dismiss getting started">
           <X />
         </Button>
       </div>

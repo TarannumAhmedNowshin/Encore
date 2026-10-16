@@ -48,7 +48,7 @@ async function waitFor<T>(fn: () => T | null | undefined, ms = 8000): Promise<T 
 }
 
 function closeOverlays(keepQuote: boolean) {
-  document.querySelectorAll<HTMLButtonElement>('aside[role="dialog"][aria-hidden="false"] button[aria-label="Close"]').forEach((b) => b.click());
+  document.querySelectorAll<HTMLButtonElement>('[data-encore-panel][data-state="open"] button[aria-label="Close"]').forEach((b) => b.click());
   if (!keepQuote) document.querySelector<HTMLButtonElement>('[aria-label="Quote in document"] button[aria-label="Close"]')?.click();
 }
 
@@ -136,7 +136,7 @@ function GuidedTour() {
           style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }} />
       )}
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex flex-col items-stretch gap-2 p-3 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px] sm:p-0">
+      <div data-tour-ui className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex flex-col items-stretch gap-2 p-3 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-[380px] sm:p-0">
         <div className="flex flex-col gap-1.5" role="status" aria-live="polite">
           {notes.map((n) => (
             <div key={n.id} className="tour-note pointer-events-auto flex items-center gap-2 self-end rounded-full border border-border bg-card px-3 py-1.5 text-xs shadow-sm">
@@ -161,7 +161,7 @@ function GuidedTour() {
           <section aria-label="Guided tour" className="surface pointer-events-auto rounded-t-2xl p-5 sm:rounded-xl">
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs text-muted-foreground">Step {step + 1} of {TOUR_STEPS.length} · {s.stage}</span>
-              <Button variant="ghost" size="icon" className="size-7" aria-label="Skip tour" onClick={() => { setOpen(false); setAuto(false); }}><X /></Button>
+              <Button variant="ghost" size="icon-sm" aria-label="Skip tour" onClick={() => { setOpen(false); setAuto(false); }}><X /></Button>
             </div>
             <h2 className="mt-1 text-base font-semibold">{s.title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
