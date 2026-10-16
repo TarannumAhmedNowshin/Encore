@@ -65,14 +65,15 @@ export function orbitGroup(t: Pick<AccountRow, "status" | "on_watch_list">): Orb
   if (t.status === "qualified" || t.status === "rejected" || t.status === "failed") return t.status;
   return "pending";
 }
-/** Arc per group in degrees (0 = right, -90 = top, SVG y grows downward). */
+/** Arc per group in degrees (0 = right, -90 = top, SVG y grows downward). Qualified gets the top 200°. */
 const ARCS: Record<OrbitGroup, [number, number]> = {
-  qualified: [-160, -20], watch: [-10, 40], rejected: [55, 125], failed: [130, 160], pending: [170, 200],
+  qualified: [-190, 10], watch: [20, 55], rejected: [65, 115], failed: [120, 150], pending: [155, 180],
 };
-/** Distance from the centre as a 0..1 fraction of the outer radius: (100 − similarity) / 100; pending sits at the edge. */
+/** Distance from the centre as a 0..1 fraction of the outer radius: linear, 100% similarity just outside the centre node, 40% at the outer ring; pending sits at the edge. */
 export function orbitDistance(t: Pick<AccountRow, "status" | "on_watch_list" | "similarity_percent">): number {
   if (orbitGroup(t) === "pending") return 1;
-  return Math.max(0.12, Math.min(1, (100 - (t.similarity_percent ?? 0)) / 100));
+  const sim = Math.max(0, Math.min(100, t.similarity_percent ?? 0));
+  return Math.max(0.15, Math.min(1, 0.15 + ((100 - sim) * 0.85) / 60));
 }
 export const bubbleRadius = (opp: number | null) => 10 + Math.max(0, Math.min(100, opp ?? 0)) * 0.14;
 
@@ -81,15 +82,31 @@ export const orbitRadius = (frac: number, inner: number, outer: number) => inner
 export function orbitLayout<T extends AccountRow>(ts: T[], outer: number, inner = 0) {
   const groups = new Map<OrbitGroup, T[]>();
   for (const t of [...ts].sort(defaultOrder)) { const g = orbitGroup(t); groups.set(g, [...(groups.get(g) ?? []), t]); }
-  const out: { t: T; group: OrbitGroup; x: number; y: number; r: number; dist: number }[] = [];
+  const out: { t: T; group: OrbitGroup; x: number; y: number; r: number; dist: number; deg: number }[] = [];
   for (const [g, list] of groups) {
     const [a0, a1] = ARCS[g];
     list.forEach((t, i) => {
       const deg = list.length === 1 ? (a0 + a1) / 2 : a0 + ((a1 - a0) * i) / (list.length - 1);
       const rad = (deg * Math.PI) / 180;
       const dist = orbitRadius(orbitDistance(t), inner, outer);
-      out.push({ t, group: g, x: Math.cos(rad) * dist, y: Math.sin(rad) * dist, r: bubbleRadius(t.opportunity_score), dist });
+      out.push({ t, group: g, x: Math.cos(rad) * dist, y: Math.sin(rad) * dist, r: bubbleRadius(t.opportunity_score), dist, deg });
     });
+  }
+  // Nudge colliding bubbles outward along their own angle until they clear each other.
+  for (let pass = 0; pass < 4; pass++) {
+    for (let i = 0; i < out.length; i++) {
+      for (let j = i + 1; j < out.length; j++) {
+        const a = out[i]!, b = out[j]!;
+        const need = a.r + b.r + 6;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.hypot(dx, dy);
+        if (d < need) {
+          const rad = (b.deg * Math.PI) / 180;
+          b.dist = Math.min(outer, b.dist + (need - d));
+          b.x = Math.cos(rad) * b.dist; b.y = Math.sin(rad) * b.dist;
+        }
+      }
+    }
   }
   return out;
 }
