@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { MobileActionBar, Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline } from "@/components/encore/primitives";
 import { draftOutreach } from "@/lib/encore/outreach.functions";
 import { CHANNELS, CHANNEL_LABELS, type Channel } from "@/lib/encore/outreach";
-import { finalBody, matchesFilter, recheckEditedBody } from "@/lib/encore/outreach-review";
+import { countReviewDrafts, finalBody, matchesFilter, recheckEditedBody, reviewStatus } from "@/lib/encore/outreach-review";
 import { toastError } from "@/lib/encore/toast";
 import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { cn } from "@/lib/utils";
@@ -66,12 +66,6 @@ const outreachQuery = (id: string) => queryOptions({
 });
 
 type CStatus = "none" | "pending" | "approved" | "rejected";
-const statusOf = (ds: Draft[]): CStatus => {
-  if (!ds.length) return "none";
-  if (ds.some((d) => ["pending", "edited", "error"].includes(d.status))) return "pending";
-  if (ds.some((d) => d.status === "approved")) return "approved";
-  return "rejected";
-};
 const DOT: Record<CStatus, string> = { none: "bg-muted-foreground/40", pending: "bg-inference", approved: "bg-verified", rejected: "bg-risk" };
 const STATUS_LABEL: Record<CStatus, string> = { none: "Not drafted", pending: "Pending review", approved: "Approved", rejected: "Rejected" };
 type Filter = "all" | "pending" | "approved" | "rejected" | "none";
@@ -137,7 +131,7 @@ function OutreachPage() {
         t,
         contacts: d.contacts.filter((c) => c.target_id === t.id)
           .sort((a, b) => (d.scores.get(b.id) ?? -1) - (d.scores.get(a.id) ?? -1))
-          .map((c) => ({ c, drafts: byContact.get(c.id) ?? [], status: statusOf(byContact.get(c.id) ?? []) })),
+          .map((c) => ({ c, drafts: byContact.get(c.id) ?? [] })),
       }))
       .filter((g) => g.contacts.length);
   }, [d]);
@@ -276,7 +270,7 @@ function OutreachPage() {
             <div className="mb-3 flex flex-wrap gap-1">
               {FILTERS.map(([f, l]) => (
                 <Button key={f} size="sm" variant="ghost" onClick={() => { setFilter(f); setSelected(null); setEditing(null); setRejecting(null); }}
-                  className={cn("chip", filter === f ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground")}>{l} ({all.filter((x) => matchesFilter(x.drafts, f)).length})</Button>
+                  className={cn("chip", filter === f ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground")}>{l} ({f === "none" ? all.filter((x) => !x.drafts.length).length : countReviewDrafts(d.drafts, f)})</Button>
               ))}
             </div>
             {groups.map((g) => {
@@ -285,17 +279,20 @@ function OutreachPage() {
               return (
                 <div key={g.t.id} className="mb-3">
                   <div className="px-1 text-xs font-medium text-muted-foreground">{g.t.name}</div>
-                  {list.map((x) => (
+                  {list.map((x) => {
+                    const matching = x.drafts.filter((dr) => filter === "all" || filter === "none" || matchesFilter([dr], filter));
+                    const status = reviewStatus(matching.find((dr) => dr.channel === channel) ?? matching[0]);
+                    return (
                     <button key={x.c.id} type="button" onClick={() => { setSelected(x.c.id); setEditing(null); setRejecting(null); }}
                       className={cn("mt-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary", current?.c.id === x.c.id && "bg-secondary")}>
-                      <span className={cn("size-2 shrink-0 rounded-full", DOT[x.status])} title={STATUS_LABEL[x.status]} aria-label={STATUS_LABEL[x.status]} />
+                      <span className={cn("size-2 shrink-0 rounded-full", DOT[status])} title={STATUS_LABEL[status]} aria-label={STATUS_LABEL[status]} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{x.c.name}</span>
                         <span className="block truncate text-xs text-muted-foreground">{x.c.title}</span>
                       </span>
                       {d.scores.has(x.c.id) && <span className="font-mono text-xs text-muted-foreground">{d.scores.get(x.c.id)}</span>}
                     </button>
-                  ))}
+                  ); })}
                 </div>
               );
             })}
@@ -311,9 +308,11 @@ function OutreachPage() {
                     <div className="text-xs text-muted-foreground">{current.c.title} · {current.t.name}</div>
                   </div>
                   {!d.readOnly && (
-                    <Button size="sm" variant="outline" disabled={busy.includes(current.c.id)} onClick={() => void draftOne(current.c.id)}>
+                    <span title={draft?.status === "approved" ? "Approved — edit or un-approve first" : undefined}>
+                    <Button size="sm" variant="outline" disabled={busy.includes(current.c.id) || draft?.status === "approved"} onClick={() => void draftOne(current.c.id)}>
                       {busy.includes(current.c.id) ? "Drafting…" : current.drafts.length ? "Draft again" : "Draft outreach"}
                     </Button>
+                    </span>
                   )}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-1 border-b border-border">

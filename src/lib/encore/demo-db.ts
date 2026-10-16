@@ -13,7 +13,7 @@ export function loadDemo(): Promise<DemoSnapshot> {
     if (typeof window !== "undefined") {
       try {
         const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? "null") as { expires: number; data: DemoSnapshot } | null;
-        if (cached && cached.expires > Date.now() && cached.data?.analysis) snapshot = Promise.resolve(cached.data);
+        if (cached && cached.expires > Date.now() && Array.isArray(cached.data?.analyses)) snapshot = Promise.resolve(cached.data);
       } catch { /* Storage can be disabled; fall through to the public request. */ }
     }
     if (!snapshot) snapshot = getDemo().then((j) => {

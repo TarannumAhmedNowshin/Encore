@@ -39,9 +39,11 @@ function RunsPill() {
 
 /** Shows the limit closest to being reached; same numbers as Settings → Usage today. */
 function UsageMeter() {
+  const { pathname } = useLocation();
   const { data } = useQuery(usageTodayQuery);
   if (!data) return null;
-  const top = [...data].sort((a, b) => b.used / b.limit - a.used / a.limit)[0];
+  const stageKind = pathname.endsWith("/people") ? "people_search" : pathname.endsWith("/accounts") ? "discovery_run" : null;
+  const top = data.find((u) => u.kind === stageKind) ?? [...data].sort((a, b) => b.used / b.limit - a.used / a.limit)[0];
   if (!top) return null;
   const summary = data.map((u) => `${LIMIT_LABELS[u.kind]} ${u.used}/${u.limit}${u.resetsAt ? `; capacity starts resetting at ${new Date(u.resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`).join(", ");
   return (

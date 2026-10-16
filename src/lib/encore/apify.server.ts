@@ -3,21 +3,32 @@ import { fetchWithTimeout, requireEnv } from "./http.server";
 export type Person = { name: string; title: string; company?: string; linkedinUrl: string; location?: string };
 
 async function runActor(actor: string, input: unknown): Promise<any[]> {
-  const url = `https://api.apify.com/v2/acts/${encodeURIComponent(actor)}/run-sync-get-dataset-items?timeout=110`;
+  const headers = { "content-type": "application/json", Authorization: `Bearer ${requireEnv("APIFY_API_TOKEN")}` };
+  const url = `https://api.apify.com/v2/acts/${encodeURIComponent(actor)}/runs?waitForFinish=30&timeout=35`;
   const res = await fetchWithTimeout(url, {
     method: "POST",
-    headers: { "content-type": "application/json", Authorization: `Bearer ${requireEnv("APIFY_API_TOKEN")}` },
+    headers,
     body: JSON.stringify(input),
-  }, 120000);
+  }, 35000);
   const body = (await res.json().catch(() => null)) as any;
   if (!res.ok) {
-    const msg = body?.error?.message ?? res.statusText;
-    throw Object.assign(new Error(`${res.status} ${msg}`), { status: res.status });
+    console.error("Apify run", { status: res.status, errorType: body?.error?.type ?? "request_failed", itemCount: 0 });
+    throw Object.assign(new Error("LinkedIn search is unavailable right now"), { status: res.status });
   }
-  if (!Array.isArray(body)) throw new Error("Unexpected response from people search");
-  const errItem = body.find((i) => i && typeof i.error === "string");
-  if (errItem && body.length === 1) throw Object.assign(new Error(errItem.error), { status: 200 });
-  return body;
+  const run = body?.data;
+  console.info("Apify run", { status: run?.status ?? "UNKNOWN", itemCount: null });
+  if (run?.status !== "SUCCEEDED" || !run.defaultDatasetId) {
+    if (run?.id && ["READY", "RUNNING"].includes(run.status)) {
+      await fetchWithTimeout(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(run.id)}/abort`, { method: "POST", headers }, 5000).catch(() => undefined);
+    }
+    throw new Error("LinkedIn search is unavailable right now");
+  }
+  const dataset = await fetchWithTimeout(`https://api.apify.com/v2/datasets/${encodeURIComponent(run.defaultDatasetId)}/items?limit=25`, { headers }, 10000);
+  const items = await dataset.json().catch(() => null);
+  const failed = !dataset.ok || !Array.isArray(items) || items.some((item) => item && typeof item.error === "string");
+  console.info("Apify dataset", { status: failed ? "FAILED" : "SUCCEEDED", itemCount: Array.isArray(items) ? items.length : 0 });
+  if (failed) throw new Error("LinkedIn search is unavailable right now");
+  return items;
 }
 
 const isLimitError = (e: any) =>
@@ -47,7 +58,7 @@ export async function searchPeople({
       location: i.location?.linkedinText,
     })).filter((p): p is Person => !!p);
   } catch (first: any) {
-    if (!isLimitError(first)) throw new Error(`LinkedIn people search is unavailable: ${first.message}`);
+    if (!isLimitError(first)) throw new Error("LinkedIn search is unavailable right now");
     try {
       const items = await runActor(requireEnv("APIFY_EMPLOYEES_ACTOR"), {
         companies: [companyLinkedinUrl],
@@ -61,7 +72,7 @@ export async function searchPeople({
         linkedinUrl: i.linkedinUrl,
       })).filter((p): p is Person => !!p);
     } catch (second: any) {
-      throw new Error(`LinkedIn people search is unavailable: ${second.message}`);
+      throw new Error("LinkedIn search is unavailable right now");
     }
   }
 }

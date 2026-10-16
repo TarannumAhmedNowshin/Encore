@@ -4,10 +4,21 @@ export type ReviewClaim = { claim: string; fact_id: string | null; verified: boo
 export type ReviewDraft = { body: string | null; edited_body: string | null; status: string };
 export const finalBody = (d: ReviewDraft) => d.edited_body ?? d.body ?? "";
 export type OutreachFilter = "all" | "pending" | "approved" | "rejected" | "none";
+export type ReviewStatus = "none" | "pending" | "approved" | "rejected";
+export function reviewStatus(draft: { status: string } | undefined): ReviewStatus {
+  if (!draft) return "none";
+  if (draft.status === "approved" || draft.status === "rejected") return draft.status;
+  return "pending";
+}
+export function countReviewDrafts(drafts: { status: string }[], filter: OutreachFilter): number {
+  if (filter === "all") return drafts.length;
+  if (filter === "none") return 0;
+  return drafts.filter((d) => reviewStatus(d) === filter).length;
+}
 export function matchesFilter(ds: { status: string }[], filter: OutreachFilter) {
   if (filter === "all") return true;
   if (filter === "none") return ds.length === 0;
-  return ds.some((d) => filter === "pending" ? ["pending", "edited", "error"].includes(d.status) : d.status === filter);
+  return ds.some((d) => reviewStatus(d) === filter);
 }
 export function recheckEditedBody(body: string, previous: ReviewClaim[]) {
   const normalized = ` ${canon(body)} `;
