@@ -95,7 +95,7 @@ function HowItWorks() {
         </div>
 
         <h2 className="mt-14 text-2xl font-semibold">Daily limits</h2>
-        <Card className="mt-6 p-5">
+        <Card className="mt-6 p-4 sm:p-5">
           <ul className="space-y-2 text-sm">
             {LIMITS.map(([k, v]) => (
               <li key={k} className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-mono">{v}</span></li>
@@ -105,7 +105,7 @@ function HowItWorks() {
         </Card>
 
         <h2 className="mt-14 text-2xl font-semibold">What Encore never does</h2>
-        <Card className="mt-6 p-5">
+        <Card className="mt-6 p-4 sm:p-5">
           <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
             {NEVER.map((n) => <li key={n}>{n}</li>)}
           </ul>

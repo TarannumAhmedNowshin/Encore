@@ -223,3 +223,10 @@
 @keyframes drawer-in { from { transform: translateX(24px); opacity: 0; } }
 .drawer-in { animation: drawer-in 220ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .drawer-in { animation: none; } }
+
+/* One chip everywhere: 24px tall, 12px text, 8px radius, icon + label. */
+@utility chip {
+  display: inline-flex; align-items: center; gap: 0.25rem; height: 1.5rem; padding-inline: 0.5rem;
+  border-radius: 0.5rem; border-width: 1px; font-size: 0.75rem; line-height: 1rem; font-weight: 500; white-space: nowrap; max-width: 100%; overflow: hidden; min-width: 0;
+  & > svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
+}
