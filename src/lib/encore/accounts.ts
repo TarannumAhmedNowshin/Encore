@@ -75,7 +75,9 @@ export function orbitDistance(t: Pick<AccountRow, "status" | "on_watch_list" | "
 }
 export const bubbleRadius = (opp: number | null) => 10 + Math.max(0, Math.min(100, opp ?? 0)) * 0.14;
 
-export function orbitLayout<T extends AccountRow>(ts: T[], outer: number) {
+/** inner = radius kept clear for the won-deal node; distances scale between inner and outer. */
+export const orbitRadius = (frac: number, inner: number, outer: number) => inner + frac * (outer - inner);
+export function orbitLayout<T extends AccountRow>(ts: T[], outer: number, inner = 0) {
   const groups = new Map<OrbitGroup, T[]>();
   for (const t of [...ts].sort(defaultOrder)) { const g = orbitGroup(t); groups.set(g, [...(groups.get(g) ?? []), t]); }
   const out: { t: T; group: OrbitGroup; x: number; y: number; r: number; dist: number }[] = [];
@@ -84,7 +86,7 @@ export function orbitLayout<T extends AccountRow>(ts: T[], outer: number) {
     list.forEach((t, i) => {
       const deg = list.length === 1 ? (a0 + a1) / 2 : a0 + ((a1 - a0) * i) / (list.length - 1);
       const rad = (deg * Math.PI) / 180;
-      const dist = orbitDistance(t) * outer;
+      const dist = orbitRadius(orbitDistance(t), inner, outer);
       out.push({ t, group: g, x: Math.cos(rad) * dist, y: Math.sin(rad) * dist, r: bubbleRadius(t.opportunity_score), dist });
     });
   }

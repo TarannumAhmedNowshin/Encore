@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { faviconUrl, initials, orbitLayout, type AccountRow, type OrbitGroup } from "@/lib/encore/accounts";
+import { orbitRadius, faviconUrl, initials, orbitLayout, type AccountRow, type OrbitGroup } from "@/lib/encore/accounts";
 import { cn } from "@/lib/utils";
 
 type T = AccountRow & { evidence: unknown };
@@ -29,7 +29,8 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
   const h = Math.min(640, Math.max(360, w * 0.72));
   const outer = Math.min(w, h) / 2 - 48;
   const cx = w / 2, cy = h / 2;
-  const nodes = orbitLayout(targets, outer);
+  const inner = 70;
+  const nodes = orbitLayout(targets, outer, inner);
 
   // A bubble animates in only when it is new or its status changed since last render.
   const fresh = new Set<string>();
@@ -40,7 +41,7 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
     <div ref={box} className="relative w-full">
       <svg width={w} height={h} role="img" aria-label="Companies arranged by similarity to your won deal" className="block">
         {[90, 70, 50].map((p) => {
-          const r = ((100 - p) / 100) * outer;
+          const r = orbitRadius((100 - p) / 100, inner, outer);
           return (
             <g key={p}>
               <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeDasharray="3 4" />
@@ -55,7 +56,7 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
         ))}
         <g>
           <circle cx={cx} cy={cy} r={26} fill="var(--primary)" />
-          <text x={cx} y={cy + 44} textAnchor="middle" fontSize={12} fontWeight={600} className="fill-foreground">{center}</text>
+          <text x={cx} y={cy + 42} textAnchor="middle" fontSize={12} fontWeight={600} className="fill-foreground">{center}</text>
           <text x={cx} y={cy + 4} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--primary-foreground)">WON</text>
         </g>
         {nodes.map((n) => {
