@@ -73,7 +73,8 @@ const ARCS: Record<OrbitGroup, [number, number]> = {
 export function orbitDistance(t: Pick<AccountRow, "status" | "on_watch_list" | "similarity_percent">): number {
   if (orbitGroup(t) === "pending") return 1;
   const sim = Math.max(0, Math.min(100, t.similarity_percent ?? 0));
-  return Math.max(0.15, Math.min(1, 0.15 + ((100 - sim) * 0.85) / 60));
+  // radius = inner + (100 − similarity) / 60 × (outer − inner): 100% at the centre, 40% or less at the edge.
+  return Math.max(0, Math.min(1, (100 - sim) / 60));
 }
 export const bubbleRadius = (opp: number | null) => 10 + Math.max(0, Math.min(100, opp ?? 0)) * 0.14;
 
@@ -107,6 +108,22 @@ export function orbitLayout<T extends AccountRow>(ts: T[], outer: number, inner 
         }
       }
     }
+  }
+  return out;
+}
+
+/** Similarity shown by each guide ring, as a fraction of the inner→outer span. */
+export const ringFrac = (similarity: number) => Math.max(0, Math.min(1, (100 - similarity) / 60));
+
+/** Hide labels that would overlap an earlier (higher-priority) label. Returns the ids kept. */
+export function visibleLabels(items: { id: string; x: number; y: number; w: number; h?: number }[]): Set<string> {
+  const kept: { x: number; y: number; w: number; h: number }[] = [];
+  const out = new Set<string>();
+  for (const it of items) {
+    const h = it.h ?? 14;
+    const box = { x: it.x - it.w / 2, y: it.y - h / 2, w: it.w, h };
+    if (kept.some((k) => box.x < k.x + k.w && box.x + box.w > k.x && box.y < k.y + k.h && box.y + box.h > k.y)) continue;
+    kept.push(box); out.add(it.id);
   }
   return out;
 }

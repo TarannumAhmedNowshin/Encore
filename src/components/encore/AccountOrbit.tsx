@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { orbitRadius, faviconUrl, initials, orbitLayout, type AccountRow, type OrbitGroup } from "@/lib/encore/accounts";
+import { orbitRadius, faviconUrl, initials, orbitLayout, ringFrac, visibleLabels, type AccountRow, type OrbitGroup } from "@/lib/encore/accounts";
 import { cn } from "@/lib/utils";
 
 type T = AccountRow & { evidence: unknown };
@@ -26,11 +26,15 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
     ro.observe(el); return () => ro.disconnect();
   }, []);
 
-  const h = Math.min(640, Math.max(360, w * 0.72));
-  const outer = Math.min(w, h) / 2 - 48;
+  const h = Math.max(520, Math.min(760, w * 0.7));
+  const outer = Math.min(w, h) / 2 - 40;
   const cx = w / 2, cy = h / 2;
-  const inner = 70;
+  const inner = 48;
   const nodes = orbitLayout(targets, outer, inner);
+  const short = (n: string | null) => { const s = n ?? ""; return s.length > 18 ? `${s.slice(0, 18)}…` : s; };
+  // Qualified first (best first), then the rest; a label that would overlap one already placed is hidden.
+  const labelled = visibleLabels(nodes.filter((n) => n.group === "qualified")
+    .map((n) => ({ id: n.t.id, x: cx + n.x, y: cy + n.y + n.r + 10, w: short(n.t.name).length * 6.2 + 6 })));
 
   // A bubble animates in only when it is new or its status changed since last render.
   const fresh = new Set<string>();
@@ -39,9 +43,10 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
 
   return (
     <div ref={box} className="relative w-full">
-      <svg width={w} height={h} role="img" aria-label="Companies arranged by similarity to your won deal" className="block">
-        {([[40, "90%"], [60, "70%"], [80, "50%"]] as const).map(([f, label]) => {
-          const r = orbitRadius(f / 100, inner, outer);
+      <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Companies arranged by similarity to your won deal" className="block">
+        {([90, 70, 50] as const).map((sim) => {
+          const f = sim; const label = `${sim}%`;
+          const r = orbitRadius(ringFrac(sim), inner, outer);
           return (
             <g key={f}>
               <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeDasharray="3 4" />
@@ -55,10 +60,9 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
             strokeWidth={0.5 + ((n.t.evidence_score ?? 0) / 100) * 3.5} />
         ))}
         <g>
-          <circle cx={cx} cy={cy} r={26} fill="var(--primary)" />
-          <text x={cx} y={cy + 4} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--primary-foreground)">WON</text>
-          <text x={cx} y={cy + 42} textAnchor="middle" fontSize={12} fontWeight={600} className="fill-foreground">{center}</text>
-          <text x={cx} y={cy + 56} textAnchor="middle" fontSize={10} className="fill-muted-foreground">Your won deal</text>
+          <circle cx={cx} cy={cy} r={8} fill="var(--primary)" />
+          <text x={cx} y={cy + 24} textAnchor="middle" fontSize={12} fontWeight={600} className="fill-foreground">{short(center)}</text>
+          <title>{center} — your won deal</title>
         </g>
         {nodes.map((n) => {
           const fav = faviconUrl(n.t.website);
@@ -78,8 +82,8 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
                 {fav ? <image href={fav} x={-s / 2} y={-s / 2} width={s} height={s} />
                   : <text textAnchor="middle" dy="0.35em" fontSize={Math.max(9, n.r * 0.6)} fontWeight={600} className="fill-foreground">{initials(n.t.name)}</text>}
               </g>
-              {(n.group === "qualified" || hover?.t.id === n.t.id) && (
-                <text y={n.r + 14} textAnchor="middle" fontSize={11} className="fill-foreground">{(n.t.name ?? "").slice(0, 18)}{(n.t.name ?? "").length > 18 ? "…" : ""}</text>
+              {hover?.t.id !== n.t.id && labelled.has(n.t.id) && (
+                <text y={n.r + 14} textAnchor="middle" fontSize={11} className="fill-foreground">{short(n.t.name)}</text>
               )}
             </g>
           );
