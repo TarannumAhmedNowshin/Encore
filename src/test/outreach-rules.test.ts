@@ -85,3 +85,20 @@ describe("claim verification", () => {
     expect(r.personalised).toBe(true);
   });
 });
+
+import { draftRows } from "@/lib/encore/outreach";
+describe("draft saving", () => {
+  const base = { user_id: "u", analysis_id: "a", contact_id: "c" };
+  const v = { claims: [], ungrounded: [], all_claims_verified: true };
+  it("always saves the generated body", () => {
+    const [r] = draftRows([{ d: { channel: "email", subject: "Hi", body: "Hello there.", claims: [] }, v }], base);
+    expect(r!.body).toBe("Hello there.");
+    expect(r!.status).toBe("pending");
+  });
+  it("never saves a blank draft: empty body becomes an error row", () => {
+    const [r] = draftRows([{ d: { channel: "email", subject: "Hi", body: "  ", claims: [] }, v }], base);
+    expect(r!.body).toBeNull();
+    expect(r!.status).toBe("error");
+    expect(r!.all_claims_verified).toBe(false);
+  });
+});
