@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, Check, Copy, Download, Mail, Pencil, Send, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Copy, Download, Mail, Pencil, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -234,7 +234,7 @@ function OutreachPage() {
       )}
 
       {!all.length ? (
-        <section className="mt-8"><EmptyState title="No contacts yet" line="Find people at qualified accounts on the People page first." /></section>
+        <section className="mt-8"><EmptyState title="No contacts yet" line="Find people at qualified accounts on the People page first." action={<Button asChild variant="outline"><Link to="/app/a/$id/people" params={{ id }}>Find people first <ArrowRight /></Link></Button>} /></section>
       ) : tab === "approved" ? (
         <section className="mt-6 space-y-3">
           <div className="flex justify-end"><Button variant="outline" onClick={exportCsv} disabled={!approved.length}><Download /> Export approved CSV</Button></div>
