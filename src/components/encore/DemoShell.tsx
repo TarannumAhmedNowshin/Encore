@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Pause, Play, RotateCcw, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ function GuidedTour() {
   const [progress, setProgress] = useState(0);
   const [dockTop, setDockTop] = useState(false);
   const tourUi = useRef<HTMLDivElement>(null);
+  const [portalHost, setPortalHost] = useState<Element | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [stats, setStats] = useState<DemoStats | null>(null);
@@ -109,6 +111,7 @@ function GuidedTour() {
   useEffect(() => {
     let raf = 0;
     const tick = () => {
+      setPortalHost(document.querySelector('[data-encore-panel][data-state="open"]'));
       const el = target.current;
       if (el && window.innerWidth < 640) {
         const bounds = el.getBoundingClientRect();
@@ -166,13 +169,7 @@ function GuidedTour() {
   if (!s) return null;
   const pad = 8;
 
-  return (
-    <>
-      {rect && open && !done && (
-        <div aria-hidden className="tour-spot pointer-events-none fixed z-[60] rounded-xl"
-          style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }} />
-      )}
-
+  const controls = (
       <div ref={tourUi} data-tour-ui className={cn("pointer-events-none fixed inset-x-0 z-[70] flex max-h-[calc(100dvh-64px)] flex-col items-stretch gap-2 p-3 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:top-auto sm:w-[380px] sm:p-0", dockTop ? "top-12" : "bottom-0")}>
         <div className="hidden flex-col gap-1.5 sm:flex" role="status" aria-live="polite">
           {notes.map((n) => (
@@ -220,6 +217,14 @@ function GuidedTour() {
           </section>
         )}
       </div>
+  );
+  return (
+    <>
+      {rect && open && !done && (
+        <div aria-hidden className="tour-spot pointer-events-none fixed z-[60] rounded-xl"
+          style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }} />
+      )}
+      {portalHost ? createPortal(controls, portalHost) : controls}
     </>
   );
 }
