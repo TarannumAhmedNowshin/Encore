@@ -26,3 +26,4 @@
 - Subdirectories have their own `AGENTS.md` (e.g. `src/lib/encore/AGENTS.md`); read it before changing files there.
 - Landing story lives in src/components/encore/landing/Story.tsx: framer-motion scroll scenes are sticky only at ≥1024px without reduced motion, otherwise stacked final states; why: phones and reduced-motion users get a simple, fast page.
 - Pan/zoom for SVG charts (orbit, quadrant) uses usePanZoom + ZoomControls in src/components/encore/PanZoom.tsx with pure math in src/lib/encore/zoom.ts; why: one tested zoom behaviour (cursor-anchored wheel, pinch, drag) for every chart.
+- Overlays use Panel (src/components/encore/primitives.tsx, Radix Dialog: outside click + Esc close, focus trap, focus returns to opener) or ConfirmDialog (destructive = AlertDialog, ignores outside clicks); chips use the `chip` utility via Pill/EvidenceChip; phone main actions go in MobileActionBar; why: one consistent interaction and size system app-wide.
