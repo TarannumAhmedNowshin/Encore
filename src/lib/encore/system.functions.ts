@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { DAILY_LIMITS, type LimitedKind } from "./limits";
+import { DAILY_LIMITS, dailyLimitFor, type LimitedKind } from "./limits";
 
 export type CheckResult = { id: string; label: string; ok: boolean; detail: string };
 
@@ -54,7 +54,7 @@ export const getUsageToday = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return (Object.keys(DAILY_LIMITS) as LimitedKind[]).map((kind) => ({
       kind,
-      limit: DAILY_LIMITS[kind],
+      limit: dailyLimitFor(kind, context.userId) ?? DAILY_LIMITS[kind],
       used: (data ?? []).filter((r) => r.kind === kind).reduce((s, r) => s + (r.units ?? 1), 0),
     }));
   });

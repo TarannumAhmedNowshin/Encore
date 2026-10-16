@@ -12,7 +12,11 @@ export function similarityPercent(dimensions: Record<string, unknown> | unknown[
   const vals = Array.isArray(dimensions)
     ? dimensions.map((d: any) => val(typeof d === "string" ? d : d?.rating))
     : Object.values(dimensions ?? {}).map((d: any) => val(typeof d === "string" ? d : d?.rating));
-  return Math.round(mean(vals) * 100);
+  const pct = Math.round(mean(vals) * 100);
+  // A different business model can never look like a near-perfect match.
+  const bm = Array.isArray(dimensions) ? undefined : (dimensions as any)?.business_model;
+  const bmRating = typeof bm === "string" ? bm : bm?.rating;
+  return bmRating !== undefined && bmRating !== "high" ? Math.min(85, pct) : pct;
 }
 
 export function evidenceScore(evidence: Evidence[]): { score: number; strength: "direct" | "adjacent" | null } {
