@@ -136,3 +136,27 @@ export function checkQualification(input: {
 
 /** Browser: is this failure the AI being busy (worth one delayed retry)? */
 export const isBusyError = (msg: string) => /busy|overload|503|429|rate/i.test(msg);
+
+// ---------- find-departments rules ----------
+
+const STRIP_WORDS = /\b(department|dept|team|group|function|unit|division)\b/gi;
+const titleCase = (s: string) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Functions likely to own the problem at a target: the Sales DNA owning department (cleaned, title case),
+ *  then persona functions shared by 2+ personas, else the most common persona function. */
+export function owningFunctions(owningDepartment: string | null | undefined, personaFunctions: (string | null | undefined)[]): string[] {
+  const out: string[] = [];
+  const push = (s: string) => { const t = s.trim(); if (t && !out.some((o) => o.toLowerCase() === t.toLowerCase())) out.push(t); };
+  const base = (owningDepartment ?? "").replace(STRIP_WORDS, " ").replace(/\s+/g, " ").trim();
+  if (base) push(titleCase(base));
+  const counts = new Map<string, { n: number; label: string }>();
+  for (const f of personaFunctions) for (const part of (f ?? "").split("/")) {
+    const t = part.trim(); if (!t) continue;
+    const k = t.toLowerCase();
+    const e = counts.get(k) ?? { n: 0, label: t };
+    e.n++; counts.set(k, e);
+  }
+  for (const e of [...counts.values()].filter((e) => e.n >= 2).sort((a, b) => b.n - a.n)) push(e.label);
+  if (!out.length && counts.size) push([...counts.values()].sort((a, b) => b.n - a.n)[0]!.label);
+  return out;
+}
