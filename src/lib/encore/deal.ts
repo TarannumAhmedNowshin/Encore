@@ -4,7 +4,7 @@ import type { StageStatus } from "@/components/encore/primitives";
 
 export type StageCounts = {
   facts: number; extractRunning: boolean; playbookRunning?: boolean; hasSalesDna: boolean; personas: number;
-  qualified: number; contacts: number; approvedDrafts: number;
+  qualified: number; contacts: number; drafts: number;
 };
 export type StageState = { status: StageStatus; count: number; reason?: string };
 
@@ -21,9 +21,9 @@ export function computeStages(c: StageCounts): Record<"deal" | "playbook" | "acc
     people: c.contacts > 0 ? { status: "done", count: c.contacts }
       : c.qualified === 0 ? { status: "blocked", count: c.contacts, reason: "Qualify an account first" }
       : { status: "not_started", count: c.contacts },
-    outreach: c.approvedDrafts > 0 ? { status: "done", count: c.approvedDrafts }
-      : c.contacts === 0 ? { status: "blocked", count: c.approvedDrafts, reason: "Find contacts first" }
-      : { status: "not_started", count: c.approvedDrafts },
+    outreach: c.drafts > 0 ? { status: "done", count: c.drafts }
+      : c.contacts === 0 ? { status: "blocked", count: c.drafts, reason: "Find contacts first" }
+      : { status: "not_started", count: c.drafts },
   };
 }
 
