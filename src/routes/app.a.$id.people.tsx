@@ -229,7 +229,7 @@ const RATING_LABEL: [keyof Score, string][] = [
   ["similarity_to_original", "Similarity to original"], ["evidence_strength", "Evidence strength"],
 ];
 
-function ContactCard({ c, score, persona }: { c: Contact; score?: Score; persona: string }) {
+function ContactCard({ c, score, persona }: { c: Contact; score?: Score | undefined; persona: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-md border border-border bg-card p-2.5 text-sm">
