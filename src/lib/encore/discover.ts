@@ -9,8 +9,8 @@ export type SearchPlan = {
 };
 
 /** Fallback plan: the first 8 words of each DNA field. */
-export function fallbackPlan(dna: Record<string, string | null | undefined>): SearchPlan {
-  const w = (s: string | null | undefined) => (s ?? "").split(/\s+/).filter(Boolean).slice(0, 8).join(" ");
+export function fallbackPlan(dna: Record<string, unknown>): SearchPlan {
+  const w = (s: unknown) => (typeof s === "string" ? s : "").split(/\s+/).filter(Boolean).slice(0, 8).join(" ");
   return {
     industry_terms: w(dna["industry_characteristics"]),
     regulatory_terms: w(dna["regulatory_characteristics"]),
