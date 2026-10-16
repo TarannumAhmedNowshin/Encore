@@ -10,33 +10,170 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppNewRouteImport } from './routes/app.new'
+import { Route as AppAIdRouteImport } from './routes/app.a.$id'
+import { Route as AppAIdAccountsRouteImport } from './routes/app.a.$id.accounts'
+import { Route as AppAIdDealRouteImport } from './routes/app.a.$id.deal'
+import { Route as AppAIdOutreachRouteImport } from './routes/app.a.$id.outreach'
+import { Route as AppAIdPeopleRouteImport } from './routes/app.a.$id.people'
+import { Route as AppAIdPlaybookRouteImport } from './routes/app.a.$id.playbook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNewRoute = AppNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAIdRoute = AppAIdRouteImport.update({
+  id: '/a/$id',
+  path: '/a/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAIdAccountsRoute = AppAIdAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => AppAIdRoute,
+} as any)
+const AppAIdDealRoute = AppAIdDealRouteImport.update({
+  id: '/deal',
+  path: '/deal',
+  getParentRoute: () => AppAIdRoute,
+} as any)
+const AppAIdOutreachRoute = AppAIdOutreachRouteImport.update({
+  id: '/outreach',
+  path: '/outreach',
+  getParentRoute: () => AppAIdRoute,
+} as any)
+const AppAIdPeopleRoute = AppAIdPeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => AppAIdRoute,
+} as any)
+const AppAIdPlaybookRoute = AppAIdPlaybookRouteImport.update({
+  id: '/playbook',
+  path: '/playbook',
+  getParentRoute: () => AppAIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/app/new': typeof AppNewRoute
+  '/app/': typeof AppIndexRoute
+  '/app/a/$id': typeof AppAIdRouteWithChildren
+  '/app/a/$id/accounts': typeof AppAIdAccountsRoute
+  '/app/a/$id/deal': typeof AppAIdDealRoute
+  '/app/a/$id/outreach': typeof AppAIdOutreachRoute
+  '/app/a/$id/people': typeof AppAIdPeopleRoute
+  '/app/a/$id/playbook': typeof AppAIdPlaybookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/app/new': typeof AppNewRoute
+  '/app': typeof AppIndexRoute
+  '/app/a/$id': typeof AppAIdRouteWithChildren
+  '/app/a/$id/accounts': typeof AppAIdAccountsRoute
+  '/app/a/$id/deal': typeof AppAIdDealRoute
+  '/app/a/$id/outreach': typeof AppAIdOutreachRoute
+  '/app/a/$id/people': typeof AppAIdPeopleRoute
+  '/app/a/$id/playbook': typeof AppAIdPlaybookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/app/new': typeof AppNewRoute
+  '/app/': typeof AppIndexRoute
+  '/app/a/$id': typeof AppAIdRouteWithChildren
+  '/app/a/$id/accounts': typeof AppAIdAccountsRoute
+  '/app/a/$id/deal': typeof AppAIdDealRoute
+  '/app/a/$id/outreach': typeof AppAIdOutreachRoute
+  '/app/a/$id/people': typeof AppAIdPeopleRoute
+  '/app/a/$id/playbook': typeof AppAIdPlaybookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/how-it-works'
+    | '/app/new'
+    | '/app/'
+    | '/app/a/$id'
+    | '/app/a/$id/accounts'
+    | '/app/a/$id/deal'
+    | '/app/a/$id/outreach'
+    | '/app/a/$id/people'
+    | '/app/a/$id/playbook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/how-it-works'
+    | '/app/new'
+    | '/app'
+    | '/app/a/$id'
+    | '/app/a/$id/accounts'
+    | '/app/a/$id/deal'
+    | '/app/a/$id/outreach'
+    | '/app/a/$id/people'
+    | '/app/a/$id/playbook'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/how-it-works'
+    | '/app/new'
+    | '/app/'
+    | '/app/a/$id'
+    | '/app/a/$id/accounts'
+    | '/app/a/$id/deal'
+    | '/app/a/$id/outreach'
+    | '/app/a/$id/people'
+    | '/app/a/$id/playbook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  HowItWorksRoute: typeof HowItWorksRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +185,124 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/new': {
+      id: '/app/new'
+      path: '/new'
+      fullPath: '/app/new'
+      preLoaderRoute: typeof AppNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/a/$id': {
+      id: '/app/a/$id'
+      path: '/a/$id'
+      fullPath: '/app/a/$id'
+      preLoaderRoute: typeof AppAIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/a/$id/accounts': {
+      id: '/app/a/$id/accounts'
+      path: '/accounts'
+      fullPath: '/app/a/$id/accounts'
+      preLoaderRoute: typeof AppAIdAccountsRouteImport
+      parentRoute: typeof AppAIdRoute
+    }
+    '/app/a/$id/deal': {
+      id: '/app/a/$id/deal'
+      path: '/deal'
+      fullPath: '/app/a/$id/deal'
+      preLoaderRoute: typeof AppAIdDealRouteImport
+      parentRoute: typeof AppAIdRoute
+    }
+    '/app/a/$id/outreach': {
+      id: '/app/a/$id/outreach'
+      path: '/outreach'
+      fullPath: '/app/a/$id/outreach'
+      preLoaderRoute: typeof AppAIdOutreachRouteImport
+      parentRoute: typeof AppAIdRoute
+    }
+    '/app/a/$id/people': {
+      id: '/app/a/$id/people'
+      path: '/people'
+      fullPath: '/app/a/$id/people'
+      preLoaderRoute: typeof AppAIdPeopleRouteImport
+      parentRoute: typeof AppAIdRoute
+    }
+    '/app/a/$id/playbook': {
+      id: '/app/a/$id/playbook'
+      path: '/playbook'
+      fullPath: '/app/a/$id/playbook'
+      preLoaderRoute: typeof AppAIdPlaybookRouteImport
+      parentRoute: typeof AppAIdRoute
+    }
   }
 }
 
+interface AppAIdRouteChildren {
+  AppAIdAccountsRoute: typeof AppAIdAccountsRoute
+  AppAIdDealRoute: typeof AppAIdDealRoute
+  AppAIdOutreachRoute: typeof AppAIdOutreachRoute
+  AppAIdPeopleRoute: typeof AppAIdPeopleRoute
+  AppAIdPlaybookRoute: typeof AppAIdPlaybookRoute
+}
+
+const AppAIdRouteChildren: AppAIdRouteChildren = {
+  AppAIdAccountsRoute: AppAIdAccountsRoute,
+  AppAIdDealRoute: AppAIdDealRoute,
+  AppAIdOutreachRoute: AppAIdOutreachRoute,
+  AppAIdPeopleRoute: AppAIdPeopleRoute,
+  AppAIdPlaybookRoute: AppAIdPlaybookRoute,
+}
+
+const AppAIdRouteWithChildren =
+  AppAIdRoute._addFileChildren(AppAIdRouteChildren)
+
+interface AppRouteChildren {
+  AppNewRoute: typeof AppNewRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppAIdRoute: typeof AppAIdRouteWithChildren
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppNewRoute: AppNewRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppAIdRoute: AppAIdRouteWithChildren,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  AuthRoute: AuthRoute,
+  HowItWorksRoute: HowItWorksRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
