@@ -1,5 +1,5 @@
 // Pure look-alike discovery rules. No I/O, safe to unit test.
-import { normalizeCompany } from "./text";
+import { companyAliases, mentionsCompany, normalizeCompany, quoteVerified } from "./text";
 
 export const REGION_PHRASE: Record<string, string> = { us: "United States", uk_ie: "UK Ireland", eu: "Europe", global: "" };
 
@@ -80,3 +80,55 @@ export function selectCandidates(leads: Lead[], customer: string, region: string
   const rest = [...other, ...unknown].slice(0, max - fromIn.length);
   return [...fromIn, ...rest];
 }
+
+// ---------- qualify-company rules ----------
+
+export const DIM_KEYS = ["industry", "business_model", "regulatory", "operational", "organizational", "technology"] as const;
+const SOURCED = new Set(["regulatory", "operational", "organizational", "technology"]);
+export type DimRating = "high" | "medium" | "low";
+export type DimIn = { rating: DimRating; reason: string; source_url: string | null };
+export type DimOut = DimIn & { capped: boolean };
+export type EvidenceIn = { summary: string; quote: string; source_url: string; strength: "direct" | "adjacent" };
+export type EvidenceOut = EvidenceIn & { source_title: string; verified: boolean };
+export type Mat = { url: string; title?: string | null; text?: string | null };
+
+/** Strip parentheses and quotes from a name for use inside a quoted search phrase. */
+export const searchName = (name: string) => name.replace(/\([^)]*\)/g, " ").replace(/"/g, "").replace(/\s+/g, " ").trim();
+
+export function qualifyQueries(name: string, plan: Partial<SearchPlan>, website: string | null, domain: string): string[] {
+  const n = searchName(name);
+  const problems = (plan.problem_terms ?? []).filter(Boolean);
+  const q = problems.slice(0, 2).map((p) => `"${n}" ${p}`);
+  q.push(`"${n}" headquarters`);
+  if (plan.department_terms?.trim()) q.push(`"${n}" ${plan.department_terms.trim()}`);
+  if (website && domain && problems[0]) q.push(`site:${domain} ${problems[0]}`);
+  return q;
+}
+
+export function checkQualification(input: {
+  name: string; domain: string; materials: Mat[];
+  dimensions: Record<string, DimIn>; evidence: EvidenceIn[]; qualified: boolean; rejection_reason: string;
+}): { dimensions: Record<string, DimOut>; evidence: EvidenceOut[]; status: "qualified" | "rejected"; rejection_reason: string | null } {
+  const byUrl = new Map(input.materials.map((m) => [m.url, m]));
+  const aliases = companyAliases(input.name);
+  const dimensions: Record<string, DimOut> = {};
+  for (const k of DIM_KEYS) {
+    const d = input.dimensions[k] ?? { rating: "low", reason: "", source_url: null };
+    const src = d.source_url && byUrl.has(d.source_url) ? d.source_url : null;
+    const capped = SOURCED.has(k) && d.rating === "high" && !src;
+    dimensions[k] = { rating: capped ? "medium" : d.rating, reason: d.reason, source_url: src, capped };
+  }
+  const evidence: EvidenceOut[] = input.evidence.slice(0, 3).map((e) => {
+    const m = byUrl.get(e.source_url);
+    const verified = !!m && quoteVerified(e.quote, m.text ?? "", 5) && mentionsCompany({ url: m.url, title: m.title ?? "", text: m.text ?? "" }, aliases, input.domain || undefined);
+    return { ...e, source_title: m?.title ?? "", verified };
+  });
+  const anyVerified = evidence.some((e) => e.verified);
+  if (input.qualified && anyVerified) return { dimensions, evidence, status: "qualified", rejection_reason: null };
+  if (input.qualified) return { dimensions, evidence, status: "rejected",
+    rejection_reason: `The evidence couldn't be confirmed: the quote wasn't found word for word on a page about ${input.name}.` };
+  return { dimensions, evidence, status: "rejected", rejection_reason: input.rejection_reason || "Not a fit." };
+}
+
+/** Browser: is this failure the AI being busy (worth one delayed retry)? */
+export const isBusyError = (msg: string) => /busy|overload|503|429|rate/i.test(msg);

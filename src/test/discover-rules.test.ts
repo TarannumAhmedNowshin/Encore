@@ -30,3 +30,27 @@ describe("lead selection", () => {
   });
   it("global takes the first 12", () => expect(selectCandidates(Array.from({ length: 20 }, (_, i) => lead(`C${i}`, "")), "", "global").length).toBe(12));
 });
+
+import { checkQualification, qualifyQueries, isBusyError } from "@/lib/encore/discover";
+describe("qualify-company checks", () => {
+  const page = { url: "https://acme.ie/news", title: "Acme news", text: "Acme Haulage still plans every delivery route by hand in spreadsheets each morning." };
+  const dims = (r: "high" | "medium" | "low", url: string | null) =>
+    Object.fromEntries(["industry", "business_model", "regulatory", "operational", "organizational", "technology"].map((k) => [k, { rating: r, reason: "x", source_url: url }]));
+  const ev = { summary: "s", quote: "plans every delivery route by hand", source_url: page.url, strength: "direct" as const };
+  it("qualifies only with a verified quote", () => {
+    expect(checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [ev], qualified: true, rejection_reason: "" }).status).toBe("qualified");
+    const r = checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [{ ...ev, quote: "routes are planned manually" }], qualified: true, rejection_reason: "" });
+    expect(r.status).toBe("rejected");
+    expect(r.rejection_reason).toContain("Acme Haulage");
+  });
+  it("caps unsourced high on sourced dimensions and drops unknown URLs", () => {
+    const r = checkQualification({ name: "Acme", domain: "", materials: [page], dimensions: dims("high", "https://made.up"), evidence: [], qualified: false, rejection_reason: "no" });
+    expect(r.dimensions["operational"]).toMatchObject({ rating: "medium", capped: true, source_url: null });
+    expect(r.dimensions["industry"]).toMatchObject({ rating: "high", capped: false });
+  });
+  it("builds queries with parentheses stripped", () => {
+    expect(qualifyQueries("Acme (AH) Ltd", { problem_terms: ["route planning"], department_terms: "transport" }, "acme.ie", "acme.ie"))
+      .toEqual(['"Acme Ltd" route planning', '"Acme Ltd" headquarters', '"Acme Ltd" transport', "site:acme.ie route planning"]);
+  });
+  it("detects busy errors", () => { expect(isBusyError("The AI service is busy, try again in a minute")).toBe(true); });
+});
