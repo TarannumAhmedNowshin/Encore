@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { FileUp, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,8 @@ function NewAnalysis() {
     setPeople([]);
     setError(null);
   }
+
+  useEffect(() => { if (sample) loadSample(); }, [sample]);
 
   async function onFile(file: File) {
     setError(null);
