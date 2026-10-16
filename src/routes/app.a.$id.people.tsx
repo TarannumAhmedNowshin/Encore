@@ -74,8 +74,6 @@ function PeoplePage() {
   const scoreFn = useServerFn(scoreContacts);
   const [bulk, setBulk] = useRunState<Bulk>(`people-bulk:${id}`, null);
   const [busyId, setBusyId] = useRunState<string | null>(`people-busy:${id}`, null);
-  // Companies searched in this session that came back with nobody (so empty slots are real gaps).
-  const [searchedEmpty, setSearchedEmpty] = useRunState<string[]>(`people-searched:${id}`, []);
 
   const d = q.data;
   const byTarget = useMemo(() => {
@@ -102,7 +100,6 @@ function PeoplePage() {
     try {
       const r = await findFn({ data: { target_id: targetId } });
       if (r.message) toast(r.message);
-      setSearchedEmpty((l) => [...new Set([...l, targetId])]);
       await refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "People search failed"); }
     finally { setBusyId(null); }
@@ -128,7 +125,6 @@ function PeoplePage() {
       try {
         const r = kind === "find" ? await findFn({ data: { target_id: t.id } }) : await scoreFn({ data: { target_id: t.id } });
         if ("message" in r && r.message) toast(`${t.name}: ${r.message}`);
-        if (kind === "find") setSearchedEmpty((l) => [...new Set([...l, t.id])]);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Failed";
         toast.error(`${t.name}: ${msg}`);
@@ -189,7 +185,7 @@ function PeoplePage() {
           {d.targets.map((t) => {
             const contacts = byTarget.get(t.id) ?? [];
             const busy = busyId === t.id;
-            const searched = contacts.length > 0 || searchedEmpty.includes(t.id);
+            const searched = contacts.length > 0 || !!(t as AccountRow & { people_searched_at?: string | null }).people_searched_at;
             return (
               <Card key={t.id}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
