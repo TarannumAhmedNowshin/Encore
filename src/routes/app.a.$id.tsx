@@ -24,7 +24,7 @@ function AnalysisLayout() {
       <nav aria-label="Analysis stages" className="border-b border-border bg-card md:w-[260px] md:shrink-0 md:border-r md:border-b-0">
         <ol className="flex gap-1 overflow-x-auto p-2 md:flex-col md:p-4">
           {STAGES.map((s, i) => {
-            const meta = placeholderStatus[s.key];
+            const meta = placeholderStatus[s.key] ?? { status: "not_started" as StageStatus, count: 0 };
             const active = pathname.endsWith(`/${s.key}`);
             return (
               <li key={s.key} className="shrink-0">

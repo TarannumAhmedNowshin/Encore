@@ -12,7 +12,7 @@ import { safeRedirect } from "@/lib/auth";
 const PENDING_KEY = "encore-post-auth";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s: Record<string, unknown>) => ({ redirect: typeof s.redirect === "string" ? s.redirect : undefined }),
+  validateSearch: (s: Record<string, unknown>): { redirect?: string } => (typeof s["redirect"] === "string" ? { redirect: s["redirect"] } : {}),
   head: () => ({
     meta: [
       { title: "Sign in — Encore" },

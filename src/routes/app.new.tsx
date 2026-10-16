@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, Pill, RunTimeline } from "@/components/encore/primitives";
 
 export const Route = createFileRoute("/app/new")({
-  validateSearch: (s: Record<string, unknown>) => ({ sample: s.sample === 1 || s.sample === "1" ? 1 : undefined }),
+  validateSearch: (s: Record<string, unknown>): { sample?: 1 } => (s["sample"] === 1 || s["sample"] === "1" ? { sample: 1 } : {}),
   head: () => ({ meta: [{ title: "New analysis — Encore" }] }),
   component: NewAnalysis,
 });

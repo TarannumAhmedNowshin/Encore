@@ -31,7 +31,7 @@ function AppShell() {
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const name = (user?.user_metadata?.full_name as string | undefined) || user?.email || "";
+  const name = (user?.user_metadata?.["full_name"] as string | undefined) || user?.email || "";
   const initials = name.split(/[\s@.]/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "E";
 
   async function signOut() {
