@@ -205,7 +205,7 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
   return (
     <Card className="mt-4 p-4">
       <div className="relative h-[440px]">
-        <div className="pointer-events-none absolute inset-0 z-10 grid grid-cols-2 grid-rows-2 px-14 pb-10 pt-3 text-xs text-muted-foreground/70">
+        <div className="pointer-events-none absolute inset-0 z-10 grid grid-cols-2 grid-rows-2 pb-16 pl-24 pr-12 pt-8 text-xs text-muted-foreground/70">
           <span>Proven need, different shape</span><span className="text-right">Prime targets</span>
           <span className="self-end">Long shots</span><span className="self-end text-right">Look-alike, little evidence yet</span>
         </div>
