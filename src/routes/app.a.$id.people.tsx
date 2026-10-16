@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,6 +12,7 @@ import { findPeople, scoreContacts } from "@/lib/encore/people.functions";
 import { isCreditError, ROLE_SLOTS, SLOT_LABELS, type RoleSlot } from "@/lib/encore/people";
 import { defaultOrder, type AccountRow } from "@/lib/encore/accounts";
 import { usageTodayQuery } from "@/lib/encore/usage-query";
+import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/a/$id/people")({
@@ -38,7 +40,7 @@ const peopleQuery = (id: string) => queryOptions({
   queryKey: ["people", id],
   queryFn: async () => {
     const [a, targets, contacts, scores, personas] = await Promise.all([
-      supabase.from("analyses").select("is_showcase").eq("id", id).single(),
+      supabase.from("analyses").select("is_showcase").eq("id", id).maybeSingle(),
       supabase.from("targets").select("*").eq("analysis_id", id).eq("status", "qualified"),
       supabase.from("contacts").select("*").eq("analysis_id", id),
       supabase.from("contact_scores").select("*"),
@@ -61,14 +63,19 @@ function PeoplePage() {
   const qc = useQueryClient();
   const q = useQuery(peopleQuery(id));
   const refresh = async () => {
-    await refresh();
-    await qc.invalidateQueries({ queryKey: ["stages", id] });
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["people", id] }),
+      qc.invalidateQueries({ queryKey: ["stages", id] }),
+      qc.invalidateQueries({ queryKey: ["usage-today"] }),
+    ]);
   };
   const usage = useQuery(usageTodayQuery);
   const findFn = useServerFn(findPeople);
   const scoreFn = useServerFn(scoreContacts);
-  const [bulk, setBulk] = useState<Bulk>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulk, setBulk] = useRunState<Bulk>(`people-bulk:${id}`, null);
+  const [busyId, setBusyId] = useRunState<string | null>(`people-busy:${id}`, null);
+  // Companies searched in this session that came back with nobody (so empty slots are real gaps).
+  const [searchedEmpty, setSearchedEmpty] = useRunState<string[]>(`people-searched:${id}`, []);
 
   const d = q.data;
   const byTarget = useMemo(() => {
@@ -95,6 +102,7 @@ function PeoplePage() {
     try {
       const r = await findFn({ data: { target_id: targetId } });
       if (r.message) toast(r.message);
+      setSearchedEmpty((l) => [...new Set([...l, targetId])]);
       await refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "People search failed"); }
     finally { setBusyId(null); }
@@ -112,23 +120,31 @@ function PeoplePage() {
     const list = kind === "find" ? d.targets.slice(0, 3) : d.targets.filter((t) => (byTarget.get(t.id) ?? []).length > 0);
     if (!list.length) return;
     setBulk({ kind, done: 0, total: list.length, running: true });
+    const jobKey = `people:${id}`;
+    const label = kind === "find" ? "Finding people…" : "Scoring contacts…";
+    setJob({ key: jobKey, analysisId: id, label, done: 0, total: list.length });
     for (let i = 0; i < list.length; i++) {
       const t = list[i]!;
       try {
         const r = kind === "find" ? await findFn({ data: { target_id: t.id } }) : await scoreFn({ data: { target_id: t.id } });
         if ("message" in r && r.message) toast(`${t.name}: ${r.message}`);
+        if (kind === "find") setSearchedEmpty((l) => [...new Set([...l, t.id])]);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Failed";
         toast.error(`${t.name}: ${msg}`);
         if (isCreditError(msg)) {
           toast.error("Stopped: the people-search provider says its credit or limit is exhausted.");
           setBulk({ kind, done: i, total: list.length, running: false });
+          clearJob(jobKey);
           await refresh();
           return;
         }
       }
       setBulk({ kind, done: i + 1, total: list.length, running: true });
+      setJob({ key: jobKey, analysisId: id, label, done: i + 1, total: list.length });
+      await refresh(); // show each company's board as soon as it's ready
     }
+    clearJob(jobKey);
     setBulk(null);
     await refresh();
   };
@@ -173,6 +189,7 @@ function PeoplePage() {
           {d.targets.map((t) => {
             const contacts = byTarget.get(t.id) ?? [];
             const busy = busyId === t.id;
+            const searched = contacts.length > 0 || searchedEmpty.includes(t.id);
             return (
               <Card key={t.id}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -202,7 +219,8 @@ function PeoplePage() {
                         <div className="mb-2 px-1 text-xs font-medium text-muted-foreground">{SLOT_LABELS[slot]}</div>
                         {inSlot.length === 0 ? (
                           <div className="grid place-items-center rounded-md border border-dashed border-border px-2 py-6 text-center text-xs text-muted-foreground">
-                            Gap — no match found
+                            {busy ? <span className="flex items-center gap-1"><Loader2 className="size-3 animate-spin" aria-hidden /> Searching…</span>
+                              : searched ? "Gap — no match found" : "Not searched yet"}
                           </div>
                         ) : (
                           <div className="space-y-2">

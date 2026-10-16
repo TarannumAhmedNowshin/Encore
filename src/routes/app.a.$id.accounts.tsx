@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
 import { useDiscoveryRun } from "@/hooks/useDiscoveryRun";
+import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { findDepartments } from "@/lib/encore/departments.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -52,7 +53,7 @@ function AccountsPage() {
   const [filter, setFilter] = useState<AccountFilter>("qualified");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "default", dir: 1 });
   const [openId, setOpenId] = useState<string | null>(null);
-  const [bulk, setBulk] = useState<{ running: boolean; done: number; total: number } | null>(null);
+  const [bulk, setBulk] = useRunState<{ running: boolean; done: number; total: number } | null>(`deps-bulk:${id}`, null);
   const findDeps = useServerFn(findDepartments);
   const targets = d.targets as unknown as Target[];
 
@@ -60,6 +61,8 @@ function AccountsPage() {
     const top = targets.filter((t) => t.status === "qualified").sort(defaultOrder).slice(0, 5);
     if (!top.length || bulk?.running) return;
     setBulk({ running: true, done: 0, total: top.length });
+    const jobKey = `departments:${id}`;
+    setJob({ key: jobKey, analysisId: id, label: "Finding departments…", done: 0, total: top.length });
     const queue = [...top];
     let done = 0;
     await Promise.all(Array.from({ length: Math.min(2, queue.length) }, async () => {
@@ -68,8 +71,10 @@ function AccountsPage() {
         try { const r = await findDeps({ data: { target_id: t.id } }); if (r.message) toast(`${t.name}: ${r.message}`); }
         catch (e) { toast.error(`${t.name}: ${e instanceof Error ? e.message : "Department search failed"}`); }
         done++; setBulk({ running: true, done, total: top.length });
+        setJob({ key: jobKey, analysisId: id, label: "Finding departments…", done, total: top.length });
       }
     }));
+    clearJob(jobKey);
     setBulk(null);
   };
   const rows = useMemo(() => {

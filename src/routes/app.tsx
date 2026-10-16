@@ -19,6 +19,22 @@ import { useQuery } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
 import { usageTodayQuery } from "@/lib/encore/usage-query";
 import { LIMIT_LABELS } from "@/lib/encore/limits";
+import { useJobs } from "@/lib/encore/run-store";
+
+/** Small pill while any long run is going, so you can see it from every stage. */
+function RunsPill() {
+  const jobs = useJobs();
+  const j = jobs[0];
+  if (!j) return null;
+  const more = jobs.length > 1 ? ` +${jobs.length - 1}` : "";
+  return (
+    <Link to="/app/a/$id/accounts" params={{ id: j.analysisId }} role="status"
+      className="flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-xs">
+      <span className="size-2 animate-run-pulse rounded-full bg-primary" aria-hidden />
+      {j.label}{j.total > 0 ? <span className="font-mono">{j.done} of {j.total}</span> : null}{more}
+    </Link>
+  );
+}
 
 /** Shows the limit closest to being reached; same numbers as Settings → Usage today. */
 function UsageMeter() {
@@ -70,6 +86,7 @@ function AppShell() {
             <Logo />
           </Link>
           <div className="ml-auto flex items-center gap-3">
+            <RunsPill />
             <UsageMeter />
             <Button asChild size="sm">
               <Link to="/app/new">

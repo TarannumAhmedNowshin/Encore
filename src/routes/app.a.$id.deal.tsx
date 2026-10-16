@@ -30,7 +30,7 @@ const dealQuery = (id: string) => ({
   queryKey: ["deal", id],
   queryFn: async () => {
     const [a, d, f, s, r] = await Promise.all([
-      supabase.from("analyses").select("*").eq("id", id).single(),
+      supabase.from("analyses").select("*").eq("id", id).maybeSingle(),
       supabase.from("documents").select("filename, page_count, text").eq("analysis_id", id).order("created_at").limit(1).maybeSingle(),
       supabase.from("facts").select("*, citations(id, quote, verified)").eq("analysis_id", id).eq("status", "active").in("subject", ["company", "business_problem", "solution"]).order("created_at"),
       supabase.from("stakeholders").select("*").eq("analysis_id", id).order("created_at"),

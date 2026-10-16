@@ -25,10 +25,16 @@ describe("discovery quality rules", () => {
   });
 });
 
-import { bubbleRadius, orbitDistance, orbitGroup } from "@/lib/encore/accounts";
+import { bubbleRadius, orbitDistance, orbitGroup, visibleLabels } from "@/lib/encore/accounts";
 describe("orbit rules", () => {
-  it("places a 100% similar company just outside the centre node", () => {
-    expect(orbitDistance({ status: "qualified", on_watch_list: false, similarity_percent: 100 })).toBe(0.15);
+  it("places a 100% similar company at the inner radius", () => {
+    expect(orbitDistance({ status: "qualified", on_watch_list: false, similarity_percent: 100 })).toBe(0);
+  });
+  it("places a 90% similar company a sixth of the way out, not on the 50% ring", () => {
+    expect(orbitDistance({ status: "qualified", on_watch_list: false, similarity_percent: 90 })).toBeCloseTo(1 / 6);
+  });
+  it("hides a label that would overlap an earlier one", () => {
+    expect([...visibleLabels([{ id: "a", x: 0, y: 0, w: 80 }, { id: "b", x: 20, y: 4, w: 80 }, { id: "c", x: 200, y: 0, w: 80 }])]).toEqual(["a", "c"]);
   });
   it("places a 40% similar company at the outer ring", () => {
     expect(orbitDistance({ status: "rejected", on_watch_list: false, similarity_percent: 40 })).toBe(1);

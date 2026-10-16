@@ -33,7 +33,7 @@ const playbookQuery = (id: string) => ({
   queryKey: ["playbook", id],
   queryFn: async () => {
     const [a, links, src, sh, personas, dna, signals, runs, doc] = await Promise.all([
-      supabase.from("analyses").select("is_showcase").eq("id", id).single(),
+      supabase.from("analyses").select("is_showcase").eq("id", id).maybeSingle(),
       supabase.from("facts").select("*").eq("analysis_id", id).eq("subject", "business_context").eq("status", "active").order("created_at"),
       supabase.from("facts").select("id, attribute, value, label, citations(quote)").eq("analysis_id", id).eq("origin", "document").eq("status", "active"),
       supabase.from("stakeholders").select("id, name, title").eq("analysis_id", id),

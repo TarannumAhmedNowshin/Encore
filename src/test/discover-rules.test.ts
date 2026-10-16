@@ -37,17 +37,31 @@ describe("lead selection", () => {
   it("global takes the first 12", () => expect(selectCandidates(Array.from({ length: 20 }, (_, i) => lead(`C${i}`, "")), "", "global").length).toBe(12));
 });
 
-import { checkQualification, qualifyQueries, isBusyError } from "@/lib/encore/discover";
+import { checkQualification, qualifyQueries, isBusyError, isUsableEvidence } from "@/lib/encore/discover";
 describe("qualify-company checks", () => {
   const page = { url: "https://acme.ie/news", title: "Acme news", text: "Acme Haulage still plans every delivery route by hand in spreadsheets each morning." };
+  const contact = { url: "https://acme.ie/contact-us", title: "Contact us", text: "Write to Acme Haulage at P.O. Box 1234, Dublin, phone +353 1 555 0100, email info@acme.ie today." };
   const dims = (r: "high" | "medium" | "low", url: string | null) =>
     Object.fromEntries(["industry", "business_model", "regulatory", "operational", "organizational", "technology"].map((k) => [k, { rating: r, reason: "x", source_url: url }]));
-  const ev = { summary: "s", quote: "plans every delivery route by hand", source_url: page.url, strength: "direct" as const };
+  const ev = { summary: "s", quote: "still plans every delivery route by hand in spreadsheets", source_url: page.url, strength: "direct" as const };
   it("qualifies only with a verified quote", () => {
-    expect(checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [ev], qualified: true, rejection_reason: "" }).status).toBe("qualified");
-    const r = checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [{ ...ev, quote: "routes are planned manually" }], qualified: true, rejection_reason: "" });
+    // own-site page (acme.ie) so the quote needn't repeat the name
+    expect(checkQualification({ name: "Acme Haulage", domain: "acme.ie", materials: [page], dimensions: dims("medium", null), evidence: [ev], qualified: true, rejection_reason: "" }).status).toBe("qualified");
+    const r = checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [{ ...ev, quote: "Acme Haulage routes are planned manually by the team every day" }], qualified: true, rejection_reason: "" });
     expect(r.status).toBe("rejected");
     expect(r.rejection_reason).toContain("Acme Haulage");
+  });
+  it("rejects when only contact details or short quotes remain", () => {
+    const r = checkQualification({ name: "Acme Haulage", domain: "acme.ie", materials: [page, contact], dimensions: dims("medium", null),
+      evidence: [{ ...ev, quote: "plans every delivery route", }, { ...ev, source_url: contact.url, quote: "Write to Acme Haulage at P.O. Box 1234, Dublin, phone +353 1 555 0100" }],
+      qualified: true, rejection_reason: "" });
+    expect(r.status).toBe("rejected");
+    expect(r.rejection_reason).toBe("Only contact details or generic mentions were found, not evidence of the problem.");
+    expect(r.evidence).toEqual([]);
+  });
+  it("drops a third-party quote that doesn't name the company", () => {
+    expect(isUsableEvidence({ quote: "Many hauliers still plan every delivery route by hand each morning", url: "https://blog.example.com/x", companyName: "Acme Haulage", domain: "acme.ie" })).toBe(false);
+    expect(isUsableEvidence({ quote: "Acme Haulage still plans every delivery route by hand each morning", url: "https://blog.example.com/x", companyName: "Acme Haulage", domain: "acme.ie" })).toBe(true);
   });
   it("caps unsourced high on sourced dimensions and drops unknown URLs", () => {
     const r = checkQualification({ name: "Acme", domain: "", materials: [page], dimensions: dims("high", "https://made.up"), evidence: [], qualified: false, rejection_reason: "no" });
