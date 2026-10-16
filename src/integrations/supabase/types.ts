@@ -875,6 +875,7 @@ export type Database = {
           name: string | null
           on_watch_list: boolean
           opportunity_score: number | null
+          people_searched_at: string | null
           problem_fit: string | null
           rejection_reason: string | null
           similarity_percent: number | null
@@ -901,6 +902,7 @@ export type Database = {
           name?: string | null
           on_watch_list?: boolean
           opportunity_score?: number | null
+          people_searched_at?: string | null
           problem_fit?: string | null
           rejection_reason?: string | null
           similarity_percent?: number | null
@@ -927,6 +929,7 @@ export type Database = {
           name?: string | null
           on_watch_list?: boolean
           opportunity_score?: number | null
+          people_searched_at?: string | null
           problem_fit?: string | null
           rejection_reason?: string | null
           similarity_percent?: number | null
