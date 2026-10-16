@@ -43,6 +43,22 @@ export const systemCheck = createServerFn({ method: "POST" })
     ]);
   });
 
+export type GlobalUsage = { isOwner: boolean; rows: { kind: LimitedKind; used: number; limit: number }[] };
+
+/** Remaining global demo capacity (rolling 24h). Only meaningful for the owner. */
+export const getGlobalUsageToday = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<GlobalUsage> => {
+    const { GLOBAL_DAILY_LIMITS, OWNER_USER_ID } = await import("./limits");
+    const { usedGloballyToday } = await import("./usage.server");
+    const kinds = Object.keys(GLOBAL_DAILY_LIMITS) as LimitedKind[];
+    const used = await Promise.all(kinds.map((k) => usedGloballyToday(k)));
+    return {
+      isOwner: context.userId === OWNER_USER_ID,
+      rows: kinds.map((kind, i) => ({ kind, used: used[i] ?? 0, limit: GLOBAL_DAILY_LIMITS[kind] })),
+    };
+  });
+
 export type UsageToday = { kind: LimitedKind; used: number; limit: number }[];
 
 export const getUsageToday = createServerFn({ method: "GET" })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buyerFit, contactScore, evidenceScore, opportunityScore, similarityPercent } from "@/lib/encore/scoring";
 import { canon, companyAliases, normalizeCompany, quoteVerified } from "@/lib/encore/text";
-import { DAILY_LIMITS } from "@/lib/encore/limits";
+import { CAPACITY_MESSAGE, DAILY_LIMITS, GLOBAL_DAILY_LIMITS, dailyLimitFor, OWNER_USER_ID } from "@/lib/encore/limits";
 
 describe("scoring", () => {
   it("similarity is mean of ratings x100", () =>
@@ -25,3 +25,11 @@ describe("text", () => {
 });
 
 it("daily limits", () => expect(DAILY_LIMITS).toEqual({ discovery: 3, people_search: 10, ai_call: 300 }));
+
+describe("global caps", () => {
+  it("global daily caps", () => expect(GLOBAL_DAILY_LIMITS).toEqual({ discovery: 15, people_search: 40, ai_call: 600 }));
+  it("capacity message is friendly", () =>
+    expect(CAPACITY_MESSAGE).toBe("Today's live demo capacity is used up — explore the finished example analysis instead, or try again tomorrow."));
+  it("owner keeps higher discovery limit", () => expect(dailyLimitFor("discovery", OWNER_USER_ID)).toBe(10));
+  it("other users get the standard limit", () => expect(dailyLimitFor("discovery", "someone-else")).toBe(3));
+});
