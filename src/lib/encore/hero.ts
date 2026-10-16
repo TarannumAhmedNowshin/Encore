@@ -63,3 +63,75 @@ export function heroData(s: DemoSnapshot): HeroData | null {
 
 const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
 export const numberWord = (n: number) => WORDS[n] ?? String(n);
+
+/* ---------- Scroll-story data (all from the demo snapshot) ---------- */
+export type StoryQuote = { attr: string; text: string };
+export type StoryData = {
+  filename: string; quotes: StoryQuote[];
+  dna: { problem: string; outcome: string; owner: string } | null;
+  personas: string[];
+  companies: { name: string; qualified: boolean }[]; found: number; qualified: number;
+  committee: { company: string; slots: { role: string; who: string | null }[] } | null;
+  email: { subject: string; body: string; claims: string[] } | null;
+  groundedPct: number; sent: number;
+};
+const ATTR_LABEL: Record<string, string> = { pain_points: "Pain point", current_process: "Current process", expected_outcomes: "Expected outcome" };
+export const SLOTS: [string, string][] = [
+  ["executive_buyer", "Executive buyer"], ["business_sponsor", "Business sponsor"], ["operational_buyer", "Operational buyer"],
+  ["technical_influencer", "Technical influencer"], ["end_user", "End user"],
+];
+
+/** Cut a long body at a sentence end, never mid-word. */
+function firstSentences(t: string, max: number): string {
+  if (t.length <= max) return t;
+  const parts = t.match(/[^.!?]+[.!?]+(\s|$)/g) ?? [t];
+  let out = "";
+  for (const p of parts) { if ((out + p).length > max && out) break; out += p; }
+  return out.trim();
+}
+
+export function storyData(s: DemoSnapshot): StoryData {
+  const docFacts = s.facts.filter((f) => f["status"] === "active" && f["origin"] === "document");
+  const cit = new Map<string, string>();
+  for (const c of s.citations) if (c["verified"] && typeof c["quote"] === "string" && !cit.has(c["fact_id"] as string)) cit.set(c["fact_id"] as string, (c["quote"] as string).trim());
+  const pick = (attr: string, n: number) => docFacts.filter((f) => f["attribute"] === attr && cit.has(f["id"] as string)).slice(0, n)
+    .map((f) => ({ attr: ATTR_LABEL[attr] ?? attr, text: cit.get(f["id"] as string)! }));
+  const quotes = [...pick("pain_points", 2), ...pick("current_process", 1)];
+
+  const d = s.sales_dna[0];
+  const dna = d ? { problem: String(d["problem_summary"] ?? ""), outcome: String(d["measurable_outcomes_summary"] ?? ""), owner: String(d["owning_department"] ?? "") } : null;
+  const personas = s.personas.map((p) => String(p["label"] ?? "")).filter(Boolean).slice(0, 4);
+
+  const score = (t: Record<string, unknown>) => Number(t["opportunity_score"] ?? 0);
+  const targets = [...s.targets].filter((t) => t["status"] !== "failed").sort((a, b) => Number(b["status"] === "qualified") - Number(a["status"] === "qualified") || score(b) - score(a));
+  const companies = targets.slice(0, 12).map((t) => ({ name: String(t["name"]), qualified: t["status"] === "qualified" }));
+  const qualified = s.targets.filter((t) => t["status"] === "qualified");
+
+  const withContacts = qualified.filter((t) => s.contacts.some((c) => c["target_id"] === t["id"])).sort((a, b) => score(b) - score(a))[0];
+  const personaLabel = new Map(s.personas.map((p) => [p["id"], String(p["label"] ?? "")]));
+  const committee = withContacts ? {
+    company: String(withContacts["name"]),
+    slots: SLOTS.map(([k, role]) => {
+      const c = s.contacts.find((x) => x["target_id"] === withContacts["id"] && x["buying_role_slot"] === k);
+      return { role, who: c ? (personaLabel.get(c["persona_id"]) || String(c["title"] ?? "Contact")) : null };
+    }),
+  } : null;
+
+  const contactIds = new Set(s.contacts.filter((c) => c["target_id"] === withContacts?.["id"]).map((c) => c["id"]));
+  const drafts = s.outreach_drafts.filter((x) => (x["body"] as string | null)?.trim());
+  const good = drafts.filter((x) => x["all_claims_verified"] && x["channel"] === "email");
+  const dr = good.find((x) => contactIds.has(x["contact_id"])) ?? good[0];
+  let email: StoryData["email"] = null;
+  if (dr) {
+    const body = firstSentences(String(dr["body"]).replace(/\s+/g, " ").trim(), 420);
+    const claims = (Array.isArray(dr["claims"]) ? (dr["claims"] as Record<string, unknown>[]) : [])
+      .filter((c) => c["verified"] && typeof c["claim"] === "string" && body.includes(c["claim"] as string)).map((c) => c["claim"] as string);
+    email = { subject: String(dr["subject"] ?? ""), body, claims };
+  }
+  return {
+    filename: String(s.documents[0]?.["filename"] ?? "Won SOW"), quotes, dna, personas, companies,
+    found: s.targets.length, qualified: qualified.length, committee, email,
+    groundedPct: drafts.length ? Math.round((drafts.filter((x) => x["all_claims_verified"]).length / drafts.length) * 100) : 0,
+    sent: s.outreach_drafts.filter((x) => x["status"] === "sent").length,
+  };
+}
