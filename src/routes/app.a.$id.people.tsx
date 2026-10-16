@@ -102,13 +102,13 @@ function PeoplePage() {
       const r = await findFn({ data: { target_id: targetId } });
       if (r.message) toast(r.message);
       await refresh();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "People search failed"); }
+    } catch (e) { toastError(e, "People search failed", () => void runFind(targetId)); }
     finally { setBusyId(null); }
   };
   const runScore = async (targetId: string) => {
     setBusyId(targetId);
     try { await scoreFn({ data: { target_id: targetId } }); await refresh(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Scoring failed"); }
+    catch (e) { toastError(e, "Scoring failed", () => void runScore(targetId)); }
     finally { setBusyId(null); }
   };
 
@@ -189,7 +189,8 @@ function PeoplePage() {
       {!d.targets.length ? (
         <section className="mt-8">
           <EmptyState title="No qualified accounts yet"
-            line="People search runs on qualified companies. Run discovery on the Accounts page first." />
+            line="People search runs on qualified companies. Run discovery on the Accounts page first."
+            action={<Button asChild variant="outline"><Link to="/app/a/$id/accounts" params={{ id }}>Run discovery first <ArrowRight /></Link></Button>} />
         </section>
       ) : (
         <div className="mt-6 space-y-6">
