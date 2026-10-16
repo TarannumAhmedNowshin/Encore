@@ -684,6 +684,7 @@ export type Database = {
           step: string | null
           total: number
           updated_at: string
+          used_fallback_model: boolean
           user_id: string
         }
         Insert: {
@@ -697,6 +698,7 @@ export type Database = {
           step?: string | null
           total?: number
           updated_at?: string
+          used_fallback_model?: boolean
           user_id: string
         }
         Update: {
@@ -710,6 +712,7 @@ export type Database = {
           step?: string | null
           total?: number
           updated_at?: string
+          used_fallback_model?: boolean
           user_id?: string
         }
         Relationships: [
