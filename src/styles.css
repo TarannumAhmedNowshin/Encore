@@ -117,12 +117,16 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 24px;
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+  h1 { font-size: 32px; line-height: 40px; }
+  h2 { font-size: 20px; line-height: 28px; }
   :focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
@@ -155,4 +159,43 @@
 
 @keyframes orbit-in { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .orbit-in { transform-box: fill-box; transform-origin: center; animation: orbit-in 400ms ease-out both; }
-@media (prefers-reduced-motion: reduce) { .orbit-in, .animate-run-pulse { animation: none; } }
+
+/* Premium motion: 150–250ms ease-out, 1px card lift, soft shadow */
+@utility lift {
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px -8px color-mix(in oklab, var(--color-foreground) 18%, transparent);
+  }
+}
+
+/* Score ring / bar: animate from empty on first render */
+.score-anim { transition: stroke-dashoffset 700ms ease-out, width 700ms ease-out; }
+
+/* Journey rail: progress line + current-stage glow */
+.rail-line { position: absolute; left: 15px; top: 8px; bottom: 8px; width: 2px; background: var(--color-border); border-radius: 2px; }
+.rail-fill { position: absolute; inset: 0; background: var(--color-primary); border-radius: 2px; transform-origin: top; transition: transform 500ms ease-out; }
+.rail-glow { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 18%, transparent); }
+
+/* Landing mini-orbit loop: bubbles fly in, quote card fades, then it loops */
+@keyframes mini-orbit-loop {
+  0% { opacity: 0; transform: scale(0); }
+  6% { opacity: 1; transform: scale(1); }
+  82% { opacity: 1; }
+  92%, 100% { opacity: 0; transform: scale(1); }
+}
+@keyframes mini-orbit-quote {
+  0%, 34% { opacity: 0; transform: translateY(6px); }
+  44%, 82% { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(0); }
+}
+.mini-orbit-bubble { transform-box: fill-box; transform-origin: center; opacity: 0; animation: mini-orbit-loop 9s ease-out infinite; }
+.mini-orbit-quote { opacity: 0; animation: mini-orbit-quote 9s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-in, .animate-run-pulse, .mini-orbit-bubble, .mini-orbit-quote { animation: none; }
+  .mini-orbit-bubble, .mini-orbit-quote { opacity: 1; transform: none; }
+  .score-anim { transition: none; }
+  .lift, .lift:hover { transition: none; transform: none; box-shadow: none; }
+  .rail-fill { transition: none; }
+}
