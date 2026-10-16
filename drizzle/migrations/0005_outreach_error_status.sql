@@ -1,0 +1,2 @@
+ALTER TABLE public.outreach_drafts DROP CONSTRAINT IF EXISTS outreach_drafts_status_check;
+ALTER TABLE public.outreach_drafts ADD CONSTRAINT outreach_drafts_status_check CHECK (status = ANY (ARRAY['pending','approved','edited','rejected','error']));
