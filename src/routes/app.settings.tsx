@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { systemCheck } from "@/lib/encore/system.functions";
+import { getGlobalUsageToday, systemCheck } from "@/lib/encore/system.functions";
 import { usageTodayQuery } from "@/lib/encore/usage-query";
 import { LIMIT_LABELS } from "@/lib/encore/limits";
 
@@ -26,6 +26,7 @@ function SettingsPage() {
   const qc = useQueryClient();
   const check = useServerFn(systemCheck);
   const usage = useQuery(usageTodayQuery);
+  const globalUsage = useQuery({ queryKey: ["global-usage-today"], queryFn: () => getGlobalUsageToday(), staleTime: 30_000 });
   const run = useMutation({
     mutationFn: () => check(),
     onSettled: () => qc.invalidateQueries({ queryKey: usageTodayQuery.queryKey }),
@@ -86,6 +87,28 @@ function SettingsPage() {
           ))}
         </CardContent>
       </Card>
+
+      {globalUsage.data?.isOwner && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Global demo capacity</CardTitle>
+            <CardDescription>Remaining across all users over the last 24 hours. Your account is exempt.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {globalUsage.data.rows.map((u) => (
+              <div key={u.kind} className="space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span>{LIMIT_LABELS[u.kind]}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{Math.max(0, u.limit - u.used)}/{u.limit} left</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (u.used / u.limit) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </main>
   );
 }
