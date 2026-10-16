@@ -129,9 +129,9 @@ export function useDiscoveryRun(id: string) {
       await researchAll((data ?? []).map((t) => t.id));
     } catch (e) {
       const m = e instanceof Error ? e.message : "Discovery failed";
-      setMessage(m); toast.error(m);
+      setMessage(m); toastError(e, "Discovery failed", () => void start());
     } finally { busyRef.current = false; setActive(false); refresh(); }
-  }, [research, leads, end, id, refresh, researchAll, setActive, setSteps, setMessage]);
+  }, [research, leads, end, id, refresh, researchAll, setActive, setSteps, setMessage, q.data?.run]);
 
   const resume = useCallback(async () => {
     if (busyRef.current) return;
@@ -148,11 +148,12 @@ export function useDiscoveryRun(id: string) {
   const left = targets.filter((t) => ["queued", "researching"].includes(t.status) || (t.status === "failed")).length;
   const paused = !active && q.data?.run?.status === "running" && targets.length > 0 && left > 0;
 
+  const elapsed = useElapsed(active, q.data?.run?.created_at ?? null);
   const timeline: RunStep[] | null = steps && [
     { label: "Planning searches", state: steps.plan },
     { label: "Searching the web", state: steps.search },
     { label: "Building the long list", state: steps.list, ...(steps.list === "failed" && message ? { message } : {}) },
-    { label: "Researching each company", state: steps.each, elapsed: targets.length ? `${finished} of ${targets.length}` : undefined },
+    { label: "Researching each company", state: steps.each, elapsed: [targets.length ? `${finished} of ${targets.length}` : null, elapsed].filter(Boolean).join(" · ") || undefined },
     { label: "Verifying quotes and scoring", state: steps.verify },
   ].map((s, i) => (i < 2 && s.state === "failed" && message ? { ...s, message } : s)) as RunStep[];
 
