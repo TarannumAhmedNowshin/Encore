@@ -5,7 +5,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
-import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
+import { usePanZoom, ZoomControls } from "@/components/encore/PanZoom";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
@@ -16,7 +17,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { REGION_LABEL } from "@/lib/encore/intake";
-import { accountsCsv, bubbleRadius, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
+import { accountsCsv, countryCode, visibleLabels, quadrantRadius, QUADRANT_DOMAIN, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/a/$id/accounts")({
@@ -59,7 +60,7 @@ function AccountsPage() {
   const targets = d.targets as unknown as Target[];
 
   const findDepsBulk = async () => {
-    const top = targets.filter((t) => t.status === "qualified").sort(defaultOrder).slice(0, 5);
+    const top = targets.filter((t) => t.status === "qualified").sort(defaultOrder);
     if (!top.length || bulk?.running) return;
     setBulk({ running: true, done: 0, total: top.length });
     const jobKey = `departments:${id}`;
@@ -116,7 +117,7 @@ function AccountsPage() {
           {has && <Button variant="outline" onClick={exportCsv}><Download /> Export CSV</Button>}
           {!readOnly && sum.qualified > 0 && (
             <Button variant="outline" onClick={() => void findDepsBulk()} disabled={!!bulk?.running || d.active}>
-              {bulk?.running ? `Finding departments ${bulk.done} of ${bulk.total}…` : "Find departments for top 5"}
+              {bulk?.running ? `Finding departments ${bulk.done} of ${bulk.total}…` : "Find departments for all qualified"}
             </Button>
           )}
           {!readOnly && has && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button>}
@@ -132,7 +133,7 @@ function AccountsPage() {
       {d.timeline && <Card className="mt-6"><RunTimeline steps={d.timeline} /></Card>}
       {bulk && (
         <Card className="mt-6">
-          <RunTimeline steps={[{ label: "Finding departments for the top 5 qualified companies", state: bulk.running ? "running" : "done", elapsed: `${bulk.done} of ${bulk.total}` }]} />
+          <RunTimeline steps={[{ label: "Finding departments for every qualified company, 2 at a time", state: bulk.running ? "running" : "done", elapsed: `${bulk.done} of ${bulk.total}` }]} />
         </Card>
       )}
 
@@ -150,11 +151,13 @@ function AccountsPage() {
         </section>
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-6">
+          <div className="mt-6 grid grid-cols-3 gap-2 lg:flex lg:flex-wrap lg:items-center">
             {([["Found", sum.found], ["Qualified", sum.qualified], ["Watch list", sum.watch], ["Rejected", sum.rejected], ["Failed", sum.failed]] as const).map(([l, v]) => (
-              <Card key={l} className="p-4"><div className="text-xs text-muted-foreground">{l}</div><div className="mt-1 font-mono text-xl">{v}</div></Card>
+              <span key={l} className="flex min-w-0 items-baseline justify-between gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs lg:justify-start">
+                <span className="truncate text-muted-foreground">{l}</span><span className="font-mono text-sm font-semibold">{v}</span>
+              </span>
             ))}
-            <Card className="p-4"><div className="text-xs text-muted-foreground">Target region</div><div className="mt-1 text-sm font-medium">{REGION_LABEL[region] ?? region}</div></Card>
+            <span className="col-span-3 text-xs text-muted-foreground lg:ml-auto">Target region: <span className="font-medium text-foreground">{REGION_LABEL[region] ?? region}</span></span>
           </div>
 
           <div className="mt-6 inline-flex rounded-lg border border-border p-0.5" role="tablist">
@@ -182,12 +185,12 @@ function AccountsPage() {
                 ))}
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="hidden w-full table-fixed text-sm md:table">
                   <thead className="text-left text-xs text-muted-foreground">
                     <tr className="border-b border-border">
-                      <th className="px-3 py-2">#</th>
-                      <SortTh label="Company" onClick={() => sortBy("name")} />
-                      <th className="px-3 py-2">HQ</th>
+                      <th className="w-10 px-3 py-2">#</th>
+                      <SortTh label="Company" className="w-[26%]" onClick={() => sortBy("name")} />
+                      <th className="w-16 px-3 py-2">HQ</th>
                       <SortTh label="Similarity" onClick={() => sortBy("similarity_percent")} />
                       <SortTh label="Evidence" onClick={() => sortBy("evidence_score")} />
                       <th className="px-3 py-2">Problem fit</th>
@@ -206,15 +209,12 @@ function AccountsPage() {
                         <tr key={t.id} className="cursor-pointer border-b border-border last:border-0 hover:bg-secondary/50" onClick={() => setOpenId(t.id)}>
                           <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{i + 1}</td>
                           <td className="px-3 py-2">
-                            <div className="flex items-center gap-2 font-medium">
+                            <div className="flex min-w-0 items-center gap-2 font-medium">
                               {fav ? <img src={fav} alt="" className="size-4 rounded-sm" loading="lazy" /> : <Building2 className="size-4 text-muted-foreground" aria-hidden />}
-                              {t.name}
+                              <span className="truncate">{t.name}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-xs">
-                            <span>{t.hq_country ?? "—"}</span>
-                            {t.in_target_region && <Pill tone="primary" className="ml-1.5">In region</Pill>}
-                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-xs"><HqCell t={t} /></td>
                           <td className="px-3 py-2 font-mono text-xs">{t.similarity_percent ?? 0}%</td>
                           <td className="px-3 py-2 font-mono text-xs">{t.evidence_score ?? 0}</td>
                           <td className="px-3 py-2 text-xs capitalize">{t.problem_fit ?? "—"}</td>
@@ -235,6 +235,25 @@ function AccountsPage() {
                     })}
                   </tbody>
                 </table>
+                <ul className="divide-y divide-border md:hidden">
+                  {rows.length === 0 && <li className="px-3 py-8 text-center text-sm text-muted-foreground">No companies in this group.</li>}
+                  {rows.map((t, i) => (
+                    <li key={t.id}>
+                      <button type="button" onClick={() => setOpenId(t.id)} className="w-full space-y-2 px-3 py-3 text-left hover:bg-secondary/50">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="font-mono text-xs text-muted-foreground">{i + 1}</span>
+                          <span className="min-w-0 flex-1 truncate font-medium">{t.name}</span>
+                          <span className="text-xs"><HqCell t={t} /></span>
+                        </div>
+                        <div className="flex items-center gap-2"><ScoreBar value={t.opportunity_score ?? 0} /><span className="font-mono text-xs">{t.opportunity_score ?? 0}</span></div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
+                          <span>Sim {t.similarity_percent ?? 0}%</span><span>Ev {t.evidence_score ?? 0}</span>
+                          <Pill tone={t.on_watch_list ? "inference" : STATUS_TONE[t.status] ?? "neutral"}>{t.on_watch_list ? "Watch list" : STATUS_LABEL[t.status] ?? t.status}</Pill>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </Card>
           )}
@@ -248,43 +267,74 @@ function AccountsPage() {
   );
 }
 
-function SortTh({ label, onClick }: { label: string; onClick: () => void }) {
-  return <th className="px-3 py-2"><button onClick={onClick} className="inline-flex items-center gap-1 hover:text-foreground">{label}<ArrowUpDown className="size-3" aria-hidden /></button></th>;
+function HqCell({ t }: { t: Target }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 font-mono">
+      {countryCode(t.hq_country)}
+      {t.in_target_region && (
+        <TooltipProvider delayDuration={150}><Tooltip><TooltipTrigger asChild>
+          <span tabIndex={0} aria-label="In target region" className="size-2 rounded-full bg-primary" />
+        </TooltipTrigger><TooltipContent>In your target region</TooltipContent></Tooltip></TooltipProvider>
+      )}
+    </span>
+  );
+}
+
+function SortTh({ label, onClick, className }: { label: string; onClick: () => void; className?: string }) {
+  return <th className={cn("px-3 py-2", className)}><button onClick={onClick} className="inline-flex items-center gap-1 hover:text-foreground">{label}<ArrowUpDown className="size-3" aria-hidden /></button></th>;
 }
 
 function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string) => void }) {
+  const W = 800, H = 480, L = 56, R = 16, T = 16, B = 44;
+  const pz = usePanZoom(W, H);
   if (!targets.length) return <Card className="mt-4"><p className="text-sm text-muted-foreground">No qualified accounts yet. The quadrant shows qualified companies only.</p></Card>;
-  const pts = targets.map((t) => ({ id: t.id, name: t.name, x: t.similarity_percent ?? 0, y: t.evidence_score ?? 0, z: bubbleRadius(t.opportunity_score), opp: t.opportunity_score ?? 0, inR: t.in_target_region !== false }));
+  const [d0, d1] = QUADRANT_DOMAIN;
+  const px = (v: number) => L + ((v - d0) / (d1 - d0)) * (W - L - R);
+  const py = (v: number) => H - B - ((v - d0) / (d1 - d0)) * (H - T - B);
+  const top5 = new Set([...targets].sort((a, b) => (b.opportunity_score ?? 0) - (a.opportunity_score ?? 0)).slice(0, 5).map((t) => t.id));
+  const k = pz.view.k;
+  const short = (n: string | null) => { const v = (n ?? "").replace(/\s*(Insurance|Company|Group|&).*$/i, "").trim() || (n ?? ""); return v.length > 16 ? `${v.slice(0, 15)}…` : v; };
+  const shown = visibleLabels(targets.filter((t) => top5.has(t.id) || k >= 2).sort((a, b) => (b.opportunity_score ?? 0) - (a.opportunity_score ?? 0))
+    .map((t) => ({ id: t.id, x: px(t.similarity_percent ?? 0) * k, y: (py(t.evidence_score ?? 0) - quadrantRadius(t.opportunity_score) - 8) * k, w: short(t.name).length * 6.4 + 6, h: 14 })));
+  const ticks = [0, 25, 50, 75, 100];
   return (
     <Card className="mt-4 p-4">
-      <div className="relative h-[440px]">
-        <div className="pointer-events-none absolute inset-0 z-10 grid grid-cols-2 grid-rows-2 pb-16 pl-24 pr-12 pt-8 text-xs text-muted-foreground/70">
-          <span>Proven need, different shape</span><span className="text-right">Prime targets</span>
-          <span className="self-end">Long shots</span><span className="self-end text-right">Look-alike, little evidence yet</span>
-        </div>
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
-            <XAxis type="number" dataKey="x" domain={[0, 100]} name="Similarity" unit="%" tick={{ fontSize: 11 }} label={{ value: "Similarity %", position: "insideBottom", offset: -10, fontSize: 11 }} />
-            <YAxis type="number" dataKey="y" domain={[0, 100]} name="Evidence" tick={{ fontSize: 11 }} label={{ value: "Evidence score", angle: -90, position: "insideLeft", fontSize: 11 }} />
-            <ZAxis type="number" dataKey="z" range={[Math.PI * 100, Math.PI * 576]} domain={[10, 24]} />
-            <ReferenceLine x={50} stroke="var(--border)" />
-            <ReferenceLine y={50} stroke="var(--border)" />
-            <Tooltip cursor={false} content={({ payload }) => {
-              const p = payload?.[0]?.payload as (typeof pts)[number] | undefined;
-              if (!p) return null;
-              return <div className="surface px-3 py-2 text-xs"><div className="font-medium">{p.name}</div>
-                <div className="font-mono">Similarity {p.x}% · Evidence {p.y} · Opportunity {p.opp}</div></div>;
-            }} />
-            <Scatter data={pts.filter((p) => p.inR)} fill={GROUP_COLOR.qualified} fillOpacity={0.9} stroke="var(--primary)" strokeWidth={2} onClick={(p: any) => onOpen(p.id ?? p.payload?.id)} className="cursor-pointer" />
-            <Scatter data={pts.filter((p) => !p.inR)} fill={GROUP_COLOR.qualified} fillOpacity={0.9} stroke="var(--card)" onClick={(p: any) => onOpen(p.id ?? p.payload?.id)} className="cursor-pointer" />
-          </ScatterChart>
-        </ResponsiveContainer>
+      <div className="relative">
+        <ZoomControls onIn={() => pz.zoomBy(1.4)} onOut={() => pz.zoomBy(1 / 1.4)} onFit={pz.fit} />
+        <svg ref={pz.ref} viewBox={`0 0 ${W} ${H}`} className="block w-full select-none" role="img" aria-label="Qualified companies by similarity and evidence" {...pz.handlers}>
+          <g transform={pz.transform}>
+            {ticks.map((t) => (
+              <g key={t}>
+                <line x1={px(t)} x2={px(t)} y1={py(d0)} y2={py(d1)} stroke="var(--border)" strokeDasharray={t === 50 ? undefined : "3 3"} />
+                <line x1={px(d0)} x2={px(d1)} y1={py(t)} y2={py(t)} stroke="var(--border)" strokeDasharray={t === 50 ? undefined : "3 3"} />
+                <text x={px(t)} y={H - B + 16} textAnchor="middle" fontSize={11 / k} className="fill-muted-foreground font-mono">{t}%</text>
+                <text x={L - 8} y={py(t) + 4} textAnchor="end" fontSize={11 / k} className="fill-muted-foreground font-mono">{t}</text>
+              </g>
+            ))}
+            <text x={px(2)} y={py(102)} fontSize={11 / k} className="fill-muted-foreground">Proven need, different shape</text>
+            <text x={px(52)} y={py(102)} fontSize={11 / k} className="fill-muted-foreground">Prime targets ↗</text>
+            <text x={px(2)} y={py(-2)} fontSize={11 / k} className="fill-muted-foreground">Long shots</text>
+            <text x={px(98)} y={py(-2)} textAnchor="end" fontSize={11 / k} className="fill-muted-foreground">Look-alike, little evidence yet</text>
+            {targets.map((t) => {
+              const x = px(t.similarity_percent ?? 0), y = py(t.evidence_score ?? 0), r = quadrantRadius(t.opportunity_score) / Math.sqrt(k);
+              return (
+                <g key={t.id} role="button" tabIndex={0} aria-label={`${t.name}: similarity ${t.similarity_percent ?? 0}%, evidence ${t.evidence_score ?? 0}`} className="cursor-pointer"
+                  onClick={() => { if (!pz.moved()) onOpen(t.id); }} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen(t.id)}>
+                  <title>{`${t.name} — Similarity ${t.similarity_percent ?? 0}% · Evidence ${t.evidence_score ?? 0} · Opportunity ${t.opportunity_score ?? 0}`}</title>
+                  <circle cx={x} cy={y} r={r} fill={GROUP_COLOR.qualified} fillOpacity={0.85} stroke={t.in_target_region !== false ? "var(--primary)" : "var(--card)"} strokeWidth={2 / k} />
+                  {shown.has(t.id) && <text x={Math.min(x, px(100))} y={y - r - 4 / k} textAnchor="middle" fontSize={11 / k} fontWeight={600} className="fill-foreground">{short(t.name)}</text>}
+                </g>
+              );
+            })}
+          </g>
+          <text x={(L + W - R) / 2} y={H - 6} textAnchor="middle" fontSize={11} className="fill-muted-foreground">Similarity %</text>
+          <text transform={`translate(14 ${(T + H - B) / 2}) rotate(-90)`} textAnchor="middle" fontSize={11} className="fill-muted-foreground">Evidence score</text>
+        </svg>
       </div>
-      <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+      <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-verified" /> Qualified</span>
         <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2 border-primary" /> In target region</span>
-        <span>Bubble size = opportunity score</span>
+        <span>Bubble size = opportunity · names shown for the top 5</span>
       </div>
     </Card>
   );

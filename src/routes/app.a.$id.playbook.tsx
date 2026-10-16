@@ -3,7 +3,7 @@ import { dbFor } from "@/lib/encore/demo-db";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, BookOpen, ExternalLink, Pencil, RotateCw } from "lucide-react";
+import { ArrowRight, BookOpen, Building2, Copy, Cpu, Network, Pencil, RotateCw, Scale, Search, Workflow } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -165,16 +165,18 @@ function PlaybookPage() {
         {personas.length === 0 ? <p className="text-sm text-muted-foreground">No personas yet. {lastRun("personas")?.status === "failed" ? lastRun("personas")?.error : ""}</p> : (
           <div className="grid gap-4 md:grid-cols-2">
             {personas.map((p) => (
-              <Card key={p.id} className="p-5">
-                <h3 className="font-semibold">{p.label}</h3>
-                <p className="text-xs text-muted-foreground">{[p.function, p.seniority].filter(Boolean).join(" · ")}</p>
-                <dl className="mt-3 space-y-2 text-sm">
-                  <div><dt className="text-xs text-muted-foreground">Responsibilities</dt><dd>{p.responsibilities}</dd></div>
-                  <div><dt className="text-xs text-muted-foreground">Problem ownership</dt><dd>{p.problem_ownership}</dd></div>
-                </dl>
-                <div className="mt-3 flex flex-wrap gap-1.5">{(p.buying_roles ?? []).map((b) => <Pill key={b} tone="inference">{b}</Pill>)}</div>
-                <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  Based on {(p.source_stakeholder_ids ?? []).map((sid) => <Pill key={sid}>{shById.get(sid)?.name ?? shById.get(sid)?.title ?? "Removed stakeholder"}</Pill>)}
+              <Card key={p.id} className="lift p-5">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs font-semibold text-primary" aria-hidden>{initialsOf(p.label)}</span>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold leading-tight">{p.label}</h3>
+                    <p className="text-xs text-muted-foreground">{[p.function, p.seniority].filter(Boolean).join(" · ")}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">{(p.buying_roles ?? []).map((b) => <Pill key={b} tone="primary">{b.replace(/_/g, " ")}</Pill>)}</div>
+                <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">{p.problem_ownership ?? p.responsibilities}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
+                  Based on {(p.source_stakeholder_ids ?? []).length === 0 ? "—" : (p.source_stakeholder_ids ?? []).map((sid) => <span key={sid} className="font-medium text-foreground">{shById.get(sid)?.name ?? shById.get(sid)?.title ?? "Removed stakeholder"}</span>).reduce<React.ReactNode[]>((acc, el, i) => (i ? [...acc, ", ", el] : [el]), [])}
                 </div>
               </Card>
             ))}
@@ -191,36 +193,49 @@ function PlaybookPage() {
           />
         ) : (
           <>
-            <Card className="p-5">
-              <div className="flex items-baseline justify-between"><h3 className="font-semibold">Profile</h3><span className="font-mono text-xs text-muted-foreground">v{dna.version}</span></div>
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                {([["problem_summary", "Problem"], ["current_process_summary", "Process it replaced"], ["solution_capabilities_summary", "Capabilities"], ["measurable_outcomes_summary", "Outcomes"], ["primary_buyers_summary", "Buyers and users"]] as const)
-                  .map(([k, label]) => <DnaField key={k} id={dna.id} field={k} label={label} value={dna[k]} readOnly={readOnly} onSaved={refresh} />)}
+            <Card className="p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-mono text-[13px] text-primary">Ideal customer · v{dna.version}</span>
+                <OwnerPill id={dna.id} value={dna.owning_department} readOnly={readOnly} onSaved={refresh} />
               </div>
-            </Card>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {([["industry_characteristics", "Industry"], ["regulatory_characteristics", "Regulatory"], ["operational_characteristics", "Operational"], ["organizational_characteristics", "Organisational"], ["technology_characteristics", "Technology"]] as const)
-                .map(([k, label]) => <Card key={k} className="p-4"><DnaField id={dna.id} field={k} label={label} value={dna[k]} readOnly={readOnly} onSaved={refresh} /></Card>)}
-            </div>
-            <Card className="mt-4 p-5"><DnaField id={dna.id} field="owning_department" label="Owning department" value={dna.owning_department} readOnly={readOnly} onSaved={refresh} single /></Card>
-            <Card className="mt-4 p-5">
-              <h3 className="font-semibold">Need signals</h3>
-              <ul className="mt-3 divide-y divide-border">
-                {signals.map((s) => (
-                  <li key={s.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm">{s.signal}</p>
-                      <p className="text-xs text-muted-foreground">Seen in: {s.observable_at}</p>
-                      <p className="mt-1 font-mono text-xs">{s.search_query}</p>
-                    </div>
-                    {s.search_query && (
-                      <Button asChild size="sm" variant="secondary">
-                        <a href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query)}`} target="_blank" rel="noopener noreferrer">Search <ExternalLink /></a>
-                      </Button>
-                    )}
-                  </li>
+              <p className="mt-3 font-display text-xl font-semibold leading-snug sm:text-2xl">{idealSentence(dna)}</p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {DNA_TILES.map(([k, label, Icon]) => (
+                  <div key={k} className="min-w-0 rounded-lg border border-border bg-background p-3">
+                    <DnaField id={dna.id} field={k} label={label} value={dna[k]} readOnly={readOnly} onSaved={refresh} tile icon={<Icon className="size-3.5" aria-hidden />} />
+                  </div>
                 ))}
-              </ul>
+              </div>
+              <details className="mt-4 group/d">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">Full profile (problem, process, capabilities, outcomes, buyers)</summary>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  {([["problem_summary", "Problem"], ["current_process_summary", "Process it replaced"], ["solution_capabilities_summary", "Capabilities"], ["measurable_outcomes_summary", "Outcomes"], ["primary_buyers_summary", "Buyers and users"]] as const)
+                    .map(([k, label]) => <DnaField key={k} id={dna.id} field={k} label={label} value={dna[k]} readOnly={readOnly} onSaved={refresh} />)}
+                </div>
+              </details>
+            </Card>
+            <Card className="mt-4 overflow-x-auto p-5">
+              <h3 className="font-semibold">Need signals</h3>
+              <table className="mt-3 w-full min-w-[640px] table-fixed text-sm">
+                <thead className="text-left text-xs text-muted-foreground"><tr><th className="w-[38%] pb-2 font-medium">Signal</th><th className="w-[22%] font-medium">Where it shows up</th><th className="font-medium">Search query</th></tr></thead>
+                <tbody className="divide-y divide-border">
+                  {signals.map((s) => (
+                    <tr key={s.id} className="align-top hover:bg-muted/40">
+                      <td className="py-2.5 pr-3">{s.signal}</td>
+                      <td className="py-2.5 pr-3"><div className="flex flex-wrap gap-1">{(s.observable_at ?? "").split(/[,;]\s*/).filter(Boolean).map((w) => <Pill key={w}>{w}</Pill>)}</div></td>
+                      <td className="py-2.5">
+                        {s.search_query && (
+                          <div className="flex min-w-0 items-start gap-1">
+                            <code className="min-w-0 flex-1 break-words rounded bg-muted px-1.5 py-0.5 font-mono text-[12px]">{s.search_query}</code>
+                            <Button size="icon" variant="ghost" className="size-7 shrink-0" aria-label="Copy search query" onClick={() => { void navigator.clipboard.writeText(s.search_query!); toast.success("Copied"); }}><Copy className="size-3.5" /></Button>
+                            <Button asChild size="icon" variant="ghost" className="size-7 shrink-0"><a aria-label="Search the web" href={`https://www.google.com/search?q=${encodeURIComponent(s.search_query)}`} target="_blank" rel="noopener noreferrer"><Search className="size-3.5" /></a></Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </Card>
           </>
         )}
@@ -257,20 +272,74 @@ function ChipBtn({ onClick, children }: { onClick: () => void; children: React.R
 type DnaKey = "problem_summary" | "current_process_summary" | "solution_capabilities_summary" | "measurable_outcomes_summary" | "primary_buyers_summary"
   | "industry_characteristics" | "regulatory_characteristics" | "operational_characteristics" | "organizational_characteristics" | "technology_characteristics" | "owning_department";
 
-function DnaField({ id, field, label, value, readOnly, onSaved, single }: { id: string; field: DnaKey; label: string; value: string | null; readOnly: boolean; onSaved: () => void; single?: boolean }) {
+const DNA_TILES = [
+  ["industry_characteristics", "Industry", Building2], ["regulatory_characteristics", "Regulatory", Scale],
+  ["operational_characteristics", "Operational", Workflow], ["organizational_characteristics", "Organisational", Network],
+  ["technology_characteristics", "Technology", Cpu],
+] as const;
+
+function initialsOf(s: string | null) { return (s ?? "?").split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase(); }
+/** First clause of a sentence: up to the first comma, semicolon or full stop. */
+function splitClause(v: string): [string, string] {
+  const m = v.match(/^(.+?[,;.:—])\s+(.+)$/s);
+  return m ? [m[1]!.replace(/[,;:—]$/, ""), m[2]!] : [v, ""];
+}
+function lowerFirst(s: string) { return s ? s[0]!.toLowerCase() + s.slice(1) : s; }
+function idealSentence(d: { industry_characteristics: string | null; problem_summary: string | null; measurable_outcomes_summary: string | null }) {
+  const who = splitClause(d.industry_characteristics ?? "Companies like your won customer")[0].replace(/\.$/, "");
+  const problem = d.problem_summary ? lowerFirst(splitClause(d.problem_summary)[0].replace(/\.$/, "")) : null;
+  const outcome = d.measurable_outcomes_summary ? lowerFirst(splitClause(d.measurable_outcomes_summary)[0].replace(/\.$/, "")) : null;
+  const full = `${who}${problem ? ` where ${problem}` : ""}${outcome ? ` — who want to ${outcome.replace(/^to /, "")}` : ""}.`;
+  return full.length > 220 && outcome ? `${who}${problem ? ` where ${problem}` : ""}.` : full;
+}
+
+function OwnerPill({ id, value, readOnly, onSaved }: { id: string; value: string | null; readOnly: boolean; onSaved: () => void }) {
   const [draft, setDraft] = useState<string | null>(null);
+  async function save() {
+    const { error } = await supabase.from("sales_dna").update({ owning_department: draft?.trim() || null }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setDraft(null); onSaved();
+  }
+  if (draft !== null) return (
+    <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+      <input aria-label="Owning department" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-sm" />
+      <Button size="sm" type="submit">Save</Button><Button size="sm" type="button" variant="ghost" onClick={() => setDraft(null)}>Cancel</Button>
+    </form>
+  );
+  return (
+    <span className="group inline-flex items-center gap-1">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+        <span className="text-xs font-normal opacity-80">Owned by</span> {value || "—"}
+      </span>
+      {!readOnly && <Button size="icon" variant="ghost" className="size-7 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label="Edit owning department" onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
+    </span>
+  );
+}
+
+function DnaField({ id, field, label, value, readOnly, onSaved, single, tile, icon }: { id: string; field: DnaKey; label: string; value: string | null; readOnly: boolean; onSaved: () => void; single?: boolean; tile?: boolean; icon?: React.ReactNode }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   async function save() {
     const { error } = await supabase.from("sales_dna").update({ [field]: draft?.trim() || null } as { problem_summary: string | null }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     setDraft(null); onSaved();
   }
+  const [head, rest] = splitClause(value ?? "");
   return (
-    <div>
+    <div className="group">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        {!readOnly && draft === null && <Button size="icon" variant="ghost" className="size-7" aria-label={`Edit ${label}`} onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</span>
+        {!readOnly && draft === null && <Button size="icon" variant="ghost" className="size-6 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label={`Edit ${label}`} onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
       </div>
-      {draft === null ? <p className={single ? "font-display text-lg font-semibold" : "text-sm"}>{value || "—"}</p> : (
+      {draft === null ? (tile ? (
+        <div className="mt-1 text-sm">
+          <p className="font-semibold leading-snug">{head || "—"}</p>
+          {rest && <>
+            <p className={open ? "mt-1 text-muted-foreground" : "mt-1 line-clamp-2 text-muted-foreground"}>{rest}</p>
+            <button type="button" onClick={() => setOpen(!open)} className="mt-1 text-xs text-primary hover:underline">{open ? "Less" : "More"}</button>
+          </>}
+        </div>
+      ) : <p className={single ? "font-display text-lg font-semibold" : "text-sm"}>{value || "—"}</p>) : (
         <div className="mt-1 space-y-2">
           <Textarea aria-label={label} value={draft} rows={single ? 1 : 3} onChange={(e) => setDraft(e.target.value)} autoFocus />
           <div className="flex gap-2"><Button size="sm" onClick={save}>Save</Button><Button size="sm" variant="ghost" onClick={() => setDraft(null)}>Cancel</Button></div>
@@ -279,4 +348,3 @@ function DnaField({ id, field, label, value, readOnly, onSaved, single }: { id: 
     </div>
   );
 }
-

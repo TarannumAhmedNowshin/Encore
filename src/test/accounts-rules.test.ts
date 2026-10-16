@@ -46,3 +46,10 @@ describe("orbit rules", () => {
     expect(bubbleRadius(0)).toBe(10);
   });
 });
+
+import { countryCode, quadrantRadius, QUADRANT_DOMAIN } from "@/lib/encore/accounts";
+describe("accounts layout rules", () => {
+  it("country names become compact codes", () => { expect(countryCode("United States of America")).toBe("US"); expect(countryCode("USA")).toBe("US"); expect(countryCode("Japan")).toBe("JP"); expect(countryCode(null)).toBe("—"); });
+  it("quadrant axes are padded −5 to 105", () => expect(QUADRANT_DOMAIN).toEqual([-5, 105]));
+  it("quadrant bubble radius is clamped", () => { expect(quadrantRadius(0)).toBe(6); expect(quadrantRadius(100)).toBe(18); expect(quadrantRadius(500)).toBe(18); });
+});
