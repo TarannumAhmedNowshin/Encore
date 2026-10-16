@@ -12,7 +12,7 @@ export function usePanZoom(w: number, h: number) {
   const [view, setView] = useState<View>(IDENTITY);
   const viewRef = useRef(view); viewRef.current = view;
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const drag = useRef<{ moved: number; pinch?: number } | null>(null);
+  const drag = useRef<{ moved: number; pinch?: number | undefined } | null>(null);
   const lastMoved = useRef(0);
 
   const toLocal = useCallback((cx: number, cy: number) => {

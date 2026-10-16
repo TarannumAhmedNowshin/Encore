@@ -40,6 +40,7 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
   const inner = 48;
   const nodes = orbitLayout(targets, outer, inner);
   const pz = usePanZoom(w, h);
+  const clickT = useRef<ReturnType<typeof setTimeout>>(undefined);
   const { k } = pz.view;
   const sx = (x: number) => x * k + pz.view.x, sy = (y: number) => y * k + pz.view.y;
   const short = (n: string | null) => { const s = n ?? ""; return s.length > 18 ? `${s.slice(0, 18)}…` : s; };
@@ -85,7 +86,7 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
           return (
             <g key={n.t.id} transform={`translate(${cx + n.x} ${cy + n.y})`} className="cursor-pointer" opacity={faded ? 0.55 : 1}
               onMouseEnter={() => setHover({ t: n.t, x: sx(cx + n.x), y: sy(cy + n.y) })} onMouseLeave={() => setHover(null)}
-              onClick={() => { if (!pz.moved()) onOpen(n.t.id); }} onDoubleClick={(e) => { e.stopPropagation(); pz.focus(cx + n.x, cy + n.y, Math.max(2.5, k * 1.5)); }} tabIndex={0} role="button" aria-label={n.t.name ?? "Company"}
+              onClick={() => { if (pz.moved()) return; const id = n.t.id; clearTimeout(clickT.current); clickT.current = setTimeout(() => onOpen(id), 230); }} onDoubleClick={(e) => { e.stopPropagation(); clearTimeout(clickT.current); pz.focus(cx + n.x, cy + n.y, Math.max(2.5, k * 1.5)); }} tabIndex={0} role="button" aria-label={n.t.name ?? "Company"}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen(n.t.id)}>
               <g key={replay} className={cn((fresh.has(n.t.id) || replay > 0) && "orbit-in", pending && "animate-run-pulse")}
                 style={replay > 0 ? { animationDelay: `${idx * 220}ms` } : undefined}>
