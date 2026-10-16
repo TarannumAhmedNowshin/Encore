@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, type RunStep } from "@/components/encore/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPlaybook, type PlaybookStage } from "@/lib/encore/playbook.functions";
-import { checkDocQuote, FIELD_LABEL } from "@/lib/encore/deal";
+import { checkDocQuote } from "@/lib/encore/deal";
 
 export const Route = createFileRoute("/app/a/$id/playbook")({
   head: () => ({ meta: [
@@ -258,4 +258,3 @@ function DnaField({ id, field, label, value, readOnly, onSaved, single }: { id: 
   );
 }
 
-void FIELD_LABEL;
