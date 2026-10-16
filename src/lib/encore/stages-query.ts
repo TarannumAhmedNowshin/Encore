@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { dbFor } from "@/lib/encore/demo-db";
 import { computeStages } from "./deal";
 
 export const stagesQuery = (id: string) => queryOptions({
@@ -7,14 +7,14 @@ export const stagesQuery = (id: string) => queryOptions({
   queryFn: async () => {
     const head = { count: "exact" as const, head: true };
     const [facts, runs, pbRuns, dna, personas, qualified, contacts, drafts] = await Promise.all([
-      supabase.from("facts").select("id", head).eq("analysis_id", id).eq("status", "active").in("origin", ["document", "user"]),
-      supabase.from("runs").select("id", head).eq("analysis_id", id).eq("step", "extract").eq("status", "running"),
-      supabase.from("runs").select("id", head).eq("analysis_id", id).like("step", "playbook_%").eq("status", "running"),
-      supabase.from("sales_dna").select("id", head).eq("analysis_id", id),
-      supabase.from("personas").select("id", head).eq("analysis_id", id),
-      supabase.from("targets").select("id", head).eq("analysis_id", id).eq("status", "qualified"),
-      supabase.from("contacts").select("id", head).eq("analysis_id", id),
-      supabase.from("outreach_drafts").select("id", head).eq("analysis_id", id).eq("status", "approved"),
+      dbFor(id).from("facts").select("id", head).eq("analysis_id", id).eq("status", "active").in("origin", ["document", "user"]),
+      dbFor(id).from("runs").select("id", head).eq("analysis_id", id).eq("step", "extract").eq("status", "running"),
+      dbFor(id).from("runs").select("id", head).eq("analysis_id", id).like("step", "playbook_%").eq("status", "running"),
+      dbFor(id).from("sales_dna").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("personas").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("targets").select("id", head).eq("analysis_id", id).eq("status", "qualified"),
+      dbFor(id).from("contacts").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("outreach_drafts").select("id", head).eq("analysis_id", id).eq("status", "approved"),
     ]);
     return computeStages({
       facts: facts.count ?? 0, extractRunning: (runs.count ?? 0) > 0, playbookRunning: (pbRuns.count ?? 0) > 0, hasSalesDna: (dna.count ?? 0) > 0,

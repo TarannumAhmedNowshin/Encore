@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { dbFor } from "@/lib/encore/demo-db";
+import { isDemoId } from "@/lib/encore/demo";
 import { Loader2 } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,13 +43,13 @@ const peopleQuery = (id: string) => queryOptions({
   queryKey: ["people", id],
   queryFn: async () => {
     const [a, targets, contacts, scores, personas] = await Promise.all([
-      supabase.from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
-      supabase.from("targets").select("*").eq("analysis_id", id).eq("status", "qualified"),
-      supabase.from("contacts").select("*").eq("analysis_id", id),
-      supabase.from("contact_scores").select("*"),
-      supabase.from("personas").select("id, label").eq("analysis_id", id),
+      dbFor(id).from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
+      dbFor(id).from("targets").select("*").eq("analysis_id", id).eq("status", "qualified"),
+      dbFor(id).from("contacts").select("*").eq("analysis_id", id),
+      dbFor(id).from("contact_scores").select("*"),
+      dbFor(id).from("personas").select("id, label").eq("analysis_id", id),
     ]);
-    const { data: u } = await supabase.auth.getUser();
+    const { data: u } = await dbFor(id).auth.getUser();
     return {
       readOnly: !u.user || a.data?.user_id !== u.user.id,
       targets: ((targets.data ?? []) as AccountRow[]).sort(defaultOrder),
@@ -71,7 +73,7 @@ function PeoplePage() {
       qc.invalidateQueries({ queryKey: ["usage-today"] }),
     ]);
   };
-  const usage = useQuery(usageTodayQuery);
+  const usage = useQuery({ ...usageTodayQuery, enabled: !isDemoId(id) });
   const findFn = useServerFn(findPeople);
   const scoreFn = useServerFn(scoreContacts);
   const [bulk, setBulk] = useRunState<Bulk>(`people-bulk:${id}`, null);
@@ -147,7 +149,7 @@ function PeoplePage() {
     await refresh();
   };
 
-  if (d?.readOnly) {
+  if (d?.readOnly && !isDemoId(id)) {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><Users className="size-4" aria-hidden /> People</div>
@@ -220,7 +222,7 @@ function PeoplePage() {
                   )}
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 [&>*]:min-w-0">
+                <div data-tour="board" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 [&>*]:min-w-0">
                   {ROLE_SLOTS.map((slot) => {
                     const inSlot = contacts.filter((c) => c.buying_role_slot === slot);
                     return (

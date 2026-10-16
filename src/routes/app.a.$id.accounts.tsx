@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { dbFor } from "@/lib/encore/demo-db";
 import { AccountOrbit, GROUP_COLOR, OrbitLegend } from "@/components/encore/AccountOrbit";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -299,8 +300,8 @@ function Dossier({ t, readOnly }: { t: Target; readOnly: boolean }) {
     queryKey: ["dossier", t.id],
     queryFn: async () => {
       const [deps, people] = await Promise.all([
-        supabase.from("departments").select("id, name, rank, rationale, quote, source_url, verified").eq("target_id", t.id),
-        supabase.from("contacts").select("id, name, title").eq("target_id", t.id),
+        dbFor((t as { analysis_id?: string }).analysis_id).from("departments").select("id, name, rank, rationale, quote, source_url, verified").eq("target_id", t.id),
+        dbFor((t as { analysis_id?: string }).analysis_id).from("contacts").select("id, name, title").eq("target_id", t.id),
       ]);
       return { deps: (deps.data ?? []) as Dept[], people: (people.data ?? []) as { id: string; name: string | null; title: string | null }[] };
     },
