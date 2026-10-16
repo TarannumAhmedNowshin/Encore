@@ -56,4 +56,32 @@ describe("claim verification", () => {
     expect(r.nameLeak).toBe(true);
     expect(r.all_claims_verified).toBe(false);
   });
+  it("fails a past-tense claim resting on a TARGET (goal) fact", () => {
+    const r = verifyDraft({ ...base, body: "We cut planning time by 40% for a food manufacturer.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
+    expect(r.claims[0]!.verified).toBe(false);
+    expect(r.all_claims_verified).toBe(false);
+  });
+  it("passes an aim-phrased claim on a TARGET fact", () => {
+    const r = verifyDraft({ ...base, body: "The engagement is designed to cut planning time by 40%.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
+    expect(r.claims[0]!.verified).toBe(true);
+  });
+  it("flags factual sentences not covered by any claim", () => {
+    const r = verifyDraft({ ...base, body: "We cut planning time by 40%. It also eliminated 4 hours of nightly manual planning.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
+    expect(r.ungrounded).toEqual(["It also eliminated 4 hours of nightly manual planning."]);
+    expect(r.all_claims_verified).toBe(false);
+  });
+  it("requires a verified claim on a target fact when target evidence exists", () => {
+    const r = verifyDraft({ ...base, body: "Aiming to cut planning time by 40%.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
+    expect(r.personalised).toBe(false);
+    expect(r.all_claims_verified).toBe(false);
+    const ok = verifyDraft({ ...base, body: "Aiming to cut planning time by 40%. You are hiring route planners.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }, { claim: "hiring route planners", fact_index: 0 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
+    expect(ok.personalised).toBe(true);
+    expect(ok.all_claims_verified).toBe(true);
+  });
+  it("does not require target claims when the target has no evidence", () => {
+    const noTarget = buildFactList("Acme", [], df);
+    const r = verifyDraft({ ...base, body: "Aiming to cut planning time by 40%.", claims: [{ claim: "cut planning time by 40%", fact_index: 0 }] }, noTarget, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
+    expect(r.hasTargetFacts).toBe(false);
+    expect(r.personalised).toBe(true);
+  });
 });
