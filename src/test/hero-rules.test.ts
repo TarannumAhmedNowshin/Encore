@@ -50,7 +50,7 @@ describe("landing story data", () => {
       { body: "Short", status: "approved", channel: "linkedin_message" },
     ] } as unknown as DemoSnapshot;
     expect(storyData(snap).email?.body).toBe("Hi [First name], a longer approved email.");
-    snap.outreach_drafts[1]["status"] = "rejected";
+    snap.outreach_drafts = snap.outreach_drafts.map((draft, i) => i === 1 ? { ...draft, status: "rejected" } : draft);
     expect(storyData(snap).email?.body).toBe("Hi [First name], we're building a system.");
   });
   it("does not substitute an unapproved email when there are no approved emails", () => {
