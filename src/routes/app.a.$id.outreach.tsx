@@ -108,6 +108,7 @@ function OutreachPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const [noEvidence, setNoEvidence] = useState<Record<string, boolean>>({});
   const [bulk, setBulk] = useRunState<{ done: number; total: number; running: boolean } | null>(`outreach-bulk:${id}`, null);
   const [busy, setBusy] = useRunState<string[]>(`outreach-busy:${id}`, []);
 
@@ -147,6 +148,7 @@ function OutreachPage() {
     try {
       const r = await draftFn({ data: { contact_id: cid } });
       if (r.flagged) toast(`${r.flagged} draft${r.flagged > 1 ? "s" : ""} need edits: some claims couldn't be tied to a fact.`);
+      setNoEvidence((m) => ({ ...m, [cid]: !!r.noTargetEvidence }));
       return true;
     } catch (e) { toast.error(e instanceof Error ? e.message : "Drafting failed"); return false; }
     finally { setBusy((b) => b.filter((x) => x !== cid)); await refresh(); }
