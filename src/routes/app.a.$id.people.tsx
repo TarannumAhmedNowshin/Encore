@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Linkedin, Users } from "lucide-react";
+import { ArrowRight, ChevronDown, Linkedin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { findPeople, scoreContacts } from "@/lib/encore/people.functions";
 import { isCreditError, ROLE_SLOTS, SLOT_LABELS, type RoleSlot } from "@/lib/encore/people";
 import { defaultOrder, type AccountRow } from "@/lib/encore/accounts";
 import { usageTodayQuery } from "@/lib/encore/usage-query";
+import { toastError } from "@/lib/encore/toast";
 import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { cn } from "@/lib/utils";
 
