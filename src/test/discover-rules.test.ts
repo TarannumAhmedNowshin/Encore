@@ -47,7 +47,7 @@ describe("qualify-company checks", () => {
   it("qualifies only with a verified quote", () => {
     // own-site page (acme.ie) so the quote needn't repeat the name
     expect(checkQualification({ name: "Acme Haulage", domain: "acme.ie", materials: [page], dimensions: dims("medium", null), evidence: [ev], qualified: true, rejection_reason: "" }).status).toBe("qualified");
-    const r = checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [{ ...ev, quote: "routes are planned manually" }], qualified: true, rejection_reason: "" });
+    const r = checkQualification({ name: "Acme Haulage", domain: "", materials: [page], dimensions: dims("medium", null), evidence: [{ ...ev, quote: "Acme Haulage routes are planned manually by the team every day" }], qualified: true, rejection_reason: "" });
     expect(r.status).toBe("rejected");
     expect(r.rejection_reason).toContain("Acme Haulage");
   });
