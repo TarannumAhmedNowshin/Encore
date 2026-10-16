@@ -101,7 +101,7 @@ function OverviewPage() {
   if (a === null) return <main className="mx-auto max-w-5xl px-4 py-16 sm:px-gutter"><p className="text-muted-foreground">Analysis not found.</p></main>;
   if (!a || !d) return <main className="mx-auto max-w-5xl px-4 py-16 sm:px-gutter"><div className="surface h-40 animate-pulse" /></main>;
 
-  const steps = funnelSteps(d.counts);
+  const steps = funnelSteps(d.counts).filter((s) => s.key !== "drafts" && s.key !== "approved");
   const max = Math.max(1, ...steps.map((s) => s.count));
   const next = nextAction(d.state);
   const pipeline = [
@@ -162,17 +162,20 @@ function OverviewPage() {
           <ol className="space-y-1">
             {steps.map((s) => (
               <li key={s.key}>
-                {s.conversion !== null && <p className={cn("ml-[7.75rem] py-0.5 font-mono text-[11px]", s.conversion < 50 ? "text-risk" : "text-muted-foreground")}>↓ {s.conversion}%</p>}
+                {s.conversion !== null && <p className={cn("ml-[7.75rem] py-0.5 font-mono text-[11px]", s.conversion < 50 ? "text-risk" : "text-muted-foreground")}>{s.conversion}% kept</p>}
                 <div className="flex items-center gap-3">
                   <span className="w-28 shrink-0 text-xs text-muted-foreground">{s.label}</span>
                   <span className="relative h-5 min-w-0 flex-1 overflow-hidden rounded bg-secondary">
-                    <span className="absolute inset-y-0 left-0 rounded bg-primary/70" style={{ width: `${Math.max(s.count ? 3 : 0, (s.count / max) * 100)}%` }} />
+                    <span className="absolute inset-y-0 left-0 rounded bg-accent/70" style={{ width: `${Math.max(s.count ? 3 : 0, (s.count / max) * 100)}%` }} />
                   </span>
                   <span className="w-8 text-right font-mono text-sm">{s.count}</span>
                 </div>
               </li>
             ))}
           </ol>
+          <p className="mt-3 border-t border-border pt-3 font-mono text-xs text-muted-foreground">
+            {d.counts.drafts} drafts · {d.counts.approved} approved
+          </p>
         </Card>
         <div className="space-y-4">
           <Card className="p-4 sm:p-5">
