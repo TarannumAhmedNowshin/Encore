@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { dbFor } from "@/lib/encore/demo-db";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -37,17 +38,17 @@ const playbookQuery = (id: string) => ({
   queryKey: ["playbook", id],
   queryFn: async () => {
     const [a, links, src, sh, personas, dna, signals, runs, doc] = await Promise.all([
-      supabase.from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
-      supabase.from("facts").select("*").eq("analysis_id", id).eq("subject", "business_context").eq("status", "active").order("created_at"),
-      supabase.from("facts").select("id, attribute, value, label, citations(quote)").eq("analysis_id", id).eq("origin", "document").eq("status", "active"),
-      supabase.from("stakeholders").select("id, name, title").eq("analysis_id", id),
-      supabase.from("personas").select("*").eq("analysis_id", id).order("created_at"),
-      supabase.from("sales_dna").select("*").eq("analysis_id", id).maybeSingle(),
-      supabase.from("need_signals").select("*").eq("analysis_id", id).order("created_at"),
-      supabase.from("runs").select("step, status, error, used_fallback_model, created_at").eq("analysis_id", id).like("step", "playbook_%").order("created_at", { ascending: false }).limit(10),
-      supabase.from("documents").select("text").eq("analysis_id", id).limit(1).maybeSingle(),
+      dbFor(id).from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
+      dbFor(id).from("facts").select("*").eq("analysis_id", id).eq("subject", "business_context").eq("status", "active").order("created_at"),
+      dbFor(id).from("facts").select("id, attribute, value, label, citations(quote)").eq("analysis_id", id).eq("origin", "document").eq("status", "active"),
+      dbFor(id).from("stakeholders").select("id, name, title").eq("analysis_id", id),
+      dbFor(id).from("personas").select("*").eq("analysis_id", id).order("created_at"),
+      dbFor(id).from("sales_dna").select("*").eq("analysis_id", id).maybeSingle(),
+      dbFor(id).from("need_signals").select("*").eq("analysis_id", id).order("created_at"),
+      dbFor(id).from("runs").select("step, status, error, used_fallback_model, created_at").eq("analysis_id", id).like("step", "playbook_%").order("created_at", { ascending: false }).limit(10),
+      dbFor(id).from("documents").select("text").eq("analysis_id", id).limit(1).maybeSingle(),
     ]);
-    const { data: u } = await supabase.auth.getUser();
+    const { data: u } = await dbFor(id).auth.getUser();
     return {
       readOnly: !u.user || a.data?.user_id !== u.user.id, links: links.data ?? [], facts: src.data ?? [], stakeholders: sh.data ?? [],
       personas: personas.data ?? [], dna: dna.data, signals: signals.data ?? [], runs: runs.data ?? [], docText: doc.data?.text ?? "",

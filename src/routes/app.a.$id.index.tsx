@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { dbFor } from "@/lib/encore/demo-db";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowRight, Settings2, Trash2 } from "lucide-react";
@@ -34,15 +35,15 @@ const overviewQuery = (id: string) => queryOptions({
   queryFn: async () => {
     const head = { count: "exact" as const, head: true };
     const [targets, qualified, depts, contacts, drafts, approved, facts, dna, runs] = await Promise.all([
-      supabase.from("targets").select("id", head).eq("analysis_id", id),
-      supabase.from("targets").select("id", head).eq("analysis_id", id).eq("status", "qualified"),
-      supabase.from("departments").select("id", head).eq("analysis_id", id),
-      supabase.from("contacts").select("id", head).eq("analysis_id", id),
-      supabase.from("outreach_drafts").select("id", head).eq("analysis_id", id),
-      supabase.from("outreach_drafts").select("id", head).eq("analysis_id", id).in("status", ["approved", "edited"]),
-      supabase.from("facts").select("confidence").eq("analysis_id", id).eq("status", "active"),
-      supabase.from("sales_dna").select("id", head).eq("analysis_id", id),
-      supabase.from("runs").select("id, step, status, message, error, created_at, updated_at, used_fallback_model").eq("analysis_id", id).order("created_at", { ascending: false }).limit(5),
+      dbFor(id).from("targets").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("targets").select("id", head).eq("analysis_id", id).eq("status", "qualified"),
+      dbFor(id).from("departments").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("contacts").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("outreach_drafts").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("outreach_drafts").select("id", head).eq("analysis_id", id).in("status", ["approved", "edited"]),
+      dbFor(id).from("facts").select("confidence").eq("analysis_id", id).eq("status", "active"),
+      dbFor(id).from("sales_dna").select("id", head).eq("analysis_id", id),
+      dbFor(id).from("runs").select("id, step, status, message, error, created_at, updated_at, used_fallback_model").eq("analysis_id", id).order("created_at", { ascending: false }).limit(5),
     ]);
     const counts: FunnelCounts = {
       found: targets.count ?? 0, qualified: qualified.count ?? 0, withDepartment: depts.count ?? 0,
@@ -97,7 +98,7 @@ function OverviewPage() {
 
       <div className="grid gap-6 md:grid-cols-[1fr_220px]">
         <Card className="p-5">
-          <h2 className="mb-4 text-sm font-semibold">Funnel</h2>
+          <h2 data-tour="funnel" className="mb-4 text-sm font-semibold">Funnel</h2>
           <ol className="space-y-2.5">
             {steps.map((s) => (
               <li key={s.key} className="flex items-center gap-3">

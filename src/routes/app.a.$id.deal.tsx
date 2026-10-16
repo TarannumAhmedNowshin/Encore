@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { dbFor } from "@/lib/encore/demo-db";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -33,13 +34,13 @@ const dealQuery = (id: string) => ({
   queryKey: ["deal", id],
   queryFn: async () => {
     const [a, d, f, s, r] = await Promise.all([
-      supabase.from("analyses").select("*").eq("id", id).maybeSingle(),
-      supabase.from("documents").select("filename, page_count, text").eq("analysis_id", id).order("created_at").limit(1).maybeSingle(),
-      supabase.from("facts").select("*, citations(id, quote, verified)").eq("analysis_id", id).eq("status", "active").in("subject", ["company", "business_problem", "solution"]).order("created_at"),
-      supabase.from("stakeholders").select("*").eq("analysis_id", id).order("created_at"),
-      supabase.from("runs").select("*").eq("analysis_id", id).eq("step", "extract").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      dbFor(id).from("analyses").select("*").eq("id", id).maybeSingle(),
+      dbFor(id).from("documents").select("filename, page_count, text").eq("analysis_id", id).order("created_at").limit(1).maybeSingle(),
+      dbFor(id).from("facts").select("*, citations(id, quote, verified)").eq("analysis_id", id).eq("status", "active").in("subject", ["company", "business_problem", "solution"]).order("created_at"),
+      dbFor(id).from("stakeholders").select("*").eq("analysis_id", id).order("created_at"),
+      dbFor(id).from("runs").select("*").eq("analysis_id", id).eq("step", "extract").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
-    const { data: u } = await supabase.auth.getUser();
+    const { data: u } = await dbFor(id).auth.getUser();
     return { analysis: a.data, doc: d.data, facts: f.data ?? [], stakeholders: s.data ?? [], run: r.data, userId: u.user?.id ?? null };
   },
   refetchInterval: (q: any) => (q.state.data?.run?.status === "running" ? 2500 : false),

@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { dbFor } from "@/lib/encore/demo-db";
+import { isDemoId } from "@/lib/encore/demo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -39,18 +41,18 @@ const outreachQuery = (id: string) => queryOptions({
   queryKey: ["outreach", id],
   queryFn: async () => {
     const [a, contacts, targets, drafts, scores] = await Promise.all([
-      supabase.from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
-      supabase.from("contacts").select("id, target_id, name, title, linkedin_url").eq("analysis_id", id),
-      supabase.from("targets").select("id, name, opportunity_score").eq("analysis_id", id).eq("status", "qualified"),
-      supabase.from("outreach_drafts").select("*").eq("analysis_id", id),
-      supabase.from("contact_scores").select("contact_id, total_score"),
+      dbFor(id).from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
+      dbFor(id).from("contacts").select("id, target_id, name, title, linkedin_url").eq("analysis_id", id),
+      dbFor(id).from("targets").select("id, name, opportunity_score").eq("analysis_id", id).eq("status", "qualified"),
+      dbFor(id).from("outreach_drafts").select("*").eq("analysis_id", id),
+      dbFor(id).from("contact_scores").select("contact_id, total_score"),
     ]);
     const ds = (drafts.data ?? []) as unknown as Draft[];
     const factIds = [...new Set(ds.flatMap((d) => (d.claims ?? []).map((c) => c.fact_id).filter(Boolean) as string[]))];
     const facts = factIds.length
-      ? await supabase.from("facts").select("id, value, subject, target_id, citations(quote, source_title, source_url, verified)").in("id", factIds)
+      ? await dbFor(id).from("facts").select("id, value, subject, target_id, citations(quote, source_title, source_url, verified)").in("id", factIds)
       : { data: [] };
-    const { data: u } = await supabase.auth.getUser();
+    const { data: u } = await dbFor(id).auth.getUser();
     return {
       readOnly: !u.user || a.data?.user_id !== u.user.id,
       contacts: (contacts.data ?? []) as Contact[],
@@ -139,7 +141,7 @@ function OutreachPage() {
   }, [d]);
 
   if (!d) return <main className="p-8"><div className="surface h-40 animate-pulse" /></main>;
-  if (d.readOnly) {
+  if (d.readOnly && !isDemoId(id)) {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">
         <div className="flex items-center gap-2 text-sm text-muted-foreground"><Send className="size-4" aria-hidden /> Outreach</div>
@@ -255,9 +257,9 @@ function OutreachPage() {
           ))}
         </section>
       ) : (
-        <div className="mt-6 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
           {/* Left: contacts */}
-          <aside className="surface p-3">
+          <aside className="surface min-w-0 p-3">
             <div className="mb-3 flex flex-wrap gap-1">
               {FILTERS.map(([f, l]) => (
                 <button key={f} type="button" onClick={() => setFilter(f)}
@@ -337,7 +339,7 @@ function OutreachPage() {
                         </div>
                       </div>
                     ) : (
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                      <p data-tour="draft" className="whitespace-pre-wrap text-sm leading-relaxed">
                         {draft.status === "edited" ? shownBody : segments(shownBody, claims).map((sg, k) => sg.i === undefined ? <span key={k}>{sg.text}</span> : (
                           <span key={k} onMouseEnter={() => setHover(sg.i!)} onMouseLeave={() => setHover(null)}
                             className={cn("underline decoration-2 underline-offset-4", claims[sg.i]?.verified ? "decoration-verified/60" : "decoration-risk/60", hover === sg.i && "bg-primary/10")}>{sg.text}</span>
@@ -366,7 +368,7 @@ function OutreachPage() {
           </section>
 
           {/* Right: claims */}
-          <aside className="surface p-4">
+          <aside className="surface min-w-0 p-4">
             <h2 className="text-sm font-semibold">Claims</h2>
             {!claims.length ? <p className="mt-2 text-xs text-muted-foreground">No claims in this draft.</p> : (
               <ol className="mt-3 space-y-2">
@@ -375,7 +377,7 @@ function OutreachPage() {
                   const about = f?.subject === "target_evidence" ? `about ${current?.t.name ?? "the company"}` : "from our engagement";
                   return (
                     <li key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
-                      className={cn("rounded-md border p-2 text-xs", hover === i ? "border-primary bg-primary/5" : "border-border")}>
+                      className={cn("min-w-0 break-words rounded-md border p-2 text-xs", hover === i ? "border-primary bg-primary/5" : "border-border")}>
                       <p className="font-medium">"{c.claim}"</p>
                       {f ? <p className="mt-1 text-muted-foreground">{f.value}</p> : <p className="mt-1 text-risk">{(c as { ungrounded?: boolean }).ungrounded ? "Factual sentence with no backing fact" : "Not tied to a fact"}</p>}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">

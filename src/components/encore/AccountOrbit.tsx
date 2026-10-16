@@ -19,6 +19,13 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
   const [w, setW] = useState(800);
   const [hover, setHover] = useState<{ t: T; x: number; y: number } | null>(null);
   const seen = useRef(new Map<string, string>());
+  // The guided demo replays the discovery animation: every bubble flies in again, one by one.
+  const [replay, setReplay] = useState(0);
+  useEffect(() => {
+    const on = () => setReplay((r) => r + 1);
+    window.addEventListener("encore:replay-orbit", on);
+    return () => window.removeEventListener("encore:replay-orbit", on);
+  }, []);
 
   useEffect(() => {
     const el = box.current; if (!el) return;
@@ -64,7 +71,7 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
           <text x={cx} y={cy + 24} textAnchor="middle" fontSize={12} fontWeight={600} className="fill-foreground">{short(center)}</text>
           <title>{center} — your won deal</title>
         </g>
-        {nodes.map((n) => {
+        {nodes.map((n, idx) => {
           const fav = faviconUrl(n.t.website);
           const faded = n.group === "rejected" || n.group === "failed";
           const pending = n.group === "pending";
@@ -74,7 +81,8 @@ export function AccountOrbit({ targets, center, onOpen }: { targets: T[]; center
               onMouseEnter={() => setHover({ t: n.t, x: cx + n.x, y: cy + n.y })} onMouseLeave={() => setHover(null)}
               onClick={() => onOpen(n.t.id)} tabIndex={0} role="button" aria-label={n.t.name ?? "Company"}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen(n.t.id)}>
-              <g className={cn(fresh.has(n.t.id) && "orbit-in", pending && "animate-run-pulse")}>
+              <g key={replay} className={cn((fresh.has(n.t.id) || replay > 0) && "orbit-in", pending && "animate-run-pulse")}
+                style={replay > 0 ? { animationDelay: `${idx * 220}ms` } : undefined}>
                 {n.t.in_target_region && <circle r={n.r + 3} fill="none" stroke="var(--primary)" strokeWidth={2} />}
                 <circle r={n.r} fill={FILL[n.group]} fillOpacity={n.group === "failed" ? 0 : 0.9}
                   stroke={n.group === "failed" ? "var(--risk)" : "var(--card)"} strokeWidth={n.group === "failed" ? 2 : 1.5} />

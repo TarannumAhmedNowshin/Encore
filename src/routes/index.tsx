@@ -107,7 +107,7 @@ function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
-                <Link to="/auth" search={{ redirect: "/app/new?sample=1" }}>
+                <Link to="/demo">
                   Try the sample deal <ArrowRight />
                 </Link>
               </Button>

@@ -1,4 +1,5 @@
-import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
+import { DemoShell } from "@/components/encore/DemoShell";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Moon, Plus, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +57,7 @@ function UsageMeter() {
 export const Route = createFileRoute("/app")({
   ssr: false,
   beforeLoad: async ({ location }) => {
+    if (location.pathname.startsWith("/app/a/demo")) return; // public guided demo
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/auth", search: { redirect: location.href } });
   },
@@ -64,6 +66,12 @@ export const Route = createFileRoute("/app")({
 });
 
 function AppShell() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/app/a/demo")) return <DemoShell />;
+  return <SignedInShell />;
+}
+
+function SignedInShell() {
   const { user } = useSession();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();

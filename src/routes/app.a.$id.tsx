@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StatusDot, type StageStatus } from "@/components/encore/primitives";
 import { stagesQuery } from "@/lib/encore/stages-query";
 import { accessQuery } from "@/lib/encore/ownership";
+import { isDemoId } from "@/lib/encore/demo";
 
 export const Route = createFileRoute("/app/a/$id")({
   component: AnalysisLayout,
@@ -19,7 +20,7 @@ function AnalysisLayout() {
   const { pathname } = useLocation();
   const { data: stages } = useQuery({ ...stagesQuery(id), enabled: typeof window !== "undefined" });
   const { data: access } = useQuery({ ...accessQuery(id), enabled: typeof window !== "undefined" });
-  const readOnly = !!access?.readOnly;
+  const readOnly = !!access?.readOnly && !isDemoId(id);
   const overviewActive = pathname === `/app/a/${id}` || pathname === `/app/a/${id}/`;
   const doneCount = STAGES.filter((s) => stages?.[s.key]?.status === "done").length;
   return (

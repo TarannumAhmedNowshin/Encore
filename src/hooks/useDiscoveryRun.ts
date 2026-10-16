@@ -1,4 +1,6 @@
 import { useCallback, useEffect } from "react";
+import { dbFor } from "@/lib/encore/demo-db";
+import { isDemoId } from "@/lib/encore/demo";
 import { clearJob, getRun, setJob, setRun, useRunState } from "@/lib/encore/run-store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -20,12 +22,12 @@ export const targetsQuery = (id: string) => ({
   queryKey: ["targets", id],
   queryFn: async () => {
     const [t, run, a, dna] = await Promise.all([
-      supabase.from("targets").select("*").eq("analysis_id", id).order("created_at"),
-      supabase.from("runs").select("id, step, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("analyses").select("is_showcase, target_region, customer_name, anonymise_customer, user_id").eq("id", id).maybeSingle(),
-      supabase.from("sales_dna").select("id").eq("analysis_id", id).maybeSingle(),
+      dbFor(id).from("targets").select("*").eq("analysis_id", id).order("created_at"),
+      dbFor(id).from("runs").select("id, step, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      dbFor(id).from("analyses").select("is_showcase, target_region, customer_name, anonymise_customer, user_id").eq("id", id).maybeSingle(),
+      dbFor(id).from("sales_dna").select("id").eq("analysis_id", id).maybeSingle(),
     ]);
-    const { data: u } = await supabase.auth.getUser();
+    const { data: u } = await dbFor(id).auth.getUser();
     const readOnly = !u.user || a.data?.user_id !== u.user.id;
     return { targets: t.data ?? [], run: run.data, readOnly, region: a.data?.target_region ?? "global", customer: a.data?.customer_name ?? null, hasDna: !!dna.data };
   },
@@ -62,6 +64,7 @@ export function useDiscoveryRun(id: string) {
   }, [qc, id]);
 
   useEffect(() => {
+    if (isDemoId(id)) return;
     const ch = supabase.channel(`targets-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "targets", filter: `analysis_id=eq.${id}` }, () => {
         void qc.invalidateQueries({ queryKey: ["targets", id] });

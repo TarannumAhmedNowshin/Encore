@@ -199,3 +199,12 @@
   .lift, .lift:hover { transition: none; transform: none; box-shadow: none; }
   .rail-fill { transition: none; }
 }
+
+/* Guided demo spotlight: dims the page around one element with a soft indigo glow. */
+.tour-spot {
+  box-shadow: 0 0 0 9999px color-mix(in oklab, var(--foreground) 45%, transparent), 0 0 0 2px var(--primary), 0 0 24px 4px color-mix(in oklab, var(--primary) 45%, transparent);
+  transition: top 220ms ease-out, left 220ms ease-out, width 220ms ease-out, height 220ms ease-out;
+}
+@keyframes tour-note-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.tour-note { animation: tour-note-in 200ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .tour-spot { transition: none; } .tour-note { animation: none; } }

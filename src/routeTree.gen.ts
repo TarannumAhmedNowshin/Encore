@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppNewRouteImport } from './routes/app.new'
@@ -37,6 +38,11 @@ const AppRoute = AppRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/demo': typeof DemoRoute
   '/how-it-works': typeof HowItWorksRoute
   '/app/new': typeof AppNewRoute
   '/app/settings': typeof AppSettingsRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/demo': typeof DemoRoute
   '/how-it-works': typeof HowItWorksRoute
   '/app/new': typeof AppNewRoute
   '/app/settings': typeof AppSettingsRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/demo': typeof DemoRoute
   '/how-it-works': typeof HowItWorksRoute
   '/app/new': typeof AppNewRoute
   '/app/settings': typeof AppSettingsRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/demo'
     | '/how-it-works'
     | '/app/new'
     | '/app/settings'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/demo'
     | '/how-it-works'
     | '/app/new'
     | '/app/settings'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/demo'
     | '/how-it-works'
     | '/app/new'
     | '/app/settings'
@@ -195,6 +207,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  DemoRoute: typeof DemoRoute
   HowItWorksRoute: typeof HowItWorksRoute
 }
 
@@ -219,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -342,6 +362,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  DemoRoute: DemoRoute,
   HowItWorksRoute: HowItWorksRoute,
 }
 export const routeTree = rootRouteImport
