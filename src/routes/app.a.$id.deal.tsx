@@ -135,7 +135,7 @@ function DealPage() {
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-gutter">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4" aria-hidden /> Deal</div>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4" aria-hidden /> Deal</div>
           <h1 className="mt-1 text-2xl font-semibold">{doc?.filename ?? analysis?.title ?? "Document"}</h1>
           <p className="mt-1 font-mono text-xs text-muted-foreground">
             {doc?.page_count ? `${doc.page_count} pages · ` : ""}{REGION_LABEL[analysis?.target_region as keyof typeof REGION_LABEL] ?? analysis?.target_region}
