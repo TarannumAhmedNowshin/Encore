@@ -164,10 +164,10 @@ function DealPage() {
               </div>
               <div className="mt-4">
                 <div className="flex justify-between text-[11px] text-muted-foreground"><span>Confidence</span><span className="font-mono">{overallConfidence(facts.map((f) => f.confidence))}%</span></div>
-                <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`High ${byConf.high ?? 0}, medium ${byConf.medium ?? 0}, low ${byConf.low ?? 0}`}>
+                <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`High ${byConf["high"] ?? 0}, medium ${byConf["medium"] ?? 0}, low ${byConf["low"] ?? 0}`}>
                   {(["high", "medium", "low"] as const).map((k) => <div key={k} className={CONF_BAR[k]} style={{ width: `${((byConf[k] ?? 0) / facts.length) * 100}%` }} />)}
                 </div>
-                <div className="mt-1 font-mono text-[11px] text-muted-foreground">high {byConf.high ?? 0} · med {byConf.medium ?? 0} · low {byConf.low ?? 0}</div>
+                <div className="mt-1 font-mono text-[11px] text-muted-foreground">high {byConf["high"] ?? 0} · med {byConf["medium"] ?? 0} · low {byConf["low"] ?? 0}</div>
               </div>
               {canEdit && <Button className="mt-4 w-full" size="sm" variant="secondary" onClick={onExtract} disabled={running}>{running ? "Extracting…" : "Re-extract"}</Button>}
               {!running && run?.status === "done" && run.used_fallback_model && <p className="mt-2 text-[11px] text-muted-foreground">Extracted with the fast model because the main model was busy.</p>}
@@ -190,7 +190,7 @@ function DealPage() {
                           <ul className="mt-1">
                             {rows.map((f) => {
                               const c = (f as any).citations?.[0] as { quote: string | null; verified: boolean | null } | undefined;
-                              const kind = evidencePill({ origin: f.origin, label: f.label, quote: c?.quote, verified: c?.verified });
+                              const kind = evidencePill({ origin: f.origin, label: f.label, quote: c?.quote ?? null, verified: c?.verified ?? null });
                               const P = PILL[kind];
                               return (
                                 <li key={f.id}>
