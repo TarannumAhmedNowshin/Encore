@@ -47,7 +47,7 @@ const peopleQuery = (id: string) => queryOptions({
       supabase.from("personas").select("id, label").eq("analysis_id", id),
     ]);
     return {
-      readOnly: !!a.data?.is_showcase,
+      readOnly: !u.user || a.data?.user_id !== u.user.id,
       targets: ((targets.data ?? []) as AccountRow[]).sort(defaultOrder),
       contacts: (contacts.data ?? []) as Contact[],
       scores: (scores.data ?? []) as Score[],

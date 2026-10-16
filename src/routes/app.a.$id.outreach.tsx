@@ -50,7 +50,7 @@ const outreachQuery = (id: string) => queryOptions({
       ? await supabase.from("facts").select("id, value, subject, target_id, citations(quote, source_title, source_url, verified)").in("id", factIds)
       : { data: [] };
     return {
-      readOnly: !!a.data?.is_showcase,
+      readOnly: !u.user || a.data?.user_id !== u.user.id,
       contacts: (contacts.data ?? []) as Contact[],
       targets: (targets.data ?? []) as { id: string; name: string | null; opportunity_score: number | null }[],
       drafts: ds,

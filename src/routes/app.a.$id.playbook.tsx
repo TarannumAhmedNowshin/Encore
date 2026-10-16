@@ -44,7 +44,7 @@ const playbookQuery = (id: string) => ({
       supabase.from("documents").select("text").eq("analysis_id", id).limit(1).maybeSingle(),
     ]);
     return {
-      readOnly: !!a.data?.is_showcase, links: links.data ?? [], facts: src.data ?? [], stakeholders: sh.data ?? [],
+      readOnly: !u.user || a.data?.user_id !== u.user.id, links: links.data ?? [], facts: src.data ?? [], stakeholders: sh.data ?? [],
       personas: personas.data ?? [], dna: dna.data, signals: signals.data ?? [], runs: runs.data ?? [], docText: doc.data?.text ?? "",
     };
   },
