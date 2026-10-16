@@ -17,10 +17,10 @@ export const targetsQuery = (id: string) => ({
   queryFn: async () => {
     const [t, run, a] = await Promise.all([
       supabase.from("targets").select("*").eq("analysis_id", id).order("created_at"),
-      supabase.from("runs").select("id, status, error, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("analyses").select("is_showcase").eq("id", id).single(),
+      supabase.from("runs").select("id, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("analyses").select("is_showcase, target_region").eq("id", id).single(),
     ]);
-    return { targets: t.data ?? [], run: run.data, readOnly: !!a.data?.is_showcase };
+    return { targets: t.data ?? [], run: run.data, readOnly: !!a.data?.is_showcase, region: a.data?.target_region ?? "global" };
   },
 });
 
