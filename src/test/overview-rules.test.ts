@@ -29,3 +29,11 @@ describe("next action", () => {
     expect(nextAction(base)).toBeNull();
   });
 });
+
+import { conversionPct, storyLine } from "@/lib/encore/overview";
+describe("overview story", () => {
+  it("story line follows the pipeline", () =>
+    expect(storyLine({ facts: 40, personas: 4, qualified: 11, contacts: 11, drafts: 44 })).toBe("From 1 won SOW: 40 facts, 4 personas, 11 qualified look-alikes, 11 decision-makers, 44 drafts"));
+  it("singular wording for one", () => expect(storyLine({ facts: 1, personas: 1, qualified: 1, contacts: 1, drafts: 1 })).toContain("1 qualified look-alike, 1 decision-maker, 1 draft"));
+  it("conversion is share of previous step", () => { expect(conversionPct(12, 11)).toBe(92); expect(conversionPct(0, 0)).toBeNull(); expect(conversionPct(11, 44)).toBe(100); });
+});
