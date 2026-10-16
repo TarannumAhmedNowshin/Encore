@@ -91,3 +91,11 @@ export function checkDocQuote(quote: string | null | undefined, text: string): Q
 export function inRange(i: number, length: number): boolean {
   return Number.isInteger(i) && i >= 0 && i < length;
 }
+
+export type EvidencePillKind = "verified" | "inferred" | "unverified" | "user";
+/** One evidence pill per fact: user-added wins, then inferred, then quote verification. */
+export function evidencePill(f: { origin?: string | null; label?: string | null; quote?: string | null; verified?: boolean | null }): EvidencePillKind {
+  if (f.origin === "user" || f.label === "user") return "user";
+  if (f.label === "inferred") return "inferred";
+  return f.quote && f.verified ? "verified" : "unverified";
+}
