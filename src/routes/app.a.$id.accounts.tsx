@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
-import { CartesianGrid, ReferenceArea, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
+import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
@@ -202,10 +202,6 @@ function SortTh({ label, onClick }: { label: string; onClick: () => void }) {
 function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string) => void }) {
   if (!targets.length) return <Card className="mt-4"><p className="text-sm text-muted-foreground">No qualified accounts yet. The quadrant shows qualified companies only.</p></Card>;
   const pts = targets.map((t) => ({ id: t.id, name: t.name, x: t.similarity_percent ?? 0, y: t.evidence_score ?? 0, z: Math.max(5, t.opportunity_score ?? 0), opp: t.opportunity_score ?? 0, inR: t.in_target_region !== false }));
-  const label = (x: number, y: number, text: string, anchor: "start" | "end") => (
-    <ReferenceArea x1={x} x2={x} y1={y} y2={y} ifOverflow="visible" fill="none" stroke="none"
-      label={{ value: text, position: "insideTopLeft", fill: "var(--muted-foreground)", fontSize: 11, textAnchor: anchor }} />
-  );
   return (
     <Card className="mt-4 p-4">
       <div className="relative h-[440px]">
@@ -221,7 +217,6 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
             <ZAxis type="number" dataKey="z" range={[60, 600]} domain={[0, 100]} />
             <ReferenceLine x={50} stroke="var(--border)" />
             <ReferenceLine y={50} stroke="var(--border)" />
-            {false && label(0, 0, "", "start")}
             <Tooltip cursor={false} content={({ payload }) => {
               const p = payload?.[0]?.payload as (typeof pts)[number] | undefined;
               if (!p) return null;
