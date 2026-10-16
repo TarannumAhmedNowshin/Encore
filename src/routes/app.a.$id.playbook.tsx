@@ -43,6 +43,7 @@ const playbookQuery = (id: string) => ({
       supabase.from("runs").select("step, status, error, used_fallback_model, created_at").eq("analysis_id", id).like("step", "playbook_%").order("created_at", { ascending: false }).limit(10),
       supabase.from("documents").select("text").eq("analysis_id", id).limit(1).maybeSingle(),
     ]);
+    const { data: u } = await supabase.auth.getUser();
     return {
       readOnly: !u.user || a.data?.user_id !== u.user.id, links: links.data ?? [], facts: src.data ?? [], stakeholders: sh.data ?? [],
       personas: personas.data ?? [], dna: dna.data, signals: signals.data ?? [], runs: runs.data ?? [], docText: doc.data?.text ?? "",
