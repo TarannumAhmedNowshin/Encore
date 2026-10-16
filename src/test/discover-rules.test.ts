@@ -67,7 +67,7 @@ describe("owning functions", () => {
     expect(owningFunctions("Transport Planning Department", [])).toEqual(["Transport Planning"]);
   });
   it("adds persona functions shared by 2 or more personas", () => {
-    expect(owningFunctions("Claims", ["Claims/Operations", "operations", "IT"])).toEqual(["Claims", "operations"]);
+    expect(owningFunctions("Claims", ["Claims/Operations", "operations", "IT"])).toEqual(["Claims", "Operations"]);
   });
   it("falls back to the most common persona function when nothing else", () => {
     expect(owningFunctions("", ["IT", "Risk", "IT"])).toEqual(["IT"]);
