@@ -15,6 +15,27 @@ import {
 import { Logo } from "@/components/encore/primitives";
 import { useSession } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
+import { useQuery } from "@tanstack/react-query";
+import { Settings } from "lucide-react";
+import { usageTodayQuery } from "@/lib/encore/usage-query";
+import { LIMIT_LABELS } from "@/lib/encore/limits";
+
+/** Shows the limit closest to being reached; same numbers as Settings → Usage today. */
+function UsageMeter() {
+  const { data } = useQuery(usageTodayQuery);
+  if (!data) return null;
+  const top = [...data].sort((a, b) => b.used / b.limit - a.used / a.limit)[0]!;
+  const summary = data.map((u) => `${LIMIT_LABELS[u.kind]} ${u.used}/${u.limit}`).join(", ");
+  return (
+    <Link to="/app/settings" className="hidden items-center gap-2 rounded-md md:flex" aria-label={`Usage today: ${summary}`} title={summary}>
+      <span className="text-xs text-muted-foreground">{LIMIT_LABELS[top.kind]}</span>
+      <span className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary">
+        <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (top.used / top.limit) * 100)}%` }} />
+      </span>
+      <span className="font-mono text-xs text-muted-foreground">{top.used}/{top.limit}</span>
+    </Link>
+  );
+}
 
 export const Route = createFileRoute("/app")({
   ssr: false,
@@ -49,13 +70,7 @@ function AppShell() {
             <Logo />
           </Link>
           <div className="ml-auto flex items-center gap-3">
-            <div className="hidden items-center gap-2 md:flex" aria-label="Usage: 0 of 5 analyses this month">
-              <span className="text-xs text-muted-foreground">Usage</span>
-              <span className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary">
-                <span className="block h-full w-[8%] rounded-full bg-primary" />
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">0/5</span>
-            </div>
+            <UsageMeter />
             <Button asChild size="sm">
               <Link to="/app/new">
                 <Plus /> <span className="hidden sm:inline">New analysis</span>
@@ -72,6 +87,9 @@ function AppShell() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggle(); }}>
                   {theme === "dark" ? <Sun /> : <Moon />} {theme === "dark" ? "Light mode" : "Dark mode"}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/app/settings"><Settings /> Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={signOut}>
                   <LogOut /> Sign out
