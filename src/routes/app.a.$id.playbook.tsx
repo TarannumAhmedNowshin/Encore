@@ -65,6 +65,7 @@ function PlaybookPage() {
 
   async function runStage(stage: PlaybookStage): Promise<boolean> {
     setStates((s) => ({ ...s, [stage]: { state: "running" } }));
+    setTimeout(() => void qc.invalidateQueries({ queryKey: ["stages", id] }), 800);
     try {
       await build({ data: { analysis_id: id, stage } });
       setStates((s) => ({ ...s, [stage]: { state: "done" } }));
