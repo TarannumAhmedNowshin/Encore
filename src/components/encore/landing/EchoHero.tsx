@@ -95,7 +95,7 @@ export function EchoHero() {
               <span className={`hero-mark ${reduced ? "is-on is-instant" : on ? "is-on" : ""}`}>{sentence.slice(a, b)}</span>
               {sentence.slice(b)}
             </p>
-          </div>
+          </div>}
 
           {!failed && shown.length > 0 && (
             <div className="relative mt-5 pl-5 md:pl-6">
