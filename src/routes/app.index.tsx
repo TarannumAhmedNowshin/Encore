@@ -1,11 +1,46 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Eye, Plus } from "lucide-react";
+import { Check, Eye, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Pill } from "@/components/encore/primitives";
 import { REGION_LABEL } from "@/lib/encore/intake";
 import { funnelSteps, type FunnelCounts } from "@/lib/encore/overview";
 import { supabase } from "@/integrations/supabase/client";
+
+const ONBOARD_KEY = "encore-onboarding-dismissed";
+
+/** First-run checklist: ticks off from real data, dismissible. */
+function OnboardingCard({ rows, funnels, onDismiss }: { rows: Row[]; funnels: Record<string, FunnelCounts>; onDismiss: () => void }) {
+  const all = Object.values(funnels);
+  const steps = [
+    { label: "Try the sample deal", done: rows.length > 0, to: "/app/new?sample=1" },
+    { label: "Run discovery", done: all.some((f) => f.found > 0), to: rows[0] ? `/app/a/${rows[0].id}/accounts` : "/app/new?sample=1" },
+    { label: "Approve your first draft", done: all.some((f) => f.approved > 0), to: rows[0] ? `/app/a/${rows[0].id}/outreach` : "/app/new?sample=1" },
+  ];
+  if (steps.every((s) => s.done)) return null;
+  return (
+    <div className="surface mb-6 p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Getting started</h2>
+        <Button variant="ghost" size="icon" className="size-7" onClick={onDismiss} aria-label="Dismiss getting started">
+          <X />
+        </Button>
+      </div>
+      <ol className="mt-3 space-y-2">
+        {steps.map((s, i) => (
+          <li key={s.label}>
+            <Link to={s.to as string} className="flex items-center gap-3 rounded-md px-1 py-1 text-sm transition-colors hover:bg-secondary">
+              <span className={`grid size-5 shrink-0 place-items-center rounded-full border ${s.done ? "border-verified bg-verified text-primary-foreground" : "border-border text-muted-foreground"}`}>
+                {s.done ? <Check className="size-3" aria-hidden /> : <span className="font-mono text-[10px]">{i + 1}</span>}
+              </span>
+              <span className={s.done ? "text-muted-foreground line-through" : "font-medium"}>{s.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "My analyses — Encore" }, { name: "description", content: "Your Encore analyses, one per won deal." }] }),
