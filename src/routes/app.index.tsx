@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Eye, Plus, X } from "lucide-react";
+import { Check, Eye, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EmptyState, Pill } from "@/components/encore/primitives";
+import { ConfirmDialog } from "@/components/encore/ConfirmDialog";
 import { REGION_LABEL } from "@/lib/encore/intake";
 import { funnelSteps, type FunnelCounts } from "@/lib/encore/overview";
+import { deleteAnalysis } from "@/lib/encore/analysis.functions";
+import { toastError } from "@/lib/encore/toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const ONBOARD_KEY = "encore-onboarding-dismissed";
@@ -50,6 +56,18 @@ export const Route = createFileRoute("/app/")({
 type Row = { id: string; title: string | null; target_region: string; created_at: string; status: string; user_id: string; is_showcase: boolean };
 const STAGE_LABEL: Record<string, string> = { draft: "Deal · draft", extracting: "Deal · reading", needs_review: "Deal · review", ready: "Playbook" };
 
+/** The chip shows the furthest stage that actually has data, not just the pipeline status. */
+function stageChip(status: string, f: FunnelCounts | undefined): string {
+  if (f) {
+    if (f.drafts > 0) return `Outreach · ${f.drafts} drafts`;
+    if (f.contacts > 0) return `People · ${f.contacts} contacts`;
+    if (f.withDepartment > 0) return `Departments · ${f.withDepartment}`;
+    if (f.qualified > 0) return `Accounts · ${f.qualified} qualified`;
+    if (f.found > 0) return `Accounts · ${f.found} found`;
+  }
+  return STAGE_LABEL[status] ?? "Deal";
+}
+
 async function funnelFor(id: string): Promise<FunnelCounts> {
   const head = { count: "exact" as const, head: true };
   const [t, q, dep, c, dr, ap] = await Promise.all([
@@ -72,7 +90,7 @@ function MiniFunnel({ counts }: { counts: FunnelCounts }) {
         <li key={s.key} className="flex items-center gap-2">
           <span className="w-28 shrink-0 truncate text-[11px] text-muted-foreground">{s.label}</span>
           <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-            <span className="absolute inset-y-0 left-0 rounded-full bg-primary/70" style={{ width: `${Math.max(s.count ? 6 : 0, (s.count / max) * 100)}%` }} />
+            <span className="absolute inset-y-0 left-0 rounded-full bg-accent/70" style={{ width: `${Math.max(s.count ? 6 : 0, (s.count / max) * 100)}%` }} />
           </span>
           <span className="w-6 text-right font-mono text-[11px] text-muted-foreground">{s.count}</span>
         </li>
@@ -86,6 +104,20 @@ function Dashboard() {
   const [showcase, setShowcase] = useState<Row[]>([]);
   const [funnels, setFunnels] = useState<Record<string, FunnelCounts>>({});
   const [onboardDismissed, setOnboardDismissed] = useState(() => typeof window !== "undefined" && localStorage.getItem(ONBOARD_KEY) === "1");
+  const [deleteRow, setDeleteRow] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const delFn = useServerFn(deleteAnalysis);
+  const confirmDelete = async () => {
+    if (!deleteRow) return;
+    setDeleting(true);
+    try {
+      await delFn({ data: { analysis_id: deleteRow.id } });
+      setRows((rs) => (rs ?? []).filter((r) => r.id !== deleteRow.id));
+      toast(`Deleted “${deleteRow.title ?? "Untitled analysis"}” and all its data.`);
+      setDeleteRow(null);
+    } catch (e) { toastError(e, "Delete failed", () => void confirmDelete()); }
+    finally { setDeleting(false); }
+  };
   useEffect(() => {
     void supabase.auth.getUser().then(async ({ data: u }) => {
       if (!u.user) return setRows([]);
@@ -111,8 +143,8 @@ function Dashboard() {
       {showcase.length > 0 && (
         <div className="mb-6 grid gap-4 sm:grid-cols-2">
           {showcase.map((r) => (
-            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface block border-dashed p-5 transition-colors hover:border-primary/40">
-              <div className="flex items-center gap-2 text-xs font-medium text-primary"><Eye className="size-3.5" aria-hidden /> See a finished example</div>
+            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface block border-dashed p-5 transition-colors hover:border-accent/40">
+              <div className="flex items-center gap-2 text-xs font-medium text-accent"><Eye className="size-3.5" aria-hidden /> See a finished example</div>
               <h2 className="mt-2 font-semibold">{r.title ?? "Example analysis"}</h2>
               <p className="mt-1 text-xs text-muted-foreground">{REGION_LABEL[r.target_region] ?? r.target_region} · read only</p>
             </Link>
@@ -146,19 +178,42 @@ function Dashboard() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {rows.map((r) => (
-            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface lift block p-5 hover:border-primary/40">
-              <h2 className="font-semibold">{r.title ?? "Untitled analysis"}</h2>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Pill tone="primary">{STAGE_LABEL[r.status] ?? "Deal"}</Pill>
-                <span>{REGION_LABEL[r.target_region] ?? r.target_region}</span>
-                <span aria-hidden>·</span>
-                <span className="font-mono">{new Date(r.created_at).toLocaleDateString()}</span>
-              </div>
-              {funnels[r.id] && <MiniFunnel counts={funnels[r.id]!} />}
-            </Link>
+            <div key={r.id} className="surface lift relative p-5 transition-colors hover:border-accent/40">
+              <Link to="/app/a/$id" params={{ id: r.id }} className="block rounded-md focus-visible:outline-2">
+                <h2 className="pr-8 font-semibold">{r.title ?? "Untitled analysis"}</h2>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Pill tone="primary">{stageChip(r.status, funnels[r.id])}</Pill>
+                  <span>{REGION_LABEL[r.target_region] ?? r.target_region}</span>
+                  <span aria-hidden>·</span>
+                  <span className="font-mono">{new Date(r.created_at).toLocaleDateString()}</span>
+                </div>
+                {funnels[r.id] && <MiniFunnel counts={funnels[r.id]!} />}
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" aria-label={`Options for ${r.title ?? "analysis"}`} className="absolute right-3 top-3">
+                    <MoreHorizontal />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeleteRow(r)}>
+                    <Trash2 /> Delete analysis
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={!!deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={() => void confirmDelete()}
+        busy={deleting}
+        title={`Delete “${deleteRow?.title ?? "this analysis"}”?`}
+        body="This permanently deletes the analysis and all its facts, accounts, people and drafts. This cannot be undone."
+        confirmLabel="Delete analysis"
+      />
     </main>
   );
 }
