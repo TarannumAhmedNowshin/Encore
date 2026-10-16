@@ -114,7 +114,7 @@ export const findPeople = createServerFn({ method: "POST" })
     const user = [
       `Company: ${t.name}`,
       `Owning department here: ${(deps ?? []).map((d: { name: string | null }) => d.name).filter(Boolean).join(", ") || "unknown"}`,
-      `Primary buyers (Sales DNA): ${dna?.primary_buyers ?? "unknown"}`,
+      `Primary buyers (Sales DNA): ${dna?.primary_buyers_summary ?? "unknown"}`,
       `Personas: ${personas.map((p: { label: string | null; function: string | null }) => `${p.label} (${p.function ?? "?"})`).join("; ")}`,
       "",
       "Candidates:",
