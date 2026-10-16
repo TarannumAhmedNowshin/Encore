@@ -2,6 +2,14 @@ import type { ReactNode } from "react";
 import { Check, Quote, Sparkles, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useCountUp, useMounted } from "@/lib/encore/use-count-up";
+
+/** Score band colors: ≥75 green, 50–74 indigo, <50 amber. */
+export function scoreBand(v: number): "high" | "mid" | "low" {
+  return v >= 75 ? "high" : v >= 50 ? "mid" : "low";
+}
+const bandText = { high: "text-verified", mid: "text-primary", low: "text-inference" } as const;
+const bandBg = { high: "bg-verified", mid: "bg-primary", low: "bg-inference" } as const;
 
 export function Logo({ className }: { className?: string }) {
   return (
@@ -61,17 +69,18 @@ export function EvidenceChip({ kind, onClick, label }: { kind: EvidenceKind; onC
 
 export function ScoreBar({ value, label }: { value: number; label?: string }) {
   const v = Math.max(0, Math.min(100, Math.round(value)));
-  const tone = v >= 70 ? "bg-verified" : v >= 40 ? "bg-inference" : "bg-risk";
+  const shown = useCountUp(v);
+  const mounted = useMounted();
   return (
     <div className="w-full">
       {label && (
         <div className="mb-1 flex justify-between text-xs text-muted-foreground">
           <span>{label}</span>
-          <span className="font-mono text-foreground">{v}</span>
+          <span className="font-mono text-[13px] text-foreground">{shown}</span>
         </div>
       )}
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="meter" aria-valuenow={v} aria-valuemin={0} aria-valuemax={100} aria-label={label ?? "Score"}>
-        <div className={cn("h-full rounded-full", tone)} style={{ width: `${v}%` }} />
+        <div className={cn("score-anim h-full rounded-full", bandBg[scoreBand(v)])} style={{ width: `${mounted ? v : 0}%` }} />
       </div>
     </div>
   );
@@ -79,16 +88,17 @@ export function ScoreBar({ value, label }: { value: number; label?: string }) {
 
 export function ScoreRing({ value, size = 56 }: { value: number; size?: number }) {
   const v = Math.max(0, Math.min(100, Math.round(value)));
+  const shown = useCountUp(v);
+  const mounted = useMounted();
   const r = (size - 6) / 2;
   const c = 2 * Math.PI * r;
-  const tone = v >= 70 ? "text-verified" : v >= 40 ? "text-inference" : "text-risk";
   return (
     <div className="relative inline-grid place-items-center" style={{ width: size, height: size }} role="img" aria-label={`Score ${v} of 100`}>
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={4} className="stroke-secondary" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={4} strokeLinecap="round" stroke="currentColor" className={tone} strokeDasharray={c} strokeDashoffset={c - (v / 100) * c} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={4} strokeLinecap="round" stroke="currentColor" className={cn("score-anim", bandText[scoreBand(v)])} strokeDasharray={c} strokeDashoffset={mounted ? c - (v / 100) * c : c} />
       </svg>
-      <span className="absolute font-mono text-sm font-semibold">{v}</span>
+      <span className="absolute font-mono text-[13px] font-semibold">{shown}</span>
     </div>
   );
 }
