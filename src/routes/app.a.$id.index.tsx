@@ -55,7 +55,7 @@ const overviewQuery = (id: string) => queryOptions({
     return {
       counts, state,
       confidence: overallConfidence((facts.data ?? []).map((f) => f.confidence)),
-      runs: (runs.data ?? []) as RunRow,
+      runs: (runs.data ?? []) as RunRow[],
     };
   },
 });
