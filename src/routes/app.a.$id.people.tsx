@@ -9,7 +9,7 @@ import { ArrowRight, ChevronDown, Linkedin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { MobileActionBar, Card, EmptyState, Pill, RunTimeline, ScoreRing } from "@/components/encore/primitives";
+import { MobileActionBar, Card, EmptyState, GapCard, Pill, RunTimeline, ScoreRing } from "@/components/encore/primitives";
 import { findPeople, scoreContacts } from "@/lib/encore/people.functions";
 import { isCreditError, ROLE_SLOTS, SLOT_LABELS, type RoleSlot } from "@/lib/encore/people";
 import { defaultOrder, type AccountRow } from "@/lib/encore/accounts";
@@ -222,19 +222,19 @@ function PeoplePage() {
                   )}
                 </div>
 
-                <div data-tour="board" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 [&>*]:min-w-0">
+                <div data-tour="board" className="mt-4 space-y-3">
                   {ROLE_SLOTS.map((slot) => {
                     const inSlot = contacts.filter((c) => c.buying_role_slot === slot);
                     return (
-                      <div key={slot} className="rounded-lg border border-border p-2">
-                        <div className="mb-2 px-1 text-xs font-medium text-muted-foreground">{SLOT_LABELS[slot]}</div>
+                      <div key={slot} className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-start sm:gap-4">
+                        <div className="shrink-0 pt-1 text-xs font-medium text-muted-foreground sm:w-40">{SLOT_LABELS[slot]}</div>
                         {inSlot.length === 0 ? (
-                          <div className="grid place-items-center rounded-md border border-dashed border-border px-2 py-6 text-center text-xs text-muted-foreground">
+                          <GapCard className="flex-1 py-4">
                             {busy ? <span className="flex items-center gap-1"><Loader2 className="size-3 animate-spin" aria-hidden /> Searching…</span>
                               : searched ? "Gap — no match found" : "Not searched yet"}
-                          </div>
+                          </GapCard>
                         ) : (
-                          <div className="space-y-2">
+                          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
                             {inSlot.map((c) => (
                               <ContactCard key={c.id} c={c} score={scoreByContact.get(c.id)} persona={personaLabel.get(c.persona_id ?? "") ?? ""} />
                             ))}
@@ -267,19 +267,19 @@ const RATING_LABEL: [keyof Score, string][] = [
 function ContactCard({ c, score, persona }: { c: Contact; score?: Score | undefined; persona: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-md border border-border bg-card p-2.5 text-sm">
+    <div className="w-full min-w-0 rounded-md border border-border bg-card p-2.5 text-sm sm:w-[260px]">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-start justify-between gap-2 text-left" aria-expanded={open}>
         <span className="min-w-0">
-          <span className="block truncate font-medium">{c.name}</span>
-          <span className="block truncate text-xs text-muted-foreground">{c.title}</span>
+          <span className="block font-medium leading-snug line-clamp-2" title={c.name ?? undefined}>{c.name}</span>
+          <span className="block text-xs leading-snug text-muted-foreground line-clamp-2" title={c.title ?? undefined}>{c.title}</span>
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
-          {score?.total_score != null && <ScoreRing value={score.total_score} size={36} />}
+          {score?.total_score != null && <ScoreRing value={score.total_score} size={40} />}
           <ChevronDown className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
         </span>
       </button>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        {persona && <Pill tone="primary">{persona}</Pill>}
+        {persona && <Pill tone="primary" className="h-auto whitespace-normal py-0.5">{persona}</Pill>}
         {c.linkedin_url && (
           <a href={c.linkedin_url} target="_blank" rel="noreferrer" aria-label={`${c.name} on LinkedIn`}
             className="text-muted-foreground hover:text-primary">
