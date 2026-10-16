@@ -61,7 +61,7 @@ function PeoplePage() {
   const qc = useQueryClient();
   const q = useQuery(peopleQuery(id));
   const refresh = async () => {
-    await q.refetch();
+    await refresh();
     await qc.invalidateQueries({ queryKey: ["stages", id] });
   };
   const usage = useQuery(usageTodayQuery);
@@ -95,13 +95,13 @@ function PeoplePage() {
     try {
       const r = await findFn({ data: { target_id: targetId } });
       if (r.message) toast(r.message);
-      await q.refetch();
+      await refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "People search failed"); }
     finally { setBusyId(null); }
   };
   const runScore = async (targetId: string) => {
     setBusyId(targetId);
-    try { await scoreFn({ data: { target_id: targetId } }); await q.refetch(); }
+    try { await scoreFn({ data: { target_id: targetId } }); await refresh(); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Scoring failed"); }
     finally { setBusyId(null); }
   };
@@ -123,14 +123,14 @@ function PeoplePage() {
         if (isCreditError(msg)) {
           toast.error("Stopped: the people-search provider says its credit or limit is exhausted.");
           setBulk({ kind, done: i, total: list.length, running: false });
-          await q.refetch();
+          await refresh();
           return;
         }
       }
       setBulk({ kind, done: i + 1, total: list.length, running: true });
     }
     setBulk(null);
-    await q.refetch();
+    await refresh();
   };
 
   return (
