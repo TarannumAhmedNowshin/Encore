@@ -101,6 +101,7 @@ function GuidedTour() {
       const n = s.note?.(stats);
       if (n) note(n);
     })();
+    return () => { if (run.current === me) run.current++; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, open, done]);
 

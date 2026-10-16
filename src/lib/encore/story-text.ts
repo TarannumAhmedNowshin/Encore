@@ -21,6 +21,6 @@ export function typedStorySegments(segments: StorySegment[], characters: number)
   return segments.flatMap((segment) => {
     const t = segment.t.slice(0, left);
     left = Math.max(0, left - segment.t.length);
-    return t ? [{ t, src: t.length === segment.t.length ? segment.src : undefined }] : [];
+    return t ? [{ t, ...(t.length === segment.t.length && segment.src ? { src: segment.src } : {}) }] : [];
   });
 }
