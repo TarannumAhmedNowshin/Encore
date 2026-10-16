@@ -6,7 +6,7 @@ export type Channel = (typeof CHANNELS)[number];
 export const CHANNEL_LABELS: Record<Channel, string> = {
   email: "Email", executive_intro: "Executive intro", linkedin_message: "LinkedIn note", talking_points: "Talking points",
 };
-export const DOC_ATTRS = ["solution_capabilities", "expected_outcomes", "business_impact"];
+export const DOC_ATTRS = ["solution_capabilities", "expected_outcomes", "success_criteria", "business_impact", "pain_point"];
 /** Engagement facts that are goals, not achieved results. */
 export const TARGET_ATTRS = ["expected_outcomes", "success_criteria"];
 /** Engagement facts that describe the situation before the engagement. */
@@ -46,8 +46,8 @@ export function customerDescriptor(industry: string | null | undefined): string 
 export type DraftIn = { channel: Channel; subject: string; body: string; claims: { claim: string; fact_index: number }[] };
 export type ClaimOut = { claim: string; fact_id: string | null; verified: boolean; ungrounded?: boolean };
 
-/** Past-tense verbs that must never describe a TARGET (goal) fact. */
-export const PAST_TENSE = /\b(achieved|reduced|cut|eliminated|delivered|saved|improved)\b/i;
+/** Past-tense verbs that must never describe a TARGET (goal) fact. "cut" is excluded: it is also present tense ("aiming to cut"). */
+export const PAST_TENSE = /\b(achieved|reduced|eliminated|delivered|saved|improved)\b/i;
 /** Verbs that make a sentence factual, so it must be covered by a claim. */
 const FACTUAL_VERB = /\b(built|reduced|handles|processes|uses|launched|invests|cut|eliminated|delivered|saved|improved|achieved|grew|increased|lowered|runs|manages|serves|operates)\b/i;
 

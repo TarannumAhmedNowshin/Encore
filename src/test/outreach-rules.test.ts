@@ -42,9 +42,9 @@ describe("claim verification", () => {
   const facts = buildFactList("Acme", tf, df);
   const base = { channel: "email" as const, subject: "Route planning", body: "We cut planning time by 40% for a food manufacturer." };
   it("verifies a claim that appears in the body and points at a listed fact", () => {
-    const r = verifyDraft({ ...base, claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan" });
+    const r = verifyDraft({ ...base, body: "You are hiring route planners.", claims: [{ claim: "hiring route planners", fact_index: 0 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
     expect(r.all_claims_verified).toBe(true);
-    expect(r.claims[0]).toEqual({ claim: "cut planning time by 40%", fact_id: "d1", verified: true });
+    expect(r.claims[0]).toEqual({ claim: "hiring route planners", fact_id: "t2", verified: true });
   });
   it("fails a claim with an out-of-range index or text not in the body", () => {
     const r = verifyDraft({ ...base, claims: [{ claim: "cut planning time", fact_index: 9 }, { claim: "doubled revenue", fact_index: 0 }] }, facts, { anonymous: false, customerName: null });
