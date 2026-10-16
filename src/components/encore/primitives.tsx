@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Check, Quote, Sparkles, AlertTriangle, X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
@@ -181,6 +181,8 @@ export function Panel({ open, onClose, title, label, side = "right", width = "sm
   open: boolean; onClose: () => void; title: ReactNode; label?: string; side?: "right" | "bottom"; width?: string;
   header?: ReactNode; bodyClassName?: string; children: ReactNode;
 }) {
+  const opener = useRef<HTMLElement | null>(null);
+  if (open && !opener.current && typeof document !== "undefined") opener.current = document.activeElement as HTMLElement | null;
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogPrimitive.Portal>
@@ -189,6 +191,7 @@ export function Panel({ open, onClose, title, label, side = "right", width = "sm
           data-encore-panel
           aria-label={label ?? (typeof title === "string" ? title : undefined)}
           aria-describedby={undefined}
+          onCloseAutoFocus={(e) => { const el = opener.current; opener.current = null; if (el && el.isConnected && el !== document.body) { e.preventDefault(); el.focus(); } }}
           onInteractOutside={(e) => { if ((e.target as Element | null)?.closest?.("[data-tour-ui]")) e.preventDefault(); }}
           className={cn(
             "fixed z-50 flex flex-col border-border bg-card shadow-sm outline-none",
