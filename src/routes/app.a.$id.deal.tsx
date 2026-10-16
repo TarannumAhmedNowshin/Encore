@@ -12,6 +12,9 @@ import { extractDeal } from "@/lib/encore/deal.functions";
 import { checkDocQuote, FIELD_GROUPS, FIELD_LABEL, findQuoteRange, overallConfidence, type FieldSubject } from "@/lib/encore/deal";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
 import { REGION_LABEL } from "@/lib/encore/intake";
+import { toastError } from "@/lib/encore/toast";
+import { hasActiveRun } from "@/lib/encore/run-guard";
+import { useElapsed } from "@/lib/encore/use-elapsed";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/a/$id/deal")({
@@ -87,6 +90,10 @@ function DealPage() {
   const canEdit = !!analysis && analysis.user_id === data.userId;
 
   function onExtract() {
+    if (run && hasActiveRun([run], "extract", Date.now())) {
+      toast.error("Extraction is already running for this analysis.");
+      return;
+    }
     if (!hasFacts) return void runExtract();
     setAsk({ title: "Re-extract this deal?", body: "This replaces the earlier facts and stakeholders found in the document. Facts and stakeholders you added stay.", action: "Re-extract", onConfirm: () => void runExtract() });
   }
@@ -97,13 +104,15 @@ function DealPage() {
       const r = await extract({ data: { analysis_id: id } });
       toast.success(r.gaps.length ? `Done. ${r.gaps.length} fields were not in the document.` : "Done. Every field was found.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Extraction failed");
+      toastError(e, "Extraction failed", () => void runExtract());
     } finally { setBusy(false); refresh(); }
   }
 
+  const elapsed = useElapsed(running, run?.created_at ?? null);
   const steps: RunStep[] = ["Reading the document", "Extracting facts", "Checking every quote"].map((label, i) => {
     const done = run?.done ?? 0;
-    return { label, state: run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting", ...(run?.error ? { message: run.error } : {}) };
+    const state: RunStep["state"] = run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting";
+    return { label, state, ...(state === "running" && elapsed ? { elapsed } : {}), ...(run?.error ? { message: run.error } : {}) };
   });
 
   const presentAttrs = new Set(facts.map((f) => f.attribute));
