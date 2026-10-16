@@ -41,8 +41,9 @@ function RunsPill() {
 function UsageMeter() {
   const { data } = useQuery(usageTodayQuery);
   if (!data) return null;
-  const top = [...data].sort((a, b) => b.used / b.limit - a.used / a.limit)[0]!;
-  const summary = data.map((u) => `${LIMIT_LABELS[u.kind]} ${u.used}/${u.limit}`).join(", ");
+  const top = [...data].sort((a, b) => b.used / b.limit - a.used / a.limit)[0];
+  if (!top) return null;
+  const summary = data.map((u) => `${LIMIT_LABELS[u.kind]} ${u.used}/${u.limit}${u.resetsAt ? `; capacity starts resetting at ${new Date(u.resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`).join(", ");
   return (
     <Link to="/app/settings" className="hidden items-center gap-2 rounded-md md:flex" aria-label={`Usage today: ${summary}`} title={summary}>
       <span className="text-xs text-muted-foreground">{LIMIT_LABELS[top.kind]}</span>

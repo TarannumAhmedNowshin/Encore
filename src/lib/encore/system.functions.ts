@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { DAILY_LIMITS, dailyLimitFor, type LimitedKind } from "./limits";
+import { DAILY_LIMITS, dailyLimitFor, nextUsageReset, type LimitedKind } from "./limits";
 
 export type CheckResult = { id: string; label: string; ok: boolean; detail: string };
 
@@ -59,18 +59,19 @@ export const getGlobalUsageToday = createServerFn({ method: "GET" })
     };
   });
 
-export type UsageToday = { kind: LimitedKind; used: number; limit: number }[];
+export type UsageToday = { kind: LimitedKind; used: number; limit: number; resetsAt: string | null }[];
 
 export const getUsageToday = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<UsageToday> => {
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { data, error } = await context.supabase
-      .from("usage_events").select("kind, units").eq("user_id", context.userId).gte("created_at", since);
+      .from("usage_events").select("kind, units, created_at").eq("user_id", context.userId).gte("created_at", since);
     if (error) throw new Error(error.message);
     return (Object.keys(DAILY_LIMITS) as LimitedKind[]).map((kind) => ({
       kind,
       limit: dailyLimitFor(kind, context.userId) ?? DAILY_LIMITS[kind],
+      resetsAt: nextUsageReset((data ?? []).filter((r) => r.kind === kind)),
       used: (data ?? []).filter((r) => r.kind === kind).reduce((s, r) => s + (r.units ?? 1), 0),
     }));
   });

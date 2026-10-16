@@ -41,6 +41,11 @@ export const draftOutreach = createServerFn({ method: "POST" })
     const { data: c } = await db.from("contacts").select("*").eq("id", data.contact_id).maybeSingle();
     if (!c) throw new HttpError(404, "Contact not found");
     const analysis = await loadOwnedAnalysis(c.analysis_id, userId);
+    const { data: existing, error: existingError } = await db.from("outreach_drafts").select("channel").eq("contact_id", c.id).eq("status", "approved");
+    if (existingError) throw new HttpError(500, existingError.message);
+    const approvedChannels = new Set((existing ?? []).map((d) => d.channel));
+    const channels = CHANNELS.filter((ch) => !approvedChannels.has(ch));
+    if (!channels.length) return { drafts: 0, flagged: 0, empty: 0, noTargetEvidence: false };
     const [{ data: t }, { data: dna }, { data: tf }, { data: df }, { data: dept }] = await Promise.all([
       db.from("targets").select("id, name").eq("id", c.target_id).maybeSingle(),
       db.from("sales_dna").select("*").eq("analysis_id", analysis.id).maybeSingle(),
@@ -60,12 +65,14 @@ export const draftOutreach = createServerFn({ method: "POST" })
       (df ?? []).map((f: any) => ({ ...f, verified: (f.citations ?? []).some((x: { verified: boolean | null }) => x.verified) })));
 
     const system = `You draft outreach from a business-development lead to one person at a target company. Use only the solution summary and the numbered facts; never anything about the person beyond name, title and department. Write like a competent BD person, not a marketer: concise, specific, no superlatives, no invented metrics, no fake 'I noticed that you...'. Describe what was built for a comparable organisation and why it may matter to this person's remit. ${anonymous ? `Never name the original customer; call it '${descriptor}'. ` : `The original customer is ${analysis.customer_name ?? "our client"}. `}Facts marked TARGET are goals of the engagement, not achieved results. Phrase them only as aims ('designed to', 'aiming to', 'the goal is'). Never write reduced/achieved/cut/eliminated/delivered for a TARGET fact. Facts marked BEFORE describe the situation before the engagement. Every email, executive intro and LinkedIn note must ground at least one claim in a fact about the target company and explain why it may matter to this person's remit. Claim grounding is enforced: for every factual sentence or clause in the body, add a claims entry with the exact text of that clause as it appears in the body and the index of the fact it rests on. If a claim can't be grounded in a fact, leave it out. A shorter, fully grounded draft is correct. Channels: email (subject + body under 120 words), executive_intro (under 90 words, for a C-level reader), linkedin_message (under 300 characters, no subject), talking_points (3 to 5 bullet lines for a call).`;
+    const tenseRules = "The won SOW is a signed engagement, not proof of completion. Describe scope and target work in present/future tense ('we are building', 'the project is set up to'). Never say built, ingested, delivered, implemented or achieved for a SCOPE or TARGET fact. Past tense is allowed only for a fact explicitly marked COMPLETED; BEFORE facts describe the customer's earlier situation, not our achievements.";
     const user = [
+      tenseRules,
       `Contact: ${c.name ?? ""}, ${c.title ?? ""}${dept?.name ? `, ${dept.name}` : ""}`,
       `Target company: ${t.name}`,
       `Solution summary: ${dna.solution_capabilities_summary ?? ""} ${dna.measurable_outcomes_summary ?? ""}`,
       "", "Facts:", ...(facts.length ? facts.map((f) => f.line) : ["(none)"]),
-      "", `Channels to draft: ${CHANNELS.join(", ")}`,
+      "", `Channels to draft: ${channels.join(", ")}`,
     ].join("\n");
 
     const zod = z.object({ drafts: z.array(z.object({
@@ -75,7 +82,7 @@ export const draftOutreach = createServerFn({ method: "POST" })
     const run = async () => {
       const { value } = await generateJsonWithFallback({ tier: "smart", userId, system, user, responseSchema: SCHEMA, zodSchema: zod });
       const seen = new Set<string>();
-      const ds = value.drafts.filter((d) => !seen.has(d.channel) && seen.add(d.channel));
+      const ds = value.drafts.filter((d) => channels.includes(d.channel) && !seen.has(d.channel) && seen.add(d.channel));
       return ds.map((d) => ({ d, v: verifyDraft(d, facts, { anonymous, customerName: analysis.customer_name, targetName: t.name ?? undefined }) }));
     };
     let out = await run();
@@ -83,11 +90,12 @@ export const draftOutreach = createServerFn({ method: "POST" })
       const retry = await run();
       // Keep a channel's earlier draft if the retry came back empty for it.
       const prev = new Map(out.map((x) => [x.d.channel, x]));
-      out = retry.map((x) => (!hasBody(x.d) && prev.get(x.d.channel) && hasBody(prev.get(x.d.channel)!.d) ? prev.get(x.d.channel)! : x));
+      out = retry.map((x) => { const prior = prev.get(x.d.channel); return !hasBody(x.d) && prior && hasBody(prior.d) ? prior : x; });
       for (const [ch, x] of prev) if (!out.some((y) => y.d.channel === ch)) out.push(x);
     }
 
-    await db.from("outreach_drafts").delete().eq("contact_id", c.id);
+    const { error: deleteError } = await db.from("outreach_drafts").delete().eq("contact_id", c.id).neq("status", "approved");
+    if (deleteError) throw new HttpError(500, deleteError.message);
     if (out.length) {
       const { error } = await db.from("outreach_drafts").insert(draftRows(out, { user_id: userId, analysis_id: analysis.id, contact_id: c.id }));
       if (error) throw new HttpError(500, error.message);

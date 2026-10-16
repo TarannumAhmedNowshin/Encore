@@ -6,7 +6,8 @@ export type Channel = (typeof CHANNELS)[number];
 export const CHANNEL_LABELS: Record<Channel, string> = {
   email: "Email", executive_intro: "Executive intro", linkedin_message: "LinkedIn note", talking_points: "Talking points",
 };
-export const DOC_ATTRS = ["solution_capabilities", "expected_outcomes", "success_criteria", "business_impact", "pain_point"];
+export const DOC_ATTRS = ["solution_capabilities", "deliverables", "scope", "expected_outcomes", "success_criteria", "business_impact", "pain_point", "completed_work", "delivered_outcomes"];
+export const SCOPE_ATTRS = ["solution_capabilities", "deliverables", "scope"];
 /** Engagement facts that are goals, not achieved results. */
 export const TARGET_ATTRS = ["expected_outcomes", "success_criteria"];
 /** Engagement facts that describe the situation before the engagement. */
@@ -16,7 +17,7 @@ export type FactIn = {
   id: string; value: string | null; subject: string | null; attribute: string | null; status: string;
   target_id: string | null; label?: string | null; verified?: boolean;
 };
-export type ListedFact = { index: number; id: string; kind: "target" | "engagement"; value: string; line: string; goal: boolean };
+export type ListedFact = { index: number; id: string; kind: "target" | "engagement"; value: string; line: string; goal: boolean; scope?: boolean };
 
 /** Target evidence (verified first) then verified engagement facts, indexed from 0. */
 export function buildFactList(targetName: string, targetFacts: FactIn[], docFacts: FactIn[]): ListedFact[] {
@@ -24,11 +25,13 @@ export function buildFactList(targetName: string, targetFacts: FactIn[], docFact
     .sort((a, b) => Number(!!b.verified) - Number(!!a.verified));
   const df = docFacts.filter((f) => f.status === "active" && f.verified && f.value && DOC_ATTRS.includes(f.attribute ?? ""));
   const out: ListedFact[] = [];
-  for (const f of tf) out.push({ index: out.length, id: f.id, kind: "target", value: f.value!, line: `[${out.length}] (about ${targetName}) ${f.value}`, goal: false });
+  for (const f of tf) { if (f.value) out.push({ index: out.length, id: f.id, kind: "target", value: f.value, line: `[${out.length}] (about ${targetName}) ${f.value}`, goal: false }); }
   for (const f of df) {
     const attr = f.attribute ?? "";
-    const prefix = TARGET_ATTRS.includes(attr) ? "TARGET (not yet achieved): " : BEFORE_ATTRS.includes(attr) ? "BEFORE: " : "";
-    out.push({ index: out.length, id: f.id, kind: "engagement", value: f.value!, line: `[${out.length}] (from our engagement) ${prefix}${f.value}`, goal: TARGET_ATTRS.includes(attr) });
+    if (!f.value) continue;
+    const scope = SCOPE_ATTRS.includes(attr);
+    const prefix = TARGET_ATTRS.includes(attr) ? "TARGET (not yet achieved): " : scope ? "SCOPE (not completed): " : BEFORE_ATTRS.includes(attr) ? "BEFORE: " : "COMPLETED: ";
+    out.push({ index: out.length, id: f.id, kind: "engagement", value: f.value, line: `[${out.length}] (from our engagement) ${prefix}${f.value}`, goal: TARGET_ATTRS.includes(attr), scope });
   }
   return out;
 }
@@ -47,7 +50,7 @@ export type DraftIn = { channel: Channel; subject: string; body: string; claims:
 export type ClaimOut = { claim: string; fact_id: string | null; verified: boolean; ungrounded?: boolean };
 
 /** Past-tense verbs that must never describe a TARGET (goal) fact. "cut" is excluded: it is also present tense ("aiming to cut"). */
-export const PAST_TENSE = /\b(achieved|reduced|eliminated|delivered|saved|improved)\b/i;
+export const PAST_TENSE = /\b(built|ingested|delivered|implemented|achieved|reduced|eliminated|saved|improved)\b/i;
 /** Verbs that make a sentence factual, so it must be covered by a claim. */
 const FACTUAL_VERB = /\b(built|reduced|handles|processes|uses|launched|invests|cut|eliminated|delivered|saved|improved|achieved|grew|increased|lowered|runs|manages|serves|operates)\b/i;
 
@@ -62,7 +65,7 @@ export function verifyDraft(d: DraftIn, facts: ListedFact[], opts: { anonymous: 
     const cc = canon(c.claim);
     let verified = !!f && !!cc && body.includes(` ${cc} `);
     // A TARGET fact is a goal: past-tense achievement verbs fail the claim.
-    if (verified && f!.goal && PAST_TENSE.test(c.claim)) verified = false;
+    if (verified && (f?.goal || f?.scope) && PAST_TENSE.test(c.claim)) verified = false;
     return { claim: c.claim, fact_id: f?.id ?? null, verified };
   });
   const name = (opts.customerName ?? "").trim().toLowerCase();
