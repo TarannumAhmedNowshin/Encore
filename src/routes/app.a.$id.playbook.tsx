@@ -106,7 +106,7 @@ function PlaybookPage() {
   const lastRun = (st: PlaybookStage) => runs.find((r) => r.step === `playbook_${st}`);
   const fallbackUsed = STAGE_STEPS.some(({ stage }) => { const r = lastRun(stage); return r?.status === "done" && r.used_fallback_model; });
   const showTimeline = Object.keys(states).length > 0;
-  const steps: RunStep[] = STAGE_STEPS.map(({ stage, label }) => ({ label, state: states[stage]?.state ?? "waiting", ...(states[stage]?.message ? { message: states[stage]!.message! } : {}) }));
+  const steps: RunStep[] = STAGE_STEPS.map(({ stage, label }) => ({ label, state: states[stage]?.state ?? "waiting", ...(states[stage]?.state === "running" && elapsed ? { elapsed } : {}), ...(states[stage]?.message ? { message: states[stage]!.message! } : {}) }));
 
   const openFact = (fid: string | undefined, title: string) => {
     const f = fid ? factById.get(fid) : undefined;
@@ -179,7 +179,11 @@ function PlaybookPage() {
 
       <Section title="Sales DNA" action={<RerunBtn stage="dna" />}>
         {!dna ? (
-          <EmptyState title="No Sales DNA yet" line={lastRun("dna")?.status === "failed" ? lastRun("dna")!.error ?? "" : "Build the playbook to write the ideal customer profile that drives account discovery."} />
+          <EmptyState
+            title="No Sales DNA yet"
+            line={lastRun("dna")?.status === "failed" ? lastRun("dna")!.error ?? "" : facts.length === 0 ? "The Sales DNA is written from your deal facts, which aren't extracted yet." : "Build the playbook to write the ideal customer profile that drives account discovery."}
+            {...(facts.length === 0 ? { action: <Button asChild variant="outline"><Link to="/app/a/$id/deal" params={{ id }}>Extract the deal first <ArrowRight /></Link></Button> } : {})}
+          />
         ) : (
           <>
             <Card className="p-5">
