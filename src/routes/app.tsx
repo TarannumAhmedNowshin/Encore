@@ -88,6 +88,9 @@ function AppShell() {
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggle(); }}>
                   {theme === "dark" ? <Sun /> : <Moon />} {theme === "dark" ? "Light mode" : "Dark mode"}
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/app/settings"><Settings /> Settings</Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={signOut}>
                   <LogOut /> Sign out
                 </DropdownMenuItem>
