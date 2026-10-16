@@ -3,7 +3,7 @@ import { canon, quoteVerified } from "./text";
 import type { StageStatus } from "@/components/encore/primitives";
 
 export type StageCounts = {
-  facts: number; extractRunning: boolean; hasSalesDna: boolean; personas: number;
+  facts: number; extractRunning: boolean; playbookRunning?: boolean; hasSalesDna: boolean; personas: number;
   qualified: number; contacts: number; approvedDrafts: number;
 };
 export type StageState = { status: StageStatus; count: number; reason?: string };
@@ -11,7 +11,8 @@ export type StageState = { status: StageStatus; count: number; reason?: string }
 export function computeStages(c: StageCounts): Record<"deal" | "playbook" | "accounts" | "people" | "outreach", StageState> {
   return {
     deal: { status: c.facts > 0 ? "done" : c.extractRunning ? "running" : "not_started", count: c.facts },
-    playbook: c.hasSalesDna ? { status: "done", count: c.personas }
+    playbook: c.playbookRunning ? { status: "running", count: c.personas }
+      : c.hasSalesDna ? { status: "done", count: c.personas }
       : c.facts === 0 ? { status: "blocked", count: c.personas, reason: "Extract deal facts first" }
       : { status: "not_started", count: c.personas },
     accounts: c.qualified > 0 ? { status: "done", count: c.qualified }

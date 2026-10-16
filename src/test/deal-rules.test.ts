@@ -9,6 +9,7 @@ describe("journey rail", () => {
   it("deal not started otherwise", () => expect(computeStages(base).deal.status).toBe("not_started"));
   it("playbook blocked without facts", () => expect(computeStages(base).playbook).toMatchObject({ status: "blocked", reason: "Extract deal facts first" }));
   it("playbook done with sales dna", () => expect(computeStages({ ...base, facts: 1, hasSalesDna: true, personas: 4 }).playbook).toEqual({ status: "done", count: 4 }));
+  it("playbook running while build-playbook runs", () => expect(computeStages({ ...base, facts: 1, hasSalesDna: true, playbookRunning: true }).playbook.status).toBe("running"));
   it("accounts blocked until sales dna", () => expect(computeStages({ ...base, facts: 1 }).accounts.status).toBe("blocked"));
   it("accounts done when qualified", () => expect(computeStages({ ...base, hasSalesDna: true, qualified: 2 }).accounts).toEqual({ status: "done", count: 2 }));
   it("people blocked until qualified", () => expect(computeStages({ ...base, hasSalesDna: true }).people.status).toBe("blocked"));
