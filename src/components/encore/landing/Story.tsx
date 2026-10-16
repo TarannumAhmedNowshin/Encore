@@ -39,10 +39,7 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
   cinematic: boolean; vh: number; eyebrow: string; title: string;
   children: (p: MotionValue<number>) => ReactNode;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const done = useMotionValue(1);
-  const p = cinematic ? scrollYProgress : done;
   const head = (
     <div className="mx-auto max-w-3xl text-center">
       <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
@@ -54,11 +51,16 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
       <section className="overflow-hidden px-gutter py-20">
         <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.5, ease: "easeOut" }}>
           {head}
-          <div className="mx-auto mt-12 max-w-5xl">{children(p)}</div>
+          <div className="mx-auto mt-12 max-w-5xl">{children(done)}</div>
         </motion.div>
       </section>
     );
   }
+  return <Sticky vh={vh} head={head}>{children}</Sticky>;
+}
+function Sticky({ vh, head, children }: { vh: number; head: ReactNode; children: (p: MotionValue<number>) => ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: p } = useScroll({ target: ref, offset: ["start start", "end end"] });
   return (
     <section ref={ref} style={{ height: `${vh}vh` }} className="relative">
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden px-gutter">
