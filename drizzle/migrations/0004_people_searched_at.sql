@@ -1,0 +1,1 @@
+ALTER TABLE public.targets ADD COLUMN IF NOT EXISTS people_searched_at timestamptz;

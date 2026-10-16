@@ -24,7 +24,7 @@ const FIND_SCHEMA = {
   required: ["selected"],
 };
 
-const SCORE_SYSTEM = `Rate qualitative signals only; code turns them into a number. For each contact rate role_fit (title and department vs the matched persona), seniority_fit (right level for a buying role), similarity_to_original (resemblance in function and level to the original engagement's stakeholders) and evidence_strength (how much concrete evidence supports relevance, vs a thin guess), each high, medium or low, with a rationale citing the actual title. Never invent responsibilities.`;
+const SCORE_SYSTEM = `Rate qualitative signals only; code turns them into a number. For each contact rate role_fit (title and department vs the matched persona), seniority_fit (right level for a buying role), similarity_to_original (resemblance in function and level to the original engagement's stakeholders) and evidence_strength (how much concrete evidence supports relevance, vs a thin guess), each high, medium or low, with a rationale citing the actual title. Never invent responsibilities. Use the full range. high only when the evidence clearly supports it; most contacts should have at least one medium. Rate similarity_to_original high only when function AND level both match an original stakeholder.`;
 
 const RATING_ENUM = ["high", "medium", "low"];
 const SCORE_SCHEMA = {
@@ -109,6 +109,7 @@ export const findPeople = createServerFn({ method: "POST" })
       throw new HttpError(400, e instanceof Error ? e.message : "People search failed");
     }
     await recordUsage(userId, "people_search");
+    await db.from("targets").update({ people_searched_at: new Date().toISOString() }).eq("id", t.id);
     if (!people.length) return { contacts: 0, message: `No matching people found at ${t.name}.` };
 
     const user = [
@@ -166,7 +167,7 @@ export const scoreContacts = createServerFn({ method: "POST" })
     const { z } = await import("zod");
     const { adminClient } = await import("./auth.server");
     const { checkQuota } = await import("./usage.server");
-    const { generateJson } = await import("./gemini.server");
+    const { generateJsonWithFallback } = await import("./gemini.server");
     const { HttpError } = await import("./http.server");
     const { contactScore } = await import("./scoring");
 
@@ -200,8 +201,8 @@ export const scoreContacts = createServerFn({ method: "POST" })
       evidence_strength: z.enum(["high", "medium", "low"]),
       rationale: z.string(),
     });
-    const { signals } = await generateJson({
-      tier: "fast", userId, system: SCORE_SYSTEM, user,
+    const { value: { signals } } = await generateJsonWithFallback({
+      tier: "smart", userId, system: SCORE_SYSTEM, user,
       responseSchema: SCORE_SCHEMA,
       zodSchema: z.object({ signals: z.array(sigZ) }),
     });
