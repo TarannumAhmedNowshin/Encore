@@ -57,7 +57,7 @@ describe("claim verification", () => {
     expect(r.all_claims_verified).toBe(false);
   });
   it("fails a past-tense claim resting on a TARGET (goal) fact", () => {
-    const r = verifyDraft({ ...base, body: "We cut planning time by 40% for a food manufacturer.", claims: [{ claim: "cut planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
+    const r = verifyDraft({ ...base, body: "We reduced planning time by 40% for a food manufacturer.", claims: [{ claim: "reduced planning time by 40%", fact_index: 2 }] }, facts, { anonymous: true, customerName: "Kilbeggan", targetName: "Acme" });
     expect(r.claims[0]!.verified).toBe(false);
     expect(r.all_claims_verified).toBe(false);
   });
