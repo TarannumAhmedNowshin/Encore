@@ -28,7 +28,7 @@ export function SiteHeader({ transparent = false }: { transparent?: boolean }) {
 export function SiteFooter() {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-gutter py-8 text-sm text-muted-foreground">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-gutter py-4 text-sm text-muted-foreground sm:py-8">
         <Logo size="sm" />
         Built on Lovable for SheBuilds · Data from the public web (Serper) and LinkedIn via Apify · For B2B research only
       </div>

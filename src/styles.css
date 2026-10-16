@@ -118,6 +118,13 @@
   html {
     color-scheme: light;
   }
+  html, body {
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+  img, svg, canvas {
+    max-width: 100%;
+  }
   html.dark {
     color-scheme: dark;
   }

@@ -58,7 +58,7 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
       <section ref={ref} className="overflow-hidden px-gutter py-12">
         <motion.div initial={reduced ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: reduced ? 0 : 0.4, ease: "easeOut" }}>
           {head}
-          <div className="mx-auto mt-8 max-w-5xl">{children(progress)}</div>
+          <div className="mx-auto mt-8 w-full min-w-0 max-w-5xl">{children(progress)}</div>
         </motion.div>
       </section>
     );
@@ -89,12 +89,12 @@ function FactCard({ p, i, q }: { p: MotionValue<number>; i: number; q: StoryQuot
   const opacity = useTransform(p, [s, s + 0.1], [0, 1]);
   const x = useTransform(p, [s, s + 0.12], [-12, 0]);
   return (
-    <motion.div style={{ opacity, x }} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
+    <motion.div style={{ opacity, x }} className="w-full min-w-0 max-w-full rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:justify-between">
         <span className="text-xs text-muted-foreground">{q.attr}</span>
         <EvidenceChip kind="verified" label="Verified quote" />
       </div>
-      <p className="mt-2 font-mono text-[13px] leading-relaxed">“{q.text}”</p>
+      <p className="mt-2 break-words font-mono text-[13px] leading-relaxed">“{q.text}”</p>
     </motion.div>
   );
 }
@@ -103,8 +103,8 @@ function DocScene({ p }: { p: MotionValue<number> }) {
   const filler = "w-full h-2 rounded bg-muted";
   const quotes = d?.quotes ?? [];
   return (
-    <div className="grid items-center gap-8 lg:grid-cols-2">
-      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+    <div className="grid w-full min-w-0 max-w-full grid-cols-1 items-center gap-8 lg:grid-cols-2">
+      <div className="w-full min-w-0 max-w-full rounded-xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex min-w-0 items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4 shrink-0" aria-hidden /> <span className="truncate">{d?.filename ?? "Won SOW"}</span></div>
         <div className="space-y-3 text-[13px] leading-relaxed text-muted-foreground">
           <div className={filler} /><div className={`${filler} w-4/5`} />
@@ -114,7 +114,7 @@ function DocScene({ p }: { p: MotionValue<number> }) {
           <div className={filler} />
         </div>
       </div>
-      <div className="space-y-4">{quotes.map((q, i) => <FactCard key={i} p={p} i={i} q={q} />)}</div>
+      <div className="w-full min-w-0 max-w-full space-y-4">{quotes.map((q, i) => <FactCard key={i} p={p} i={i} q={q} />)}</div>
     </div>
   );
 }
@@ -204,7 +204,7 @@ function OrbitScene({ p }: { p: MotionValue<number> }) {
   const shrink = useTransform(p, [0, 0.15], [1.6, 1]);
   const end = 0.15 + Math.max(0, companies.length - 1) * 0.055 + 0.06;
   return (
-    <div className="grid items-center gap-8 lg:grid-cols-[1fr_220px]">
+    <div className="grid w-full min-w-0 max-w-full grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_220px]">
       <svg viewBox="0 0 500 500" className="mx-auto w-full max-w-[460px]" role="img" aria-label={`Orbit of ${d?.found ?? 0} look-alike companies around the won deal`}>
         {[110, 150, 190].map((r) => <circle key={r} cx="250" cy="250" r={r} fill="none" className="stroke-border" strokeDasharray="3 6" />)}
         <motion.g style={{ scale: shrink, transformOrigin: "250px 250px" }}>
@@ -271,7 +271,7 @@ function EmailScene({ p }: { p: MotionValue<number> }) {
   const glow = useTransform(p, [0.78, 0.9], ["0 0 0 0 transparent", "0 0 0 8px color-mix(in oklab, var(--accent) 25%, transparent)"]);
   const sources = new Set<string>();
   return (
-    <div className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-6 shadow-sm">
+    <div className="mx-auto w-full min-w-0 max-w-2xl break-words rounded-xl border border-border bg-card p-6 shadow-sm">
       <p className="text-sm text-muted-foreground">Subject: <span className="text-foreground">{e?.subject ?? ""}</span></p>
       <p data-story-email className="mt-4 min-h-[9rem] whitespace-pre-wrap text-[15px] leading-7">
         {typedStorySegments(EMAIL, n).map((s, i) => {
