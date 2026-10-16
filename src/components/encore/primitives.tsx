@@ -187,7 +187,7 @@ export function EvidenceDrawer({ open, onClose, title, children }: { open: boole
         aria-hidden={!open}
         onKeyDown={(e) => e.key === "Escape" && onClose()}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[480px] flex-col border-l border-border bg-card transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[480px] flex-col border-l border-border bg-card transition-transform duration-200 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
