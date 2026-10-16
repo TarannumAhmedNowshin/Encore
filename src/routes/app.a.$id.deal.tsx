@@ -36,7 +36,8 @@ const dealQuery = (id: string) => ({
       supabase.from("stakeholders").select("*").eq("analysis_id", id).order("created_at"),
       supabase.from("runs").select("*").eq("analysis_id", id).eq("step", "extract").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
-    return { analysis: a.data, doc: d.data, facts: f.data ?? [], stakeholders: s.data ?? [], run: r.data };
+    const { data: u } = await supabase.auth.getUser();
+    return { analysis: a.data, doc: d.data, facts: f.data ?? [], stakeholders: s.data ?? [], run: r.data, userId: u.user?.id ?? null };
   },
   refetchInterval: (q: any) => (q.state.data?.run?.status === "running" ? 2500 : false),
 });
@@ -60,7 +61,7 @@ function DealPage() {
 
   // Re-check stored quotes against the current document-quote rule (owner only).
   useEffect(() => {
-    if (!data?.doc?.text || !data.analysis || data.analysis.is_showcase || rechecked.current) return;
+    if (!data?.doc?.text || !data.analysis || data.analysis.user_id !== data.userId || rechecked.current) return;
     rechecked.current = true;
     const text = data.doc.text;
     const jobs: PromiseLike<unknown>[] = [];
@@ -83,7 +84,7 @@ function DealPage() {
   const { analysis, doc, facts, stakeholders, run } = data;
   const running = busy || run?.status === "running";
   const hasFacts = facts.length > 0;
-  const canEdit = !!analysis && !analysis.is_showcase;
+  const canEdit = !!analysis && analysis.user_id === data.userId;
 
   function onExtract() {
     if (!hasFacts) return void runExtract();
