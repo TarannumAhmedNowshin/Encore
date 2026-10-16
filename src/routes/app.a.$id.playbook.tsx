@@ -238,7 +238,7 @@ type DnaKey = "problem_summary" | "current_process_summary" | "solution_capabili
 function DnaField({ id, field, label, value, readOnly, onSaved, single }: { id: string; field: DnaKey; label: string; value: string | null; readOnly: boolean; onSaved: () => void; single?: boolean }) {
   const [draft, setDraft] = useState<string | null>(null);
   async function save() {
-    const { error } = await supabase.from("sales_dna").update({ [field]: draft?.trim() || null }).eq("id", id);
+    const { error } = await supabase.from("sales_dna").update({ [field]: draft?.trim() || null } as { problem_summary: string | null }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     setDraft(null); onSaved();
   }
