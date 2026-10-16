@@ -29,7 +29,19 @@ describe("landing hero data", () => {
 });
 
 import { storyData } from "@/lib/encore/hero";
+import { storySegments, typedStorySegments } from "@/lib/encore/story-text";
 describe("landing story data", () => {
+  it("retains decimals and every character between and after highlighted claims during typing", () => {
+    const body = "Hi [First name],\nDocuments route to adjuster queues. Reduce 2.6 business days to the same business day.\nWould a conversation help?";
+    const segments = storySegments(body, ["Documents route to adjuster queues.", "Reduce 2.6 business days to the same business day.", ""]);
+    expect(segments.map((s) => s.t).join("")).toBe(body);
+    for (let n = 0; n <= body.length; n++) expect(typedStorySegments(segments, n).map((s) => s.t).join("")).toBe(body.slice(0, n));
+  });
+  it("uses the complete stored sample body including decimal numbers and line breaks", () => {
+    const body = "Hi there,\nReduce 2.6 business days to the same business day.\nA closing line.";
+    const snap = { facts: [], citations: [], sales_dna: [], personas: [], targets: [], contacts: [], documents: [], outreach_drafts: [{ body, channel: "email", all_claims_verified: true, claims: [] }] } as unknown as DemoSnapshot;
+    expect(storyData(snap).email?.body).toBe(body);
+  });
   it("shows only verified verbatim document quotes", () => {
     const snap = {
       facts: [

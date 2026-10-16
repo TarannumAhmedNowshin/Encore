@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { allowRequest, contactLabel, maskName, sanitiseSnapshot, DEMO_TABLES, type DemoSnapshot } from "@/lib/encore/demo";
-import { demoStats } from "@/lib/encore/tour";
+import { demoStats, tourDuration } from "@/lib/encore/tour";
 
 const empty = () => Object.fromEntries(DEMO_TABLES.map((t) => [t, []])) as unknown as DemoSnapshot;
+
+it("tour moves first after 1.5 seconds, then 5 seconds or 6 for text-heavy steps", () => {
+  expect(tourDuration({ text: "Short text" }, true)).toBe(1500);
+  expect(tourDuration({ text: "Short text" })).toBe(5000);
+  expect(tourDuration({ text: "Long text ".repeat(20) })).toBe(6000);
+});
 
 describe("public demo privacy", () => {
   const snap = empty();
