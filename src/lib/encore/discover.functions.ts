@@ -242,7 +242,7 @@ export const qualifyCompany = createServerFn({ method: "POST" })
         for (const e of checked.evidence) {
           const { data: f } = await db.from("facts").insert({
             analysis_id: analysis.id, user_id: userId, target_id: t.id, subject: "target_evidence", attribute: e.strength,
-            value: e.summary, origin: "external", agent: "qualify-company", label: "inference", confidence: e.verified ? "medium" : "low", status: "active",
+            value: e.summary, origin: "external", agent: "qualify-company", label: e.verified ? "explicitly_stated" : "inferred", confidence: e.verified ? "medium" : "low", status: "active",
           }).select("id").single();
           if (f) await db.from("citations").insert({ fact_id: f.id, user_id: userId, quote: e.quote, source_url: e.source_url, source_title: e.source_title, verified: e.verified });
         }
