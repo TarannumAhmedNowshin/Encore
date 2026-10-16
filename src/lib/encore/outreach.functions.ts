@@ -34,17 +34,16 @@ export const draftOutreach = createServerFn({ method: "POST" })
     const { checkQuota } = await import("./usage.server");
     const { generateJsonWithFallback } = await import("./gemini.server");
     const { HttpError } = await import("./http.server");
-    const { buildFactList, customerDescriptor, verifyDraft, DOC_ATTRS, draftRows, hasBody } = await import("./outreach");
+    const { buildFactList, customerDescriptor, verifyDraft, DOC_ATTRS, draftRows, hasBody, channelsToDraft } = await import("./outreach");
 
     const userId = context.userId;
     const db = await adminClient();
     const { data: c } = await db.from("contacts").select("*").eq("id", data.contact_id).maybeSingle();
     if (!c) throw new HttpError(404, "Contact not found");
     const analysis = await loadOwnedAnalysis(c.analysis_id, userId);
-    const { data: existing, error: existingError } = await db.from("outreach_drafts").select("channel").eq("contact_id", c.id).eq("status", "approved");
+    const { data: existing, error: existingError } = await db.from("outreach_drafts").select("channel, status").eq("contact_id", c.id).eq("status", "approved");
     if (existingError) throw new HttpError(500, existingError.message);
-    const approvedChannels = new Set((existing ?? []).map((d) => d.channel));
-    const channels = CHANNELS.filter((ch) => !approvedChannels.has(ch));
+    const channels = channelsToDraft(existing ?? []);
     if (!channels.length) return { drafts: 0, flagged: 0, empty: 0, noTargetEvidence: false };
     const [{ data: t }, { data: dna }, { data: tf }, { data: df }, { data: dept }] = await Promise.all([
       db.from("targets").select("id, name").eq("id", c.target_id).maybeSingle(),

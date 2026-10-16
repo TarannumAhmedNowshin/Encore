@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFactList, customerDescriptor, verifyDraft } from "@/lib/encore/outreach";
+import { buildFactList, channelsToDraft, customerDescriptor, verifyDraft } from "@/lib/encore/outreach";
 
 const tf = [
   { id: "t1", value: "Plans routes by hand", subject: "target_evidence", attribute: "adjacent", status: "active", target_id: "x", verified: false },
@@ -12,6 +12,9 @@ const df = [
 ];
 
 describe("outreach fact list", () => {
+  it("re-drafting skips approved channels but includes edited and rejected drafts", () => {
+    expect(channelsToDraft([{ channel: "email", status: "approved" }, { channel: "executive_intro", status: "edited" }, { channel: "linkedin_message", status: "rejected" }])).toEqual(["executive_intro", "linkedin_message", "talking_points"]);
+  });
   it("lists verified target evidence first, then verified engagement facts, indexed from 0", () => {
     expect(buildFactList("Acme", tf, df).map((f) => f.line)).toEqual([
       "[0] (about Acme) Hiring route planners",

@@ -369,8 +369,8 @@ function OutreachPage() {
                     {!d.readOnly && editing !== draft.id && rejecting !== draft.id && (
                       <div className="flex flex-wrap gap-2 border-t border-border pt-3">
                         <Button size="sm" onClick={() => void update(draft.id, { status: "approved", decided_at: new Date().toISOString() })} disabled={draft.status === "approved" || !!saving}>{saving === draft.id ? <Loader2 className="animate-spin" /> : <Check />}{saving === draft.id ? "Saving…" : "Approve"}</Button>
-                        <Button size="sm" variant="outline" onClick={() => { setText(finalBody(draft)); setEditing(draft.id); }}><Pencil /> Edit</Button>
-                        <Button size="sm" variant="outline" onClick={() => { setText(""); setRejecting(draft.id); }}><X /> Reject</Button>
+                        <Button size="sm" variant="outline" disabled={!!saving} onClick={() => { setText(finalBody(draft)); setEditing(draft.id); }}><Pencil /> Edit</Button>
+                        <Button size="sm" variant="outline" disabled={!!saving} onClick={() => { setText(""); setRejecting(draft.id); }}><X /> Reject</Button>
                         {(draft.status === "approved" || draft.status === "edited") && <CopyActions d={draft} />}
                       </div>
                     )}

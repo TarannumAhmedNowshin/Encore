@@ -3,6 +3,10 @@ import { canon } from "./text";
 
 export const CHANNELS = ["email", "executive_intro", "linkedin_message", "talking_points"] as const;
 export type Channel = (typeof CHANNELS)[number];
+export function channelsToDraft(existing: { channel: string | null; status: string }[]): Channel[] {
+  const approved = new Set(existing.filter((d) => d.status === "approved").map((d) => d.channel));
+  return CHANNELS.filter((ch) => !approved.has(ch));
+}
 export const CHANNEL_LABELS: Record<Channel, string> = {
   email: "Email", executive_intro: "Executive intro", linkedin_message: "LinkedIn note", talking_points: "Talking points",
 };
