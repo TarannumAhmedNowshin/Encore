@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import { Check, Quote, Sparkles, AlertTriangle, X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
@@ -12,13 +12,17 @@ export function scoreBand(v: number): "high" | "mid" | "low" {
 const bandText = { high: "text-verified", mid: "text-primary", low: "text-inference" } as const;
 const bandBg = { high: "bg-verified", mid: "bg-primary", low: "bg-inference" } as const;
 
-export function Logo({ className }: { className?: string }) {
+const logoPx = { sm: 24, md: 30, lg: 44 } as const;
+export function Logo({ size = "md", showWordmark = true, className }: { size?: keyof typeof logoPx; showWordmark?: boolean; className?: string }) {
+  const uid = useId().replace(/:/g, "");
+  const kf = `kf-${uid}`, km = `km-${uid}`;
+  const px = logoPx[size];
   return (
-    <span className={cn("inline-flex items-center gap-2 font-display text-lg font-semibold tracking-tight", className)}>
-      <span aria-hidden className="grid size-6 place-items-center rounded-md bg-primary text-primary-foreground">
-        <span className="text-[13px] leading-none">e</span>
-      </span>
-      Encore
+    <span className={cn("inline-flex items-center gap-2", className)}>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width={px} height={px} role="img" aria-label="Encore" className="shrink-0"><defs><mask id={kf}><rect width="64" height="64" fill="#fff"/><circle cx="39.5" cy="32" r="15.5"/></mask><mask id={km}><rect width="64" height="64" fill="#fff"/><circle cx="32" cy="32" r="15.5"/></mask></defs><rect width="64" height="64" rx="16" fill="#16161D"/><g fill="none" strokeLinecap="round" strokeWidth="5.5"><g mask={`url(#${kf})`}><g mask={`url(#${km})`}><path d="M21 0A10.5 10.5 0 1 0 18 7.4" transform="translate(14 32)" stroke="#3D3BF3" opacity=".45"/></g><path d="M21 0A10.5 10.5 0 1 0 18 7.4" transform="translate(21.5 32)" stroke="#6E6CFF"/></g><path d="M0 0H21A10.5 10.5 0 1 0 18 7.4" transform="translate(29 32)" stroke="#F7F6F2"/></g></svg>
+      {showWordmark && (
+        <span aria-hidden className="font-display font-semibold lowercase leading-none tracking-[-0.02em] text-[#16161D] dark:text-[#F7F6F2]" style={{ fontSize: Math.round(px * 0.7) }}>encore</span>
+      )}
     </span>
   );
 }
