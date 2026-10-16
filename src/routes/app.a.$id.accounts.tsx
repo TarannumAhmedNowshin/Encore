@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
 import { useDiscoveryRun } from "@/hooks/useDiscoveryRun";
+import { findDepartments } from "@/lib/encore/departments.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { REGION_LABEL } from "@/lib/encore/intake";
 import { accountsCsv, bubbleRadius, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
@@ -49,7 +52,26 @@ function AccountsPage() {
   const [filter, setFilter] = useState<AccountFilter>("qualified");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "default", dir: 1 });
   const [openId, setOpenId] = useState<string | null>(null);
+  const [bulk, setBulk] = useState<{ running: boolean; done: number; total: number } | null>(null);
+  const findDeps = useServerFn(findDepartments);
   const targets = d.targets as unknown as Target[];
+
+  const findDepsBulk = async () => {
+    const top = targets.filter((t) => t.status === "qualified").sort(defaultOrder).slice(0, 5);
+    if (!top.length || bulk?.running) return;
+    setBulk({ running: true, done: 0, total: top.length });
+    const queue = [...top];
+    let done = 0;
+    await Promise.all(Array.from({ length: Math.min(2, queue.length) }, async () => {
+      while (queue.length) {
+        const t = queue.shift()!;
+        try { const r = await findDeps({ data: { target_id: t.id } }); if (r.message) toast(`${t.name}: ${r.message}`); }
+        catch (e) { toast.error(`${t.name}: ${e instanceof Error ? e.message : "Department search failed"}`); }
+        done++; setBulk({ running: true, done, total: top.length });
+      }
+    }));
+    setBulk(null);
+  };
   const rows = useMemo(() => {
     const list = targets.filter((t) => matchesFilter(t, filter));
     if (sort.key === "default") return [...list].sort(defaultOrder);
