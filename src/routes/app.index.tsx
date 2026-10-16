@@ -85,6 +85,7 @@ function Dashboard() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [showcase, setShowcase] = useState<Row[]>([]);
   const [funnels, setFunnels] = useState<Record<string, FunnelCounts>>({});
+  const [onboardDismissed, setOnboardDismissed] = useState(() => typeof window !== "undefined" && localStorage.getItem(ONBOARD_KEY) === "1");
   useEffect(() => {
     void supabase.auth.getUser().then(async ({ data: u }) => {
       if (!u.user) return setRows([]);
@@ -118,8 +119,19 @@ function Dashboard() {
           ))}
         </div>
       )}
+      {rows && rows.length > 0 && !onboardDismissed && (
+        <OnboardingCard rows={rows} funnels={funnels} onDismiss={() => { localStorage.setItem(ONBOARD_KEY, "1"); setOnboardDismissed(true); }} />
+      )}
       {rows === null ? (
-        <div className="grid gap-4 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="surface h-28 animate-pulse" />)}</div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="surface animate-pulse p-5" aria-hidden>
+              <div className="h-4 w-2/3 rounded bg-secondary" />
+              <div className="mt-3 flex gap-2"><div className="h-5 w-20 rounded-full bg-secondary" /><div className="h-5 w-16 rounded-full bg-secondary" /></div>
+              <div className="mt-4 space-y-1.5">{[0, 1, 2, 3].map((j) => <div key={j} className="h-2 rounded-full bg-secondary" style={{ width: `${85 - j * 15}%` }} />)}</div>
+            </div>
+          ))}
+        </div>
       ) : rows.length === 0 ? (
         <EmptyState
           title="No analyses yet"
@@ -134,7 +146,7 @@ function Dashboard() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {rows.map((r) => (
-            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface block p-5 transition-colors hover:border-primary/40">
+            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface lift block p-5 hover:border-primary/40">
               <h2 className="font-semibold">{r.title ?? "Untitled analysis"}</h2>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Pill tone="primary">{STAGE_LABEL[r.status] ?? "Deal"}</Pill>
