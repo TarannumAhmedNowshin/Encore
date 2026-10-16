@@ -19,7 +19,7 @@ export const targetsQuery = (id: string) => ({
     const [t, run, a] = await Promise.all([
       supabase.from("targets").select("*").eq("analysis_id", id).order("created_at"),
       supabase.from("runs").select("id, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("analyses").select("is_showcase, target_region, customer_name, anonymise_customer").eq("id", id).single(),
+      supabase.from("analyses").select("is_showcase, target_region, customer_name, anonymise_customer").eq("id", id).maybeSingle(),
     ]);
     return { targets: t.data ?? [], run: run.data, readOnly: !!a.data?.is_showcase, region: a.data?.target_region ?? "global", customer: a.data?.customer_name ?? null };
   },
