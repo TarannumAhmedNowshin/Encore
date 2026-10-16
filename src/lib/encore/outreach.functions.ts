@@ -59,7 +59,7 @@ export const draftOutreach = createServerFn({ method: "POST" })
       (tf ?? []).map((f) => ({ ...f, verified: f.label === "explicitly_stated" })),
       (df ?? []).map((f: any) => ({ ...f, verified: (f.citations ?? []).some((x: { verified: boolean | null }) => x.verified) })));
 
-    const system = `You draft outreach from a business-development lead to one person at a target company. Use only the solution summary and the numbered facts; never anything about the person beyond name, title and department. Write like a competent BD person, not a marketer: concise, specific, no superlatives, no invented metrics, no fake 'I noticed that you...'. Describe what was built for a comparable organisation and why it may matter to this person's remit. ${anonymous ? `Never name the original customer; call it '${descriptor}'. ` : `The original customer is ${analysis.customer_name ?? "our client"}. `}Claim grounding is enforced: for every factual sentence or clause in the body, add a claims entry with the exact text of that clause as it appears in the body and the index of the fact it rests on. If a claim can't be grounded in a fact, leave it out. A shorter, fully grounded draft is correct. Channels: email (subject + body under 120 words), executive_intro (under 90 words, for a C-level reader), linkedin_message (under 300 characters, no subject), talking_points (3 to 5 bullet lines for a call).`;
+    const system = `You draft outreach from a business-development lead to one person at a target company. Use only the solution summary and the numbered facts; never anything about the person beyond name, title and department. Write like a competent BD person, not a marketer: concise, specific, no superlatives, no invented metrics, no fake 'I noticed that you...'. Describe what was built for a comparable organisation and why it may matter to this person's remit. ${anonymous ? `Never name the original customer; call it '${descriptor}'. ` : `The original customer is ${analysis.customer_name ?? "our client"}. `}Facts marked TARGET are goals of the engagement, not achieved results. Phrase them only as aims ('designed to', 'aiming to', 'the goal is'). Never write reduced/achieved/cut/eliminated/delivered for a TARGET fact. Facts marked BEFORE describe the situation before the engagement. Every email, executive intro and LinkedIn note must ground at least one claim in a fact about the target company and explain why it may matter to this person's remit. Claim grounding is enforced: for every factual sentence or clause in the body, add a claims entry with the exact text of that clause as it appears in the body and the index of the fact it rests on. If a claim can't be grounded in a fact, leave it out. A shorter, fully grounded draft is correct. Channels: email (subject + body under 120 words), executive_intro (under 90 words, for a C-level reader), linkedin_message (under 300 characters, no subject), talking_points (3 to 5 bullet lines for a call).`;
     const user = [
       `Contact: ${c.name ?? ""}, ${c.title ?? ""}${dept?.name ? `, ${dept.name}` : ""}`,
       `Target company: ${t.name}`,
@@ -76,7 +76,7 @@ export const draftOutreach = createServerFn({ method: "POST" })
       const { value } = await generateJsonWithFallback({ tier: "smart", userId, system, user, responseSchema: SCHEMA, zodSchema: zod });
       const seen = new Set<string>();
       const ds = value.drafts.filter((d) => !seen.has(d.channel) && seen.add(d.channel));
-      return ds.map((d) => ({ d, v: verifyDraft(d, facts, { anonymous, customerName: analysis.customer_name }) }));
+      return ds.map((d) => ({ d, v: verifyDraft(d, facts, { anonymous, customerName: analysis.customer_name, targetName: t.name }) }));
     };
     let out = await run();
     if (!out.length || out.some((x) => !x.v.all_claims_verified)) out = await run();
@@ -86,9 +86,12 @@ export const draftOutreach = createServerFn({ method: "POST" })
       const { error } = await db.from("outreach_drafts").insert(out.map(({ d, v }) => ({
         user_id: userId, analysis_id: analysis.id, contact_id: c.id, channel: d.channel,
         subject: d.channel === "linkedin_message" || d.channel === "talking_points" ? null : d.subject,
-        body: d.body, claims: v.claims, all_claims_verified: v.all_claims_verified, status: "pending",
+        // Ungrounded factual sentences are stored as unverified claims so the UI underlines them in red.
+        claims: [...v.claims, ...v.ungrounded.map((s) => ({ claim: s, fact_id: null, verified: false, ungrounded: true }))],
+        all_claims_verified: v.all_claims_verified, status: "pending",
       })));
       if (error) throw new HttpError(500, error.message);
     }
-    return { drafts: out.length, flagged: out.filter((x) => !x.v.all_claims_verified).length };
+    const noTargetEvidence = !facts.some((f) => f.kind === "target");
+    return { drafts: out.length, flagged: out.filter((x) => !x.v.all_claims_verified).length, noTargetEvidence };
   });
