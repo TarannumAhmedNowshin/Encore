@@ -138,6 +138,15 @@ function OutreachPage() {
   }, [d]);
 
   if (!d) return <main className="p-8"><div className="surface h-40 animate-pulse" /></main>;
+  if (d.readOnly) {
+    return (
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Send className="size-4" aria-hidden /> Outreach</div>
+        <h1 className="mt-1 text-2xl font-semibold">Grounded drafts, reviewed by you</h1>
+        <EmptyState title="People data is private to the analysis owner" line="Run your own analysis with the sample deal to see this stage." />
+      </main>
+    );
+  }
 
   const all = groups.flatMap((g) => g.contacts.map((x) => ({ ...x, t: g.t })));
   const current = all.find((x) => x.c.id === selected) ?? all[0];
