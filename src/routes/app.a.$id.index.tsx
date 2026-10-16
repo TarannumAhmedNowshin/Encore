@@ -40,7 +40,7 @@ const overviewQuery = (id: string) => queryOptions({
       db.from("departments").select("target_id").eq("analysis_id", id),
       db.from("contacts").select("id, title, buying_role_slot, target_id").eq("analysis_id", id),
       db.from("outreach_drafts").select("status").eq("analysis_id", id),
-      db.from("facts").select("id, confidence, origin, attribute").eq("analysis_id", id).eq("status", "active"),
+      db.from("facts").select("id, confidence, origin, attribute").eq("analysis_id", id).eq("status", "active").in("subject", ["company", "business_problem", "solution"]),
       db.from("personas").select("label").eq("analysis_id", id).order("created_at"),
       db.from("sales_dna").select("id").eq("analysis_id", id).maybeSingle(),
       db.from("runs").select("id, step, status, message, error, created_at, updated_at, used_fallback_model").eq("analysis_id", id).order("created_at", { ascending: false }).limit(5),

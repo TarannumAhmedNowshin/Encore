@@ -17,7 +17,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { REGION_LABEL } from "@/lib/encore/intake";
-import { accountsCsv, countryCode, quadrantRadius, QUADRANT_DOMAIN, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
+import { accountsCsv, countryCode, visibleLabels, quadrantRadius, QUADRANT_DOMAIN, BUYER_POINTS, defaultOrder, faviconUrl, matchesFilter, SCORE_WEIGHTS, summarize, type AccountFilter, type AccountRow } from "@/lib/encore/accounts";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/a/$id/accounts")({
@@ -293,6 +293,9 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
   const py = (v: number) => H - B - ((v - d0) / (d1 - d0)) * (H - T - B);
   const top5 = new Set([...targets].sort((a, b) => (b.opportunity_score ?? 0) - (a.opportunity_score ?? 0)).slice(0, 5).map((t) => t.id));
   const k = pz.view.k;
+  const short = (n: string | null) => { const v = (n ?? "").replace(/\s*(Insurance|Company|Group|&).*$/i, "").trim() || (n ?? ""); return v.length > 16 ? `${v.slice(0, 15)}…` : v; };
+  const shown = visibleLabels(targets.filter((t) => top5.has(t.id) || k >= 2).sort((a, b) => (b.opportunity_score ?? 0) - (a.opportunity_score ?? 0))
+    .map((t) => ({ id: t.id, x: px(t.similarity_percent ?? 0) * k, y: (py(t.evidence_score ?? 0) - quadrantRadius(t.opportunity_score) - 8) * k, w: short(t.name).length * 6.4 + 6, h: 14 })));
   const ticks = [0, 25, 50, 75, 100];
   return (
     <Card className="mt-4 p-4">
@@ -309,7 +312,7 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
               </g>
             ))}
             <text x={px(2)} y={py(102)} fontSize={11 / k} className="fill-muted-foreground">Proven need, different shape</text>
-            <text x={px(98)} y={py(102)} textAnchor="end" fontSize={11 / k} className="fill-muted-foreground">Prime targets</text>
+            <text x={px(2)} y={py(102) + 14 / k} fontSize={11 / k} className="fill-muted-foreground" opacity={0}>Prime targets ↗</text>
             <text x={px(2)} y={py(-2)} fontSize={11 / k} className="fill-muted-foreground">Long shots</text>
             <text x={px(98)} y={py(-2)} textAnchor="end" fontSize={11 / k} className="fill-muted-foreground">Look-alike, little evidence yet</text>
             {targets.map((t) => {
@@ -319,7 +322,7 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
                   onClick={() => { if (!pz.moved()) onOpen(t.id); }} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen(t.id)}>
                   <title>{`${t.name} — Similarity ${t.similarity_percent ?? 0}% · Evidence ${t.evidence_score ?? 0} · Opportunity ${t.opportunity_score ?? 0}`}</title>
                   <circle cx={x} cy={y} r={r} fill={GROUP_COLOR.qualified} fillOpacity={0.85} stroke={t.in_target_region !== false ? "var(--primary)" : "var(--card)"} strokeWidth={2 / k} />
-                  {(top5.has(t.id) || k >= 2) && <text x={x} y={y - r - 4 / k} textAnchor="middle" fontSize={11 / k} fontWeight={600} className="fill-foreground">{t.name}</text>}
+                  {shown.has(t.id) && <text x={Math.min(x, px(100))} y={y - r - 4 / k} textAnchor="middle" fontSize={11 / k} fontWeight={600} className="fill-foreground">{short(t.name)}</text>}
                 </g>
               );
             })}

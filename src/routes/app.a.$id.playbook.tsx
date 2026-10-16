@@ -289,7 +289,8 @@ function idealSentence(d: { industry_characteristics: string | null; problem_sum
   const who = splitClause(d.industry_characteristics ?? "Companies like your won customer")[0].replace(/\.$/, "");
   const problem = d.problem_summary ? lowerFirst(splitClause(d.problem_summary)[0].replace(/\.$/, "")) : null;
   const outcome = d.measurable_outcomes_summary ? lowerFirst(splitClause(d.measurable_outcomes_summary)[0].replace(/\.$/, "")) : null;
-  return `${who}${problem ? ` where ${problem}` : ""}${outcome ? ` — who want to ${outcome.replace(/^to /, "")}` : ""}.`;
+  const full = `${who}${problem ? ` where ${problem}` : ""}${outcome ? ` — who want to ${outcome.replace(/^to /, "")}` : ""}.`;
+  return full.length > 220 && outcome ? `${who}${problem ? ` where ${problem}` : ""}.` : full;
 }
 
 function OwnerPill({ id, value, readOnly, onSaved }: { id: string; value: string | null; readOnly: boolean; onSaved: () => void }) {
