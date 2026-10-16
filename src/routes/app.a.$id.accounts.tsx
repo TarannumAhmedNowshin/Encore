@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { AccountOrbit, GROUP_COLOR, OrbitLegend } from "@/components/encore/AccountOrbit";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
+import { ArrowRight, ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
