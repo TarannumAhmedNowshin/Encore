@@ -84,3 +84,24 @@ export function verifyDraft(d: DraftIn, facts: ListedFact[], opts: { anonymous: 
   const ok = claims.every((c) => c.verified) && !leak && !ungrounded.length && personalised;
   return { claims, ungrounded, nameLeak: leak, personalised, hasTargetFacts, all_claims_verified: ok };
 }
+
+export const hasBody = (d: { body?: string | null }) => !!(d.body ?? "").trim();
+
+/** Rows to save for one contact. The body is always written; an empty body becomes an "error" row, never a blank draft. */
+export function draftRows(
+  out: { d: DraftIn; v: { claims: ClaimOut[]; ungrounded: string[]; all_claims_verified: boolean } }[],
+  base: { user_id: string; analysis_id: string; contact_id: string },
+) {
+  return out.map(({ d, v }) => {
+    const empty = !hasBody(d);
+    return {
+      ...base, channel: d.channel,
+      subject: d.channel === "linkedin_message" || d.channel === "talking_points" ? null : d.subject,
+      body: empty ? null : d.body.trim(),
+      claims: empty ? [] : [...v.claims, ...v.ungrounded.map((s) => ({ claim: s, fact_id: null, verified: false, ungrounded: true }))],
+      all_claims_verified: empty ? false : v.all_claims_verified,
+      status: empty ? "error" : "pending",
+      rejection_reason: empty ? "The AI returned an empty draft twice. Regenerate to try again." : null,
+    };
+  });
+}

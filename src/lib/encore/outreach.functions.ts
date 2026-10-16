@@ -34,7 +34,7 @@ export const draftOutreach = createServerFn({ method: "POST" })
     const { checkQuota } = await import("./usage.server");
     const { generateJsonWithFallback } = await import("./gemini.server");
     const { HttpError } = await import("./http.server");
-    const { buildFactList, customerDescriptor, verifyDraft, DOC_ATTRS } = await import("./outreach");
+    const { buildFactList, customerDescriptor, verifyDraft, DOC_ATTRS, draftRows, hasBody } = await import("./outreach");
 
     const userId = context.userId;
     const db = await adminClient();
@@ -79,19 +79,19 @@ export const draftOutreach = createServerFn({ method: "POST" })
       return ds.map((d) => ({ d, v: verifyDraft(d, facts, { anonymous, customerName: analysis.customer_name, targetName: t.name ?? undefined }) }));
     };
     let out = await run();
-    if (!out.length || out.some((x) => !x.v.all_claims_verified)) out = await run();
+    if (!out.length || out.some((x) => !hasBody(x.d) || !x.v.all_claims_verified)) {
+      const retry = await run();
+      // Keep a channel's earlier draft if the retry came back empty for it.
+      const prev = new Map(out.map((x) => [x.d.channel, x]));
+      out = retry.map((x) => (!hasBody(x.d) && prev.get(x.d.channel) && hasBody(prev.get(x.d.channel)!.d) ? prev.get(x.d.channel)! : x));
+      for (const [ch, x] of prev) if (!out.some((y) => y.d.channel === ch)) out.push(x);
+    }
 
     await db.from("outreach_drafts").delete().eq("contact_id", c.id);
     if (out.length) {
-      const { error } = await db.from("outreach_drafts").insert(out.map(({ d, v }) => ({
-        user_id: userId, analysis_id: analysis.id, contact_id: c.id, channel: d.channel,
-        subject: d.channel === "linkedin_message" || d.channel === "talking_points" ? null : d.subject,
-        // Ungrounded factual sentences are stored as unverified claims so the UI underlines them in red.
-        claims: [...v.claims, ...v.ungrounded.map((s) => ({ claim: s, fact_id: null, verified: false, ungrounded: true }))],
-        all_claims_verified: v.all_claims_verified, status: "pending",
-      })));
+      const { error } = await db.from("outreach_drafts").insert(draftRows(out, { user_id: userId, analysis_id: analysis.id, contact_id: c.id }));
       if (error) throw new HttpError(500, error.message);
     }
     const noTargetEvidence = !facts.some((f) => f.kind === "target");
-    return { drafts: out.length, flagged: out.filter((x) => !x.v.all_claims_verified).length, noTargetEvidence };
+    return { drafts: out.length, flagged: out.filter((x) => !x.v.all_claims_verified).length, empty: out.filter((x) => !hasBody(x.d)).length, noTargetEvidence };
   });
