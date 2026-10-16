@@ -312,7 +312,7 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
               </g>
             ))}
             <text x={px(2)} y={py(102)} fontSize={11 / k} className="fill-muted-foreground">Proven need, different shape</text>
-            <text x={px(98)} y={py(52)} textAnchor="end" fontSize={11 / k} className="fill-muted-foreground">Prime targets ↗</text>
+            <text x={px(52)} y={py(102)} fontSize={11 / k} className="fill-muted-foreground">Prime targets ↗</text>
             <text x={px(2)} y={py(-2)} fontSize={11 / k} className="fill-muted-foreground">Long shots</text>
             <text x={px(98)} y={py(-2)} textAnchor="end" fontSize={11 / k} className="fill-muted-foreground">Look-alike, little evidence yet</text>
             {targets.map((t) => {
