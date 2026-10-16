@@ -180,14 +180,14 @@ function DealPage() {
               <Card key={subj} className="scroll-mt-20 p-0" >
                 <section id={`sec-${{ business_problem: "problem", solution: "solution", company: "company" }[subj]}`} className="scroll-mt-20 p-5">
                   <h2 className="text-lg font-semibold">{{ company: "Company", business_problem: "Problem", solution: "Solution" }[subj]}</h2>
-                  <div className="mt-3 space-y-4">
+                  <div className="mt-2 space-y-3">
                     {FIELD_GROUPS[subj].map((attr) => {
                       const rows = facts.filter((f) => f.subject === subj && f.attribute === attr);
                       if (!rows.length) return null;
                       return (
                         <div key={attr}>
                           <h3 className="px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{FIELD_LABEL[attr]}</h3>
-                          <ul className="mt-1">
+                          <ul className="mt-0.5">
                             {rows.map((f) => {
                               const c = (f as any).citations?.[0] as { quote: string | null; verified: boolean | null } | undefined;
                               const kind = evidencePill({ origin: f.origin, label: f.label, quote: c?.quote ?? null, verified: c?.verified ?? null });
@@ -195,7 +195,7 @@ function DealPage() {
                               return (
                                 <li key={f.id}>
                                   <button type="button" disabled={!c?.quote} onClick={() => openFact(f)}
-                                    className="flex w-full flex-col gap-1.5 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted/60 disabled:cursor-default sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                    className="flex w-full flex-col gap-1.5 rounded-lg px-2 py-1 text-left text-sm leading-snug transition-colors hover:bg-muted/60 disabled:cursor-default sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                     <span className="min-w-0">{f.value}</span>
                                     <span title={`${f.confidence ?? "low"} confidence${c?.quote ? " · click to see the quote" : ""}`} className={cn("shrink-0 self-start whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium sm:self-auto", P.cls)}>{P.text}</span>
                                   </button>
