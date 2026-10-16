@@ -45,8 +45,8 @@ describe("qualify-company checks", () => {
   });
   it("caps unsourced high on sourced dimensions and drops unknown URLs", () => {
     const r = checkQualification({ name: "Acme", domain: "", materials: [page], dimensions: dims("high", "https://made.up"), evidence: [], qualified: false, rejection_reason: "no" });
-    expect(r.dimensions.operational).toMatchObject({ rating: "medium", capped: true, source_url: null });
-    expect(r.dimensions.industry).toMatchObject({ rating: "high", capped: false });
+    expect(r.dimensions["operational"]).toMatchObject({ rating: "medium", capped: true, source_url: null });
+    expect(r.dimensions["industry"]).toMatchObject({ rating: "high", capped: false });
   });
   it("builds queries with parentheses stripped", () => {
     expect(qualifyQueries("Acme (AH) Ltd", { problem_terms: ["route planning"], department_terms: "transport" }, "acme.ie", "acme.ie"))
