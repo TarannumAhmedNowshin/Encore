@@ -123,7 +123,7 @@ const words = (t: string) => t.split(/\s+/).filter((w) => /[A-Za-z0-9]/.test(w))
 
 /** Is this (already located) quote real evidence, not contact details or a generic mention? */
 export function isUsableEvidence(input: {
-  quote: string; url: string; title?: string | null; companyName: string; domain?: string;
+  quote: string; url: string; title?: string | null; companyName: string; domain?: string | null;
 }): boolean {
   const q = input.quote ?? "";
   const total = words(q).length;
