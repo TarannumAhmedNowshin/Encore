@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Hide hero ghosts from screen readers, select an approved demo email, and verify landing bounds/footer at 360px and 375px
 - [x] Remove white flashes, add branded loading, font preload and browser demo cache
 - [x] Restore light phone story motion and preserve complete email typing
 - [x] Improve tour timing, keyboard controls, progress and 375px placement
