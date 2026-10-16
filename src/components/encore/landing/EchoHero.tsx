@@ -85,7 +85,7 @@ export function EchoHero() {
         </div>
 
         <div className="min-w-0">
-          <div className="hero-doc rounded-md border border-border bg-card p-5 shadow-[0_18px_40px_-24px_rgb(22_22_29/.35)] md:p-6">
+          {sentence && <div className="hero-doc rounded-md border border-border bg-card p-5 shadow-[0_18px_40px_-24px_rgb(22_22_29/.35)] md:p-6">
             <div className="flex justify-between gap-3 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               <span className="truncate">{data?.filename ?? "Won SOW"}</span>
               <span className="shrink-0 normal-case">your won deal</span>
