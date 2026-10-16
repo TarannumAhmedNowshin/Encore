@@ -179,14 +179,14 @@ export function RunTimeline({ steps }: { steps: RunStep[] }) {
             className={cn(
               "relative z-10 grid size-5 shrink-0 place-items-center rounded-full border",
               s.state === "waiting" && "border-border bg-card",
-              s.state === "running" && "border-primary bg-primary/15 animate-run-pulse",
+              s.state === "running" && "border-accent bg-accent/15 animate-run-pulse",
               s.state === "done" && "border-verified bg-verified text-primary-foreground",
               s.state === "failed" && "border-risk bg-risk text-primary-foreground",
             )}
           >
             {s.state === "done" && <Check className="size-3" aria-hidden />}
             {s.state === "failed" && <X className="size-3" aria-hidden />}
-            {s.state === "running" && <span className="size-1.5 rounded-full bg-primary" />}
+            {s.state === "running" && <span className="size-1.5 rounded-full bg-accent" />}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
