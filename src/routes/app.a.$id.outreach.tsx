@@ -189,7 +189,11 @@ function OutreachPage() {
 
   const update = async (did: string, patch: Partial<Draft> & { decided_at?: string }) => {
     const { error } = await supabase.from("outreach_drafts").update(patch as never).eq("id", did);
-    if (error) toast.error(error.message); else await refresh();
+    if (error) toast.error(error.message);
+    else {
+      if (patch.status === "approved") toast.success("Draft approved");
+      await refresh();
+    }
   };
 
   const exportCsv = () => {

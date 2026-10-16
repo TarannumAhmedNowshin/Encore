@@ -101,7 +101,7 @@ export function useDiscoveryRun(id: string) {
     await end({ data: { analysis_id: id } }).catch(() => undefined);
     setSteps((s) => s && { ...s, verify: "done" });
     const { data: done } = await supabase.from("targets").select("status").eq("analysis_id", id);
-    if (done?.length) toast(`${done.filter((t) => t.status === "qualified").length} of ${done.length} qualified`);
+    if (done?.length) toast.success(`Discovery finished — ${done.filter((t) => t.status === "qualified").length} of ${done.length} qualified`);
     refresh();
   }, [qualifyOne, end, id, refresh, jobKey, setSteps]);
 

@@ -96,6 +96,10 @@ function PlaybookPage() {
     if (await runStage("personas")) await runStage("dna");
     else setStates((s) => ({ ...s, dna: { state: "failed", message: "Needs personas first" } }));
     setBusy(false);
+    setStates((s) => {
+      if (s.context?.state === "done" && s.personas?.state === "done" && s.dna?.state === "done") toast.success("Playbook built");
+      return s;
+    });
   }
   async function rerun(stage: PlaybookStage) { setBusy(true); setStartedAt(Date.now()); await runStage(stage); setBusy(false); }
 

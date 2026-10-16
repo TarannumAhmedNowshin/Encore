@@ -1,11 +1,46 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Eye, Plus } from "lucide-react";
+import { Check, Eye, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Pill } from "@/components/encore/primitives";
 import { REGION_LABEL } from "@/lib/encore/intake";
 import { funnelSteps, type FunnelCounts } from "@/lib/encore/overview";
 import { supabase } from "@/integrations/supabase/client";
+
+const ONBOARD_KEY = "encore-onboarding-dismissed";
+
+/** First-run checklist: ticks off from real data, dismissible. */
+function OnboardingCard({ rows, funnels, onDismiss }: { rows: Row[]; funnels: Record<string, FunnelCounts>; onDismiss: () => void }) {
+  const all = Object.values(funnels);
+  const steps = [
+    { label: "Try the sample deal", done: rows.length > 0, to: "/app/new?sample=1" },
+    { label: "Run discovery", done: all.some((f) => f.found > 0), to: rows[0] ? `/app/a/${rows[0].id}/accounts` : "/app/new?sample=1" },
+    { label: "Approve your first draft", done: all.some((f) => f.approved > 0), to: rows[0] ? `/app/a/${rows[0].id}/outreach` : "/app/new?sample=1" },
+  ];
+  if (steps.every((s) => s.done)) return null;
+  return (
+    <div className="surface mb-6 p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Getting started</h2>
+        <Button variant="ghost" size="icon" className="size-7" onClick={onDismiss} aria-label="Dismiss getting started">
+          <X />
+        </Button>
+      </div>
+      <ol className="mt-3 space-y-2">
+        {steps.map((s, i) => (
+          <li key={s.label}>
+            <Link to={s.to as string} className="flex items-center gap-3 rounded-md px-1 py-1 text-sm transition-colors hover:bg-secondary">
+              <span className={`grid size-5 shrink-0 place-items-center rounded-full border ${s.done ? "border-verified bg-verified text-primary-foreground" : "border-border text-muted-foreground"}`}>
+                {s.done ? <Check className="size-3" aria-hidden /> : <span className="font-mono text-[10px]">{i + 1}</span>}
+              </span>
+              <span className={s.done ? "text-muted-foreground line-through" : "font-medium"}>{s.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "My analyses — Encore" }, { name: "description", content: "Your Encore analyses, one per won deal." }] }),
@@ -50,6 +85,7 @@ function Dashboard() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [showcase, setShowcase] = useState<Row[]>([]);
   const [funnels, setFunnels] = useState<Record<string, FunnelCounts>>({});
+  const [onboardDismissed, setOnboardDismissed] = useState(() => typeof window !== "undefined" && localStorage.getItem(ONBOARD_KEY) === "1");
   useEffect(() => {
     void supabase.auth.getUser().then(async ({ data: u }) => {
       if (!u.user) return setRows([]);
@@ -83,8 +119,19 @@ function Dashboard() {
           ))}
         </div>
       )}
+      {rows && rows.length > 0 && !onboardDismissed && (
+        <OnboardingCard rows={rows} funnels={funnels} onDismiss={() => { localStorage.setItem(ONBOARD_KEY, "1"); setOnboardDismissed(true); }} />
+      )}
       {rows === null ? (
-        <div className="grid gap-4 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="surface h-28 animate-pulse" />)}</div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="surface animate-pulse p-5" aria-hidden>
+              <div className="h-4 w-2/3 rounded bg-secondary" />
+              <div className="mt-3 flex gap-2"><div className="h-5 w-20 rounded-full bg-secondary" /><div className="h-5 w-16 rounded-full bg-secondary" /></div>
+              <div className="mt-4 space-y-1.5">{[0, 1, 2, 3].map((j) => <div key={j} className="h-2 rounded-full bg-secondary" style={{ width: `${85 - j * 15}%` }} />)}</div>
+            </div>
+          ))}
+        </div>
       ) : rows.length === 0 ? (
         <EmptyState
           title="No analyses yet"
@@ -99,7 +146,7 @@ function Dashboard() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {rows.map((r) => (
-            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface block p-5 transition-colors hover:border-primary/40">
+            <Link key={r.id} to="/app/a/$id" params={{ id: r.id }} className="surface lift block p-5 hover:border-primary/40">
               <h2 className="font-semibold">{r.title ?? "Untitled analysis"}</h2>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Pill tone="primary">{STAGE_LABEL[r.status] ?? "Deal"}</Pill>
