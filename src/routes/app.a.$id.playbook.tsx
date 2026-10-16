@@ -10,6 +10,10 @@ import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, type
 import { supabase } from "@/integrations/supabase/client";
 import { buildPlaybook, type PlaybookStage } from "@/lib/encore/playbook.functions";
 import { checkDocQuote } from "@/lib/encore/deal";
+import { toastError } from "@/lib/encore/toast";
+import { hasActiveRun } from "@/lib/encore/run-guard";
+import { useElapsed } from "@/lib/encore/use-elapsed";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/a/$id/playbook")({
   head: () => ({ meta: [
@@ -64,6 +68,9 @@ function PlaybookPage() {
 
   const refresh = () => ["playbook", "stages", "usage-today"].forEach((k) => void qc.invalidateQueries({ queryKey: k === "usage-today" ? [k] : [k, id] }));
 
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const elapsed = useElapsed(busy, startedAt);
+
   async function runStage(stage: PlaybookStage): Promise<boolean> {
     setStates((s) => ({ ...s, [stage]: { state: "running" } }));
     setTimeout(() => void qc.invalidateQueries({ queryKey: ["stages", id] }), 800);
@@ -74,19 +81,23 @@ function PlaybookPage() {
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong";
       setStates((s) => ({ ...s, [stage]: { state: "failed", message } }));
-      toast.error(message);
+      toastError(e, "Something went wrong", () => void rerun(stage));
       return false;
     } finally { refresh(); }
   }
   async function buildAll() {
-    setBusy(true);
+    if (data && hasActiveRun(data.runs, "playbook", Date.now(), true)) {
+      toast.error("The playbook is already being built for this analysis.");
+      return;
+    }
+    setBusy(true); setStartedAt(Date.now());
     setStates({ context: { state: "waiting" }, personas: { state: "waiting" }, dna: { state: "waiting" } });
     await runStage("context"); // a context failure must not stop the rest
     if (await runStage("personas")) await runStage("dna");
     else setStates((s) => ({ ...s, dna: { state: "failed", message: "Needs personas first" } }));
     setBusy(false);
   }
-  async function rerun(stage: PlaybookStage) { setBusy(true); await runStage(stage); setBusy(false); }
+  async function rerun(stage: PlaybookStage) { setBusy(true); setStartedAt(Date.now()); await runStage(stage); setBusy(false); }
 
   if (!data) return <main className="p-8"><div className="surface h-40 animate-pulse" /></main>;
   const { readOnly, links, facts, stakeholders, personas, dna, signals, runs } = data;
@@ -95,7 +106,7 @@ function PlaybookPage() {
   const lastRun = (st: PlaybookStage) => runs.find((r) => r.step === `playbook_${st}`);
   const fallbackUsed = STAGE_STEPS.some(({ stage }) => { const r = lastRun(stage); return r?.status === "done" && r.used_fallback_model; });
   const showTimeline = Object.keys(states).length > 0;
-  const steps: RunStep[] = STAGE_STEPS.map(({ stage, label }) => ({ label, state: states[stage]?.state ?? "waiting", ...(states[stage]?.message ? { message: states[stage]!.message! } : {}) }));
+  const steps: RunStep[] = STAGE_STEPS.map(({ stage, label }) => ({ label, state: states[stage]?.state ?? "waiting", ...(states[stage]?.state === "running" && elapsed ? { elapsed } : {}), ...(states[stage]?.message ? { message: states[stage]!.message! } : {}) }));
 
   const openFact = (fid: string | undefined, title: string) => {
     const f = fid ? factById.get(fid) : undefined;
@@ -168,7 +179,11 @@ function PlaybookPage() {
 
       <Section title="Sales DNA" action={<RerunBtn stage="dna" />}>
         {!dna ? (
-          <EmptyState title="No Sales DNA yet" line={lastRun("dna")?.status === "failed" ? lastRun("dna")!.error ?? "" : "Build the playbook to write the ideal customer profile that drives account discovery."} />
+          <EmptyState
+            title="No Sales DNA yet"
+            line={lastRun("dna")?.status === "failed" ? lastRun("dna")!.error ?? "" : facts.length === 0 ? "The Sales DNA is written from your deal facts, which aren't extracted yet." : "Build the playbook to write the ideal customer profile that drives account discovery."}
+            {...(facts.length === 0 ? { action: <Button asChild variant="outline"><Link to="/app/a/$id/deal" params={{ id }}>Extract the deal first <ArrowRight /></Link></Button> } : {})}
+          />
         ) : (
           <>
             <Card className="p-5">

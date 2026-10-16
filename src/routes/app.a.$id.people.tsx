@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Linkedin, Users } from "lucide-react";
+import { ArrowRight, ChevronDown, Linkedin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { findPeople, scoreContacts } from "@/lib/encore/people.functions";
 import { isCreditError, ROLE_SLOTS, SLOT_LABELS, type RoleSlot } from "@/lib/encore/people";
 import { defaultOrder, type AccountRow } from "@/lib/encore/accounts";
 import { usageTodayQuery } from "@/lib/encore/usage-query";
+import { toastError } from "@/lib/encore/toast";
 import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { cn } from "@/lib/utils";
 
@@ -102,13 +103,13 @@ function PeoplePage() {
       const r = await findFn({ data: { target_id: targetId } });
       if (r.message) toast(r.message);
       await refresh();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "People search failed"); }
+    } catch (e) { toastError(e, "People search failed", () => void runFind(targetId)); }
     finally { setBusyId(null); }
   };
   const runScore = async (targetId: string) => {
     setBusyId(targetId);
     try { await scoreFn({ data: { target_id: targetId } }); await refresh(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Scoring failed"); }
+    catch (e) { toastError(e, "Scoring failed", () => void runScore(targetId)); }
     finally { setBusyId(null); }
   };
 
@@ -165,7 +166,7 @@ function PeoplePage() {
           <p className="mt-1 text-sm text-muted-foreground">People at qualified companies, matched to your buyer personas by their real titles.</p>
         </div>
         {!d.readOnly && d.targets.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void runBulk("find")} disabled={!!bulk?.running || !!busyId}>
               {bulk?.running && bulk.kind === "find" ? `Finding people ${bulk.done} of ${bulk.total}…` : "Find people at top 3 accounts"}
             </Button>
@@ -189,7 +190,8 @@ function PeoplePage() {
       {!d.targets.length ? (
         <section className="mt-8">
           <EmptyState title="No qualified accounts yet"
-            line="People search runs on qualified companies. Run discovery on the Accounts page first." />
+            line="People search runs on qualified companies. Run discovery on the Accounts page first."
+            action={<Button asChild variant="outline"><Link to="/app/a/$id/accounts" params={{ id }}>Run discovery first <ArrowRight /></Link></Button>} />
         </section>
       ) : (
         <div className="mt-6 space-y-6">
@@ -218,7 +220,7 @@ function PeoplePage() {
                   )}
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 [&>*]:min-w-0">
                   {ROLE_SLOTS.map((slot) => {
                     const inSlot = contacts.filter((c) => c.buying_role_slot === slot);
                     return (

@@ -12,6 +12,9 @@ import { extractDeal } from "@/lib/encore/deal.functions";
 import { checkDocQuote, FIELD_GROUPS, FIELD_LABEL, findQuoteRange, overallConfidence, type FieldSubject } from "@/lib/encore/deal";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
 import { REGION_LABEL } from "@/lib/encore/intake";
+import { toastError } from "@/lib/encore/toast";
+import { hasActiveRun } from "@/lib/encore/run-guard";
+import { useElapsed } from "@/lib/encore/use-elapsed";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/a/$id/deal")({
@@ -58,6 +61,8 @@ function DealPage() {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const [gapEdit, setGapEdit] = useState<{ attr: string; value: string } | null>(null);
   const rechecked = useRef(false);
+  const runNow = data?.run ?? null;
+  const elapsed = useElapsed(!!runNow && runNow.status === "running", runNow?.created_at ?? null);
 
   // Re-check stored quotes against the current document-quote rule (owner only).
   useEffect(() => {
@@ -87,6 +92,10 @@ function DealPage() {
   const canEdit = !!analysis && analysis.user_id === data.userId;
 
   function onExtract() {
+    if (run && hasActiveRun([run], "extract", Date.now())) {
+      toast.error("Extraction is already running for this analysis.");
+      return;
+    }
     if (!hasFacts) return void runExtract();
     setAsk({ title: "Re-extract this deal?", body: "This replaces the earlier facts and stakeholders found in the document. Facts and stakeholders you added stay.", action: "Re-extract", onConfirm: () => void runExtract() });
   }
@@ -97,13 +106,14 @@ function DealPage() {
       const r = await extract({ data: { analysis_id: id } });
       toast.success(r.gaps.length ? `Done. ${r.gaps.length} fields were not in the document.` : "Done. Every field was found.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Extraction failed");
+      toastError(e, "Extraction failed", () => void runExtract());
     } finally { setBusy(false); refresh(); }
   }
 
   const steps: RunStep[] = ["Reading the document", "Extracting facts", "Checking every quote"].map((label, i) => {
     const done = run?.done ?? 0;
-    return { label, state: run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting", ...(run?.error ? { message: run.error } : {}) };
+    const state: RunStep["state"] = run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting";
+    return { label, state, ...(state === "running" && elapsed ? { elapsed } : {}), ...(run?.error ? { message: run.error } : {}) };
   });
 
   const presentAttrs = new Set(facts.map((f) => f.attribute));
@@ -124,9 +134,9 @@ function DealPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-gutter">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4" aria-hidden /> Deal</div>
-          <h1 className="mt-1 text-2xl font-semibold">{doc?.filename ?? analysis?.title ?? "Document"}</h1>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4" aria-hidden /> Deal</div>
+          <h1 className="mt-1 break-words text-2xl font-semibold">{doc?.filename ?? analysis?.title ?? "Document"}</h1>
           <p className="mt-1 font-mono text-xs text-muted-foreground">
             {doc?.page_count ? `${doc.page_count} pages · ` : ""}{REGION_LABEL[analysis?.target_region as keyof typeof REGION_LABEL] ?? analysis?.target_region}
           </p>

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, Check, Copy, Download, Mail, Pencil, Send, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Copy, Download, Mail, Pencil, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline } from "@/components/encore/primitives";
 import { draftOutreach } from "@/lib/encore/outreach.functions";
 import { CHANNELS, CHANNEL_LABELS, type Channel } from "@/lib/encore/outreach";
+import { toastError } from "@/lib/encore/toast";
 import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { cn } from "@/lib/utils";
 
@@ -154,13 +155,14 @@ function OutreachPage() {
   const approved = all.flatMap((x) => x.drafts.filter((dr) => dr.status === "approved" || dr.status === "edited").map((dr) => ({ ...x, dr })));
 
   const draftOne = async (cid: string) => {
+    if (busy.includes(cid)) return false; // never draft the same contact twice at once
     setBusy((b) => [...b, cid]);
     try {
       const r = await draftFn({ data: { contact_id: cid } });
       if (r.flagged) toast(`${r.flagged} draft${r.flagged > 1 ? "s" : ""} need edits: some claims couldn't be tied to a fact.`);
       setNoEvidence((m) => ({ ...m, [cid]: !!r.noTargetEvidence }));
       return true;
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Drafting failed"); return false; }
+    } catch (e) { toastError(e, "Drafting failed", () => void draftOne(cid)); return false; }
     finally { setBusy((b) => b.filter((x) => x !== cid)); await refresh(); }
   };
 
@@ -232,7 +234,7 @@ function OutreachPage() {
       )}
 
       {!all.length ? (
-        <section className="mt-8"><EmptyState title="No contacts yet" line="Find people at qualified accounts on the People page first." /></section>
+        <section className="mt-8"><EmptyState title="No contacts yet" line="Find people at qualified accounts on the People page first." action={<Button asChild variant="outline"><Link to="/app/a/$id/people" params={{ id }}>Find people first <ArrowRight /></Link></Button>} /></section>
       ) : tab === "approved" ? (
         <section className="mt-6 space-y-3">
           <div className="flex justify-end"><Button variant="outline" onClick={exportCsv} disabled={!approved.length}><Download /> Export approved CSV</Button></div>

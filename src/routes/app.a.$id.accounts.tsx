@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { AccountOrbit, GROUP_COLOR, OrbitLegend } from "@/components/encore/AccountOrbit";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
+import { ArrowRight, ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline, ScoreBar } from "@/components/encore/primitives";
@@ -111,7 +111,7 @@ function AccountsPage() {
           <p className="mt-1 text-sm text-muted-foreground">Each company is researched on the web and only qualifies with a quote found word for word.</p>
           {fallback && <p className="mt-1 text-xs text-muted-foreground">Some steps used the fast model because the main model was busy.</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {has && <Button variant="outline" onClick={exportCsv}><Download /> Export CSV</Button>}
           {!readOnly && sum.qualified > 0 && (
             <Button variant="outline" onClick={() => void findDepsBulk()} disabled={!!bulk?.running || d.active}>
@@ -137,9 +137,15 @@ function AccountsPage() {
 
       {!has ? (
         <section className="mt-8">
-          <EmptyState title="No companies yet"
-            line="Discovery searches the web for companies like your customer, then researches each one for proof of the same problem. It takes about 5–7 minutes."
-            action={!readOnly && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Find look-alike companies"}</Button>} />
+          {d.data?.hasDna === false ? (
+            <EmptyState title="Build the playbook first"
+              line="Discovery needs the Sales DNA from the Playbook stage to know which companies to look for."
+              action={<Button asChild variant="outline"><Link to="/app/a/$id/playbook" params={{ id }}>Build the playbook first <ArrowRight /></Link></Button>} />
+          ) : (
+            <EmptyState title="No companies yet"
+              line="Discovery searches the web for companies like your customer, then researches each one for proof of the same problem. It takes about 5–7 minutes."
+              action={!readOnly && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Find look-alike companies"}</Button>} />
+          )}
         </section>
       ) : (
         <>

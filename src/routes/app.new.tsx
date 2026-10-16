@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, Pill } from "@/components/encore/primitives";
 import { supabase } from "@/integrations/supabase/client";
+import { toastError } from "@/lib/encore/toast";
 import { SAMPLE_DEAL } from "@/data/sampleDeal";
 import {
   DOC_TYPES, REGIONS, DOC_TYPE_CODE, REGION_CODE, LITTLE_TEXT_MESSAGE, analysisTitle, checkFile, isTooLittleText, sha256Hex, storagePath,
@@ -131,7 +132,9 @@ function NewAnalysis() {
       }
       await navigate({ to: "/app/a/$id/deal", params: { id: a.id } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      const msg = e instanceof Error ? e.message : "Something went wrong. Please try again.";
+      setError(msg);
+      toastError(e, "Something went wrong. Please try again.", () => void submit(force));
       setBusy(null);
     }
   }

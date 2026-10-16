@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { discoverLeads, discoverResearch, endDiscovery, qualifyCompany } from "@/lib/encore/discover.functions";
 import { isBusyError } from "@/lib/encore/discover";
+import { toastError } from "@/lib/encore/toast";
+import { hasActiveRun } from "@/lib/encore/run-guard";
+import { useElapsed } from "@/lib/encore/use-elapsed";
 import type { RunStep } from "@/components/encore/primitives";
 
 const CONCURRENCY = 2; // free Gemini tier
@@ -16,14 +19,15 @@ type S = RunStep["state"];
 export const targetsQuery = (id: string) => ({
   queryKey: ["targets", id],
   queryFn: async () => {
-    const [t, run, a] = await Promise.all([
+    const [t, run, a, dna] = await Promise.all([
       supabase.from("targets").select("*").eq("analysis_id", id).order("created_at"),
-      supabase.from("runs").select("id, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("runs").select("id, step, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("analyses").select("is_showcase, target_region, customer_name, anonymise_customer, user_id").eq("id", id).maybeSingle(),
+      supabase.from("sales_dna").select("id").eq("analysis_id", id).maybeSingle(),
     ]);
     const { data: u } = await supabase.auth.getUser();
     const readOnly = !u.user || a.data?.user_id !== u.user.id;
-    return { targets: t.data ?? [], run: run.data, readOnly, region: a.data?.target_region ?? "global", customer: a.data?.customer_name ?? null };
+    return { targets: t.data ?? [], run: run.data, readOnly, region: a.data?.target_region ?? "global", customer: a.data?.customer_name ?? null, hasDna: !!dna.data };
   },
 });
 
@@ -103,6 +107,11 @@ export function useDiscoveryRun(id: string) {
 
   const start = useCallback(async () => {
     if (busyRef.current) return;
+    const lastRun = q.data?.run;
+    if (lastRun && hasActiveRun([lastRun], "discover", Date.now())) {
+      toast.error("Discovery is already running for this analysis.");
+      return;
+    }
     busyRef.current = true; setActive(true); setMessage(undefined);
     setSteps({ plan: "running", search: "running", list: "waiting", each: "waiting", verify: "waiting" });
     try {
@@ -121,9 +130,9 @@ export function useDiscoveryRun(id: string) {
       await researchAll((data ?? []).map((t) => t.id));
     } catch (e) {
       const m = e instanceof Error ? e.message : "Discovery failed";
-      setMessage(m); toast.error(m);
+      setMessage(m); toastError(e, "Discovery failed", () => void start());
     } finally { busyRef.current = false; setActive(false); refresh(); }
-  }, [research, leads, end, id, refresh, researchAll, setActive, setSteps, setMessage]);
+  }, [research, leads, end, id, refresh, researchAll, setActive, setSteps, setMessage, q.data?.run]);
 
   const resume = useCallback(async () => {
     if (busyRef.current) return;
@@ -140,11 +149,12 @@ export function useDiscoveryRun(id: string) {
   const left = targets.filter((t) => ["queued", "researching"].includes(t.status) || (t.status === "failed")).length;
   const paused = !active && q.data?.run?.status === "running" && targets.length > 0 && left > 0;
 
+  const elapsed = useElapsed(active, q.data?.run?.created_at ?? null);
   const timeline: RunStep[] | null = steps && [
     { label: "Planning searches", state: steps.plan },
     { label: "Searching the web", state: steps.search },
     { label: "Building the long list", state: steps.list, ...(steps.list === "failed" && message ? { message } : {}) },
-    { label: "Researching each company", state: steps.each, elapsed: targets.length ? `${finished} of ${targets.length}` : undefined },
+    { label: "Researching each company", state: steps.each, elapsed: [targets.length ? `${finished} of ${targets.length}` : null, elapsed].filter(Boolean).join(" · ") || undefined },
     { label: "Verifying quotes and scoring", state: steps.verify },
   ].map((s, i) => (i < 2 && s.state === "failed" && message ? { ...s, message } : s)) as RunStep[];
 
