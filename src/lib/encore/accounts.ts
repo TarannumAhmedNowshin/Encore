@@ -129,3 +129,20 @@ export function visibleLabels(items: { id: string; x: number; y: number; w: numb
 }
 
 export const initials = (name: string | null) => (name ?? "?").replace(/\([^)]*\)/g, "").split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w)).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
+
+const COUNTRY_CODE: Record<string, string> = {
+  "united states": "US", "united states of america": "US", usa: "US", us: "US", "united kingdom": "GB", uk: "GB", "great britain": "GB", england: "GB",
+  ireland: "IE", germany: "DE", france: "FR", spain: "ES", italy: "IT", netherlands: "NL", belgium: "BE", switzerland: "CH", austria: "AT",
+  sweden: "SE", norway: "NO", denmark: "DK", finland: "FI", poland: "PL", portugal: "PT", canada: "CA", mexico: "MX", brazil: "BR",
+  japan: "JP", china: "CN", india: "IN", australia: "AU", "new zealand": "NZ", singapore: "SG", "south korea": "KR", "hong kong": "HK",
+};
+/** Compact country code for the HQ column; falls back to the first 3 letters. */
+export function countryCode(c: string | null): string {
+  if (!c) return "—";
+  const k = c.trim().toLowerCase();
+  return COUNTRY_CODE[k] ?? (c.trim().length <= 3 ? c.trim().toUpperCase() : c.trim().slice(0, 3).toUpperCase());
+}
+/** Quadrant axes are padded to −5…105 so edge bubbles are never clipped. */
+export const QUADRANT_DOMAIN = [-5, 105] as const;
+/** Quadrant bubble radius, clamped to 6–18px. */
+export const quadrantRadius = (opp: number | null) => Math.max(6, Math.min(18, 6 + (Math.max(0, Math.min(100, opp ?? 0)) / 100) * 12));
