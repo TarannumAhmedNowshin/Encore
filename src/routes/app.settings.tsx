@@ -54,7 +54,7 @@ function SettingsPage() {
             <ul className="divide-y divide-border">
               {run.data.map((r) => (
                 <li key={r.id} className="flex items-start gap-3 py-3">
-                  {r.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" /> : <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />}
+                  {r.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" /> : <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />}
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{r.label}</p>
                     <p className={`break-words font-mono text-xs ${r.ok ? "text-muted-foreground" : "text-destructive"}`}>{r.detail}</p>
