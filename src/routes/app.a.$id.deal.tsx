@@ -1,7 +1,251 @@
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { StagePlaceholder } from "@/components/encore/StagePlaceholder";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { FileText, Pencil, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, EmptyState, EvidenceChip, Pill, RunTimeline, type RunStep } from "@/components/encore/primitives";
+import { supabase } from "@/integrations/supabase/client";
+import { extractDeal } from "@/lib/encore/deal.functions";
+import { FIELD_GROUPS, FIELD_LABEL, findQuoteRange, overallConfidence, type FieldSubject } from "@/lib/encore/deal";
+import { REGION_LABEL } from "@/lib/encore/intake";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/a/$id/deal")({
-  head: () => ({ meta: [{ title: "Deal — Encore" }] }),
-  component: () => <StagePlaceholder stage="deal" />,
+  head: () => ({ meta: [
+    { title: "Deal — Encore" },
+    { name: "description", content: "Facts extracted from your won deal, each with its quote." },
+    { property: "og:title", content: "Deal — Encore" },
+    { property: "og:description", content: "Facts extracted from your won deal, each with its quote." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+  component: DealPage,
 });
+
+const dealQuery = (id: string) => ({
+  queryKey: ["deal", id],
+  queryFn: async () => {
+    const [a, d, f, s, r] = await Promise.all([
+      supabase.from("analyses").select("*").eq("id", id).single(),
+      supabase.from("documents").select("filename, page_count, text").eq("analysis_id", id).order("created_at").limit(1).maybeSingle(),
+      supabase.from("facts").select("*, citations(quote, verified)").eq("analysis_id", id).eq("status", "active").in("subject", ["company", "business_problem", "solution"]).order("created_at"),
+      supabase.from("stakeholders").select("*").eq("analysis_id", id).order("created_at"),
+      supabase.from("runs").select("*").eq("analysis_id", id).eq("step", "extract").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    return { analysis: a.data, doc: d.data, facts: f.data ?? [], stakeholders: s.data ?? [], run: r.data };
+  },
+  refetchInterval: (q: any) => (q.state.data?.run?.status === "running" ? 2500 : false),
+});
+
+const LABEL_PILL: Record<string, { text: string; tone: "verified" | "inference" | "risk" | "primary" }> = {
+  explicitly_stated: { text: "Stated", tone: "verified" }, inferred: { text: "Inferred", tone: "inference" },
+  potentially_outdated: { text: "Possibly outdated", tone: "risk" }, user: { text: "Added by you", tone: "primary" },
+};
+const CONF_DOT: Record<string, string> = { high: "bg-verified", medium: "bg-inference", low: "bg-risk" };
+
+function DealPage() {
+  const { id } = Route.useParams();
+  const qc = useQueryClient();
+  const { data } = useQuery({ ...dealQuery(id), enabled: typeof window !== "undefined" });
+  const extract = useServerFn(extractDeal);
+  const [busy, setBusy] = useState(false);
+  const [quote, setQuote] = useState<string | null>(null);
+
+  const refresh = () => { void qc.invalidateQueries({ queryKey: ["deal", id] }); void qc.invalidateQueries({ queryKey: ["stages", id] }); void qc.invalidateQueries({ queryKey: ["usage-today"] }); };
+
+  if (!data) return <main className="p-8"><div className="surface h-40 animate-pulse" /></main>;
+  const { analysis, doc, facts, stakeholders, run } = data;
+  const running = busy || run?.status === "running";
+  const hasFacts = facts.length > 0;
+  const canEdit = !!analysis && !analysis.is_showcase;
+
+  async function onExtract() {
+    if (hasFacts && !confirm("Re-extract replaces the earlier facts and stakeholders found in the document. Continue?")) return;
+    setBusy(true);
+    setTimeout(refresh, 800);
+    try {
+      const r = await extract({ data: { analysis_id: id } });
+      toast.success(r.gaps.length ? `Done. ${r.gaps.length} fields were not in the document.` : "Done. Every field was found.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Extraction failed");
+    } finally { setBusy(false); refresh(); }
+  }
+
+  const steps: RunStep[] = ["Reading the document", "Extracting facts", "Checking every quote"].map((label, i) => {
+    const done = run?.done ?? 0;
+    return { label, state: run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting", message: run?.error ?? undefined };
+  });
+
+  const presentAttrs = new Set(facts.map((f) => f.attribute));
+  const gaps = Object.values(FIELD_GROUPS).flat().filter((k) => !presentAttrs.has(k));
+  const byOrigin = facts.reduce<Record<string, number>>((m, f) => ({ ...m, [f.origin ?? "document"]: (m[f.origin ?? "document"] ?? 0) + 1 }), {});
+  const byConf = facts.reduce<Record<string, number>>((m, f) => ({ ...m, [f.confidence ?? "low"]: (m[f.confidence ?? "low"] ?? 0) + 1 }), {});
+
+  async function addGap(attr: string) {
+    const value = prompt(`${FIELD_LABEL[attr]}:`)?.trim();
+    if (!value || !analysis) return;
+    const subject = (Object.entries(FIELD_GROUPS).find(([, ks]) => (ks as readonly string[]).includes(attr))![0]) as FieldSubject;
+    const { error } = await supabase.from("facts").insert({ analysis_id: id, user_id: analysis.user_id, subject, attribute: attr, value, origin: "user", label: "user", confidence: "high", agent: "user" });
+    if (error) toast.error(error.message); else refresh();
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-gutter">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4" aria-hidden /> Deal</div>
+          <h1 className="mt-1 text-2xl font-semibold">{doc?.filename ?? analysis?.title ?? "Document"}</h1>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">
+            {doc?.page_count ? `${doc.page_count} pages · ` : ""}{REGION_LABEL[analysis?.target_region as keyof typeof REGION_LABEL] ?? analysis?.target_region}
+          </p>
+        </div>
+        {canEdit && <Button onClick={onExtract} disabled={running}>{running ? "Extracting…" : hasFacts ? "Re-extract" : "Extract deal facts"}</Button>}
+      </div>
+
+      {(running || run?.status === "failed") && <Card className="mt-6"><RunTimeline steps={steps} /></Card>}
+
+      {!hasFacts && !running ? (
+        <div className="mt-6"><EmptyState title="No facts yet" line="Extract the deal to pull the company, problem and solution out of your document, each with its quote." /></div>
+      ) : hasFacts && (
+        <>
+          <Card className="mt-6">
+            <div className="flex flex-wrap items-center gap-6">
+              <div>
+                <div className="text-xs text-muted-foreground">Overall confidence</div>
+                <div className="font-mono text-3xl font-semibold">{overallConfidence(facts.map((f) => f.confidence))}%</div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <div>Mean of {facts.length} facts: high = 1, medium = 0.6, low = 0.3</div>
+                <div className="mt-1 font-mono text-xs">high {byConf.high ?? 0} · medium {byConf.medium ?? 0} · low {byConf.low ?? 0}</div>
+                <div className="font-mono text-xs">{Object.entries(byOrigin).map(([k, v]) => `${k === "user" ? "you" : k} ${v}`).join(" · ")}</div>
+              </div>
+            </div>
+          </Card>
+          <div className="mt-6 grid gap-6 lg:grid-cols-3">
+            {(["company", "business_problem", "solution"] as const).map((subj) => (
+              <Card key={subj} className="p-5">
+                <h2 className="text-base font-semibold">{{ company: "Company", business_problem: "Problem", solution: "Solution" }[subj]}</h2>
+                <ul className="mt-3 space-y-4">
+                  {facts.filter((f) => f.subject === subj).map((f) => {
+                    const c = (f as any).citations?.[0] as { quote: string | null; verified: boolean | null } | undefined;
+                    const pill = LABEL_PILL[f.label ?? ""];
+                    return (
+                      <li key={f.id}>
+                        <div className="text-xs text-muted-foreground">{FIELD_LABEL[f.attribute ?? ""] ?? f.attribute}</div>
+                        <p className="text-sm">{f.value}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          {pill && <Pill tone={pill.tone}>{pill.text}</Pill>}
+                          <span title={`${f.confidence} confidence`} className={cn("size-2 rounded-full", CONF_DOT[f.confidence ?? "low"])} />
+                          {f.origin !== "user" && (c?.quote
+                            ? <EvidenceChip kind={c.verified ? "verified" : "unverified"} onClick={() => setQuote(c.quote)} />
+                            : <EvidenceChip kind="inference" />)}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            ))}
+          </div>
+          {gaps.length > 0 && (
+            <Card className="mt-6">
+              <h2 className="text-base font-semibold">Gaps</h2>
+              <p className="text-sm text-muted-foreground">Not found in the document.</p>
+              <ul className="mt-3 divide-y divide-border">
+                {gaps.map((g) => (
+                  <li key={g} className="flex items-center justify-between py-2 text-sm">
+                    {FIELD_LABEL[g]}
+                    {canEdit && <Button size="sm" variant="secondary" onClick={() => addGap(g)}>Add it yourself</Button>}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+        </>
+      )}
+
+      {analysis && <Stakeholders rows={stakeholders} analysisId={id} userId={analysis.user_id} canEdit={canEdit} onChange={refresh} onQuote={setQuote} />}
+
+      {quote !== null && <QuoteView text={doc?.text ?? ""} quote={quote} onClose={() => setQuote(null)} />}
+    </main>
+  );
+}
+
+function QuoteView({ text, quote, onClose }: { text: string; quote: string; onClose: () => void }) {
+  const range = useMemo(() => findQuoteRange(text, quote), [text, quote]);
+  return (
+    <div className="fixed inset-0 z-50 flex bg-foreground/20" onClick={onClose}>
+      <div className="ml-auto grid h-full w-full max-w-5xl grid-cols-1 bg-card md:grid-cols-[1fr_1.4fr]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Quote in document">
+        <div className="border-b border-border p-6 md:border-r md:border-b-0">
+          <div className="flex items-center justify-between"><h2 className="font-semibold">Quote</h2><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close"><X /></Button></div>
+          <blockquote className="mt-4 rounded-lg border border-border bg-background p-4 font-mono text-sm">“{quote}”</blockquote>
+          {!range && <p className="mt-3 text-sm text-risk">This quote was not found word for word in the document</p>}
+        </div>
+        <div className="overflow-y-auto p-6 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+          {range ? (<>
+            {text.slice(0, range[0])}
+            <mark ref={(el) => el?.scrollIntoView({ block: "center" })} className="rounded bg-primary/20 text-foreground">{text.slice(range[0], range[1])}</mark>
+            {text.slice(range[1])}
+          </>) : text}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type SRow = { id: string; name: string | null; title: string | null; department: string | null; project_role: string | null; user_provided: boolean | null; quote: string | null; quote_verified: boolean | null };
+function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote }: { rows: SRow[]; analysisId: string; userId: string; canEdit: boolean; onChange: () => void; onQuote: (q: string) => void }) {
+  const [edit, setEdit] = useState<Partial<SRow> | null>(null);
+  async function save() {
+    if (!edit) return;
+    const v = { name: edit.name || null, title: edit.title || null, department: edit.department || null, project_role: edit.project_role || null };
+    const { error } = edit.id
+      ? await supabase.from("stakeholders").update(v).eq("id", edit.id)
+      : await supabase.from("stakeholders").insert({ ...v, analysis_id: analysisId, user_id: userId, user_provided: true, label: "user", confidence: "high" });
+    if (error) return toast.error(error.message);
+    setEdit(null); onChange();
+  }
+  async function del(id: string) {
+    if (!confirm("Delete this stakeholder?")) return;
+    const { error } = await supabase.from("stakeholders").delete().eq("id", id);
+    if (error) toast.error(error.message); else onChange();
+  }
+  const F = ["name", "title", "department", "project_role"] as const;
+  return (
+    <Card className="mt-6 overflow-x-auto">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">Stakeholders</h2>
+        {canEdit && <Button size="sm" variant="secondary" onClick={() => setEdit({})}><Plus /> Add</Button>}
+      </div>
+      <table className="mt-3 w-full text-sm">
+        <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">Name</th><th>Title</th><th>Department</th><th>Project role</th><th>Source</th><th /></tr></thead>
+        <tbody className="divide-y divide-border">
+          {edit && !edit.id && <EditRow edit={edit} setEdit={setEdit} save={save} fields={F} />}
+          {rows.map((r) => edit?.id === r.id ? <EditRow key={r.id} edit={edit} setEdit={setEdit} save={save} fields={F} /> : (
+            <tr key={r.id}>
+              <td className="py-2">{r.name ?? "—"}</td><td>{r.title ?? "—"}</td><td>{r.department ?? "—"}</td><td>{r.project_role ?? "—"}</td>
+              <td>{r.user_provided ? <Pill tone="primary">Added by you</Pill> : r.quote ? <EvidenceChip kind={r.quote_verified ? "verified" : "unverified"} onClick={() => onQuote(r.quote!)} /> : <EvidenceChip kind="inference" />}</td>
+              <td className="whitespace-nowrap text-right">{canEdit && <>
+                <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setEdit(r)}><Pencil /></Button>
+                <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del(r.id)}><Trash2 /></Button>
+              </>}</td>
+            </tr>
+          ))}
+          {!rows.length && !edit && <tr><td colSpan={6} className="py-4 text-muted-foreground">No stakeholders yet.</td></tr>}
+        </tbody>
+      </table>
+    </Card>
+  );
+}
+
+function EditRow({ edit, setEdit, save, fields }: { edit: Partial<SRow>; setEdit: (e: Partial<SRow> | null) => void; save: () => void; fields: readonly ("name" | "title" | "department" | "project_role")[] }) {
+  return (
+    <tr>
+      {fields.map((k) => <td key={k} className="py-2 pr-2"><Input aria-label={k} value={edit[k] ?? ""} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} /></td>)}
+      <td colSpan={2} className="whitespace-nowrap text-right"><Button size="sm" onClick={save}>Save</Button> <Button size="sm" variant="ghost" onClick={() => setEdit(null)}>Cancel</Button></td>
+    </tr>
+  );
+}
