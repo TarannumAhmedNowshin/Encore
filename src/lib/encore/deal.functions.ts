@@ -19,8 +19,7 @@ export const extractDeal = createServerFn({ method: "POST" })
     const { checkQuota } = await import("./usage.server");
     const { startRun, progress, finishRun, failRun } = await import("./runs.server");
     const { generateJson } = await import("./gemini.server");
-    const { quoteVerified } = await import("./text");
-    const { FIELD_GROUPS, stakeholderKey, isPlaceholderName } = await import("./deal");
+        const { FIELD_GROUPS, stakeholderKey, isPlaceholderName, checkDocQuote } = await import("./deal");
     const { HttpError } = await import("./http.server");
 
     const userId = context.userId;
@@ -90,6 +89,7 @@ export const extractDeal = createServerFn({ method: "POST" })
         `Existing solution: ${analysis.existing_solution ?? "(not given)"}`,
         `Stakeholders: ${(userSh ?? []).map((s) => [s.name, s.title, s.project_role].filter(Boolean).join(", ")).join("; ") || "(none)"}`,
       ];
+      let usedFallback = false;
       const ask = (tier: "smart" | "fast") => generateJson({
         tier, userId, system: SYSTEM, maxOutputTokens: 16000,
         user: `USER-PROVIDED CONTEXT:\n${ctxLines.join("\n")}\n\nDOCUMENT TEXT:\n${text.slice(0, 300000)}`,
@@ -97,7 +97,10 @@ export const extractDeal = createServerFn({ method: "POST" })
       });
       // If the smart model is overloaded, fall back to the fast model rather than failing.
       const out = await ask("smart").catch((e) => {
-        if (e instanceof HttpError && e.status === 503) return ask("fast");
+        if (e instanceof HttpError && e.status === 503) {
+          usedFallback = true;
+          return ask("fast");
+        }
         throw e;
       });
       await progress(runId, 2, "Checking every quote");
@@ -113,7 +116,7 @@ export const extractDeal = createServerFn({ method: "POST" })
         const present = vals.filter((v) => v && v.label !== "missing" && v.value);
         if (!present.length) { gaps.push(k); continue; }
         for (const v of present) {
-          const verified = v.quote ? quoteVerified(v.quote, text, 3) : null;
+          const verified = v.quote ? checkDocQuote(v.quote, text) === "found" : null;
           const { data: f, error } = await db.from("facts").insert({
             analysis_id: analysis.id, user_id: userId, subject: subjectOf(k), attribute: k, value: v.value,
             label: v.label, confidence: verified === false ? "low" : v.confidence, origin: "document", agent: "extract-deal",
@@ -126,7 +129,7 @@ export const extractDeal = createServerFn({ method: "POST" })
       const existing = new Map((userSh ?? []).map((s) => [stakeholderKey(s.name, s.title), s]));
       for (const s of (out.stakeholders ?? []) as any[]) {
         if (!s.name && !s.title) continue;
-        const verified = s.quote ? quoteVerified(s.quote, text, 3) : null;
+        const verified = s.quote ? checkDocQuote(s.quote, text) === "found" : null;
         const match = existing.get(stakeholderKey(s.name, s.title));
         if (match) {
           const patch: { title?: string; project_role?: string; department?: string } = {};
@@ -149,6 +152,7 @@ export const extractDeal = createServerFn({ method: "POST" })
         status: "needs_review", ...(!analysis.customer_name && company ? { customer_name: company } : {}),
       }).eq("id", analysis.id);
       await progress(runId, 3, gaps.length ? `Gaps: ${gaps.join(", ")}` : "No gaps");
+      if (usedFallback) await db.from("runs").update({ used_fallback_model: true }).eq("id", runId);
       await finishRun(runId);
       return { gaps };
     } catch (e) {

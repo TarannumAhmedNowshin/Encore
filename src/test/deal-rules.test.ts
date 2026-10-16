@@ -35,3 +35,18 @@ describe("quote highlight", () => {
     expect(findQuoteRange("abc", "xyz")).toBeNull();
   });
 });
+
+describe("document quote rule", () => {
+  it("2-word quote verifies", async () => {
+    const { checkDocQuote } = await import("@/lib/encore/deal");
+    expect(checkDocQuote("Route Planning", "Statement of Work: Route Planning Assistant")).toBe("found");
+  });
+  it("1-word quote is too short", async () => {
+    const { checkDocQuote } = await import("@/lib/encore/deal");
+    expect(checkDocQuote("Spreadsheets", "spreadsheets everywhere")).toBe("too_short");
+  });
+  it("absent quote not found", async () => {
+    const { checkDocQuote } = await import("@/lib/encore/deal");
+    expect(checkDocQuote("blue whales", "route planning")).toBe("not_found");
+  });
+});

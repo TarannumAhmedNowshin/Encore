@@ -1,4 +1,5 @@
 // Pure Deal-stage and journey-rail rules. No I/O, safe to unit test.
+import { canon, quoteVerified } from "./text";
 import type { StageStatus } from "@/components/encore/primitives";
 
 export type StageCounts = {
@@ -74,4 +75,13 @@ export function findQuoteRange(text: string, quote: string): [number, number] | 
   const at = norm.indexOf(q);
   if (at < 0) return null;
   return [idx[at]!, idx[at + q.length - 1]! + 1];
+}
+
+/** Document quotes verify at 2+ words; web quotes will use 5+. */
+export const DOC_QUOTE_MIN_WORDS = 2;
+export type QuoteCheck = "found" | "not_found" | "too_short";
+export function checkDocQuote(quote: string | null | undefined, text: string): QuoteCheck {
+  const words = canon(quote ?? "").split(" ").filter(Boolean).length;
+  if (words < DOC_QUOTE_MIN_WORDS) return "too_short";
+  return quoteVerified(quote ?? "", text, DOC_QUOTE_MIN_WORDS) ? "found" : "not_found";
 }
