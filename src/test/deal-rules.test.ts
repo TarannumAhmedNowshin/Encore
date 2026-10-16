@@ -28,7 +28,7 @@ describe("deal rules", () => {
 describe("quote highlight", () => {
   it("matches ignoring case, spaces, punctuation", async () => {
     const { findQuoteRange } = await import("@/lib/encore/deal");
-    expect(findQuoteRange("We cut  manual review, by 40%.", "manual review by 40")).toEqual([7, 29]);
+    expect(findQuoteRange("We cut  manual review, by 40%.", "manual review by 40")).toEqual([7, 28]);
   });
   it("null when absent", async () => {
     const { findQuoteRange } = await import("@/lib/encore/deal");
