@@ -377,7 +377,7 @@ function OutreachPage() {
                   const about = f?.subject === "target_evidence" ? `about ${current?.t.name ?? "the company"}` : "from our engagement";
                   return (
                     <li key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
-                      className={cn("rounded-md border p-2 text-xs", hover === i ? "border-primary bg-primary/5" : "border-border")}>
+                      className={cn("min-w-0 break-words rounded-md border p-2 text-xs", hover === i ? "border-primary bg-primary/5" : "border-border")}>
                       <p className="font-medium">"{c.claim}"</p>
                       {f ? <p className="mt-1 text-muted-foreground">{f.value}</p> : <p className="mt-1 text-risk">{(c as { ungrounded?: boolean }).ungrounded ? "Factual sentence with no backing fact" : "Not tied to a fact"}</p>}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
