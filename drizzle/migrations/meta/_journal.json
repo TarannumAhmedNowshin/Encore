@@ -15,6 +15,13 @@
       "when": 1792148699125,
       "tag": "0001_encore_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792156690431,
+      "tag": "0002_documents_allow_duplicate_hash",
+      "breakpoints": true
     }
   ]
 }
