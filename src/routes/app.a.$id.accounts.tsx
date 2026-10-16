@@ -120,7 +120,7 @@ function AccountsPage() {
               {bulk?.running ? `Finding departments ${bulk.done} of ${bulk.total}…` : "Find departments for all qualified"}
             </Button>
           )}
-          {!readOnly && has && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button>}
+          {!readOnly && has && <Button className="hidden sm:inline-flex" onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Run discovery again"}</Button>}
         </div>
       </div>
 

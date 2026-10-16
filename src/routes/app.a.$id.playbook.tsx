@@ -130,7 +130,7 @@ function PlaybookPage() {
           <h1 className="mt-1 text-2xl font-semibold">Why they bought, and who to look for next</h1>
           <p className="mt-1 text-sm text-muted-foreground">Everything here is AI inference built from your deal facts.</p>
         </div>
-        {!readOnly && <Button onClick={buildAll} disabled={busy}>{busy ? "Building…" : dna ? "Rebuild playbook" : "Build playbook"}</Button>}
+        {!readOnly && <Button className="hidden sm:inline-flex" onClick={buildAll} disabled={busy}>{busy ? "Building…" : dna ? "Rebuild playbook" : "Build playbook"}</Button>}
       </div>
       {fallbackUsed && <p className="mt-3 text-xs text-muted-foreground">Some sections were written with the fast model because the main model was busy.</p>}
       {showTimeline && <Card className="mt-6"><RunTimeline steps={steps} /></Card>}
