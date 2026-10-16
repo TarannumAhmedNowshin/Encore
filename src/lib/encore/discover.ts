@@ -1,5 +1,5 @@
 // Pure look-alike discovery rules. No I/O, safe to unit test.
-import { normalizeCompany } from "./text";
+import { companyAliases, mentionsCompany, normalizeCompany, quoteVerified } from "./text";
 
 export const REGION_PHRASE: Record<string, string> = { us: "United States", uk_ie: "UK Ireland", eu: "Europe", global: "" };
 
@@ -82,7 +82,6 @@ export function selectCandidates(leads: Lead[], customer: string, region: string
 }
 
 // ---------- qualify-company rules ----------
-import { companyAliases, mentionsCompany, quoteVerified } from "./text";
 
 export const DIM_KEYS = ["industry", "business_model", "regulatory", "operational", "organizational", "technology"] as const;
 const SOURCED = new Set(["regulatory", "operational", "organizational", "technology"]);

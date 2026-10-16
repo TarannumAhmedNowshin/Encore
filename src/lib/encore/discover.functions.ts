@@ -120,6 +120,13 @@ export const discoverLeads = createServerFn({ method: "POST" })
       const candidates = selectCandidates(out.leads, customer, analysis.target_region);
 
       await db.from("facts").delete().eq("analysis_id", aid).eq("subject", "target_evidence");
+      const { data: oldContacts } = await db.from("contacts").select("id").eq("analysis_id", aid);
+      const oldIds = (oldContacts ?? []).map((c) => c.id);
+      await db.from("outreach_drafts").delete().eq("analysis_id", aid);
+      if (oldIds.length) await db.from("contact_scores").delete().in("contact_id", oldIds);
+      await db.from("contacts").delete().eq("analysis_id", aid);
+      await db.from("departments").delete().eq("analysis_id", aid);
+      await db.from("materials").delete().eq("analysis_id", aid).not("target_id", "is", null);
       await db.from("targets").delete().eq("analysis_id", aid);
       if (candidates.length) {
         const { error } = await db.from("targets").insert(candidates.map((c) => ({
@@ -134,4 +141,133 @@ export const discoverLeads = createServerFn({ method: "POST" })
       if (runId) await failRun(runId, e);
       throw e;
     }
+  });
+
+const QUALIFY_SYSTEM = `You judge ONE candidate company against the Sales DNA of a successful engagement, using only the materials given (each tagged with its exact URL).
+0. Buyer, not provider. The company must be the same kind of organisation as the original customer, in the same role in the value chain, so it would itself buy the solution. If it sells software, services, equipment or consulting to companies like the customer, set qualified false with a rejection_reason such as 'Sells compliance software to credit unions; a supplier, not a buyer.' Marketing copy for something a company sells is never evidence that it has the problem.
+1. Rate six dimensions high, medium or low, each with a one-sentence reason and a source_url copied exactly from the materials when one supports it.
+- industry (vs industry characteristics): high = same industry and sub-industry; medium = same broad industry, different segment, or adjacent industry with the same core workflow; low = different or can't tell.
+- business_model: high = same revenue and operating model at comparable scale; medium = partly overlapping or scale differs 10x or more; low = different or can't tell.
+- regulatory: high = same specific regulations or regulators; medium = same kind of regulation elsewhere or only part applies; low = different or can't tell.
+- operational: high = runs the same core process the engagement improved, at volume; medium = similar process, smaller or partial; low = no sign or can't tell.
+- organizational: high = the owning department is publicly visible (careers page, org announcement, named leader); medium = very likely exists but not shown; low = no sign or can't tell.
+- technology: high = public signs of the same transformation in this area (automation, AI, modernisation of this process); medium = general digital initiatives; low = no sign or can't tell.
+high for regulatory, operational, organizational or technology REQUIRES a source_url. For industry and business_model a widely known fact may be used without a source; say so in the reason. When you can't tell, rate low; never guess high.
+2. Evidence of the same problem: up to 3 items, strongest first, from different pages where possible. quote = 1-3 sentences copied verbatim and contiguously from one material: no paraphrase, no joining passages, no added ellipses. The page must be about this company (it names the company or is its own site). strength = direct (the company describes this problem or is investing to fix it: initiative, RFP, vendor selection, job posting for this exact work) or adjacent (closely related problem in the same process area, or a strong need signal such as heavy hiring for the manual work).
+3. qualified true only for a buyer with at least one evidence item; otherwise false with a concrete rejection_reason. Set headquarters_country and website from the materials or leave them empty.`;
+
+export const qualifyCompany = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { target_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { z } = await import("zod");
+    const { loadOwnedAnalysis, adminClient } = await import("./auth.server");
+    const { checkQuota } = await import("./usage.server");
+    const { generateJsonWithFallback } = await import("./gemini.server");
+    const { gatherMaterials } = await import("./serper.server");
+    const { recomputeTarget } = await import("./scoring.server");
+    const { HttpError } = await import("./http.server");
+    const { excerpt, companyAliases, mentionsCompany, domainOf } = await import("./text");
+    const { qualifyQueries, checkQualification, countryInRegion, DIM_KEYS } = await import("./discover");
+
+    const userId = context.userId;
+    const db = await adminClient();
+    const { data: t } = await db.from("targets").select("*").eq("id", data.target_id).maybeSingle();
+    if (!t) throw new HttpError(404, "Company not found");
+    const analysis = await loadOwnedAnalysis(t.analysis_id, userId);
+    await checkQuota(userId, "ai_call");
+    await db.from("targets").update({ status: "researching", error: null }).eq("id", t.id);
+    try {
+      const { data: dna } = await db.from("sales_dna").select("*").eq("analysis_id", analysis.id).maybeSingle();
+      if (!dna) throw new HttpError(400, "Build the playbook first");
+      const plan = (dna.search_plan ?? {}) as { problem_terms?: string[]; department_terms?: string; focus_keywords?: string[] };
+      const name = t.name ?? "";
+      const aliases = companyAliases(name);
+      const domain = t.website ? domainOf(t.website) : "";
+      const queries = qualifyQueries(name, plan, t.website, domain);
+      const own = await gatherMaterials(queries, { pagesPerQuery: 2, maxChars: 20000, userId });
+
+      await db.from("materials").delete().eq("target_id", t.id);
+      if (own.length) await db.from("materials").insert(own.map((m) => ({ ...m, analysis_id: analysis.id, user_id: userId, target_id: t.id })));
+      const { data: disc } = await db.from("materials").select("url, title, text").eq("analysis_id", analysis.id).is("target_id", null);
+      const srcUrls = new Set(t.source_urls ?? []);
+      const seen = new Set(own.map((m) => m.url));
+      const extra = (disc ?? []).filter((m) => m.url && !seen.has(m.url) &&
+        (srcUrls.has(m.url) || mentionsCompany({ url: m.url, title: m.title ?? "", text: m.text ?? "" }, aliases, domain || undefined))).slice(0, 5);
+      const materials = [...own.map((m) => ({ url: m.url, title: m.title, text: m.text })), ...extra.map((m) => ({ url: m.url!, title: m.title ?? "", text: m.text ?? "" }))];
+
+      const kw = [...(plan.focus_keywords ?? []), ...aliases];
+      const user = [
+        `Original customer: ${analysis.customer_name ?? ""}`,
+        ...DNA_KEYS.map((k) => `${k}: ${dna[k] ?? ""}`),
+        "",
+        `Company to judge: ${name}`, `Website: ${t.website || "unknown"}`, `Why considered: ${t.why_considered ?? ""}`,
+        "",
+        materials.map((m) => `[URL: ${m.url}]\n[Title: ${m.title ?? ""}]\n${excerpt(m.text ?? "", kw, 2500)}`).join("\n---\n"),
+      ].join("\n");
+
+      const dimS = { type: "OBJECT" as const, properties: { rating: { type: "STRING" as const, enum: ["high", "medium", "low"] }, reason: { type: "STRING" as const }, source_url: { type: "STRING" as const, nullable: true } }, required: ["rating", "reason", "source_url"] };
+      const dimZ = z.object({ rating: z.enum(["high", "medium", "low"]), reason: z.string(), source_url: z.string().nullable() });
+      const zod = z.object({
+        headquarters_country: z.string(), website: z.string().nullable(),
+        industry: dimZ, business_model: dimZ, regulatory: dimZ, operational: dimZ, organizational: dimZ, technology: dimZ,
+        evidence: z.array(z.object({ summary: z.string(), quote: z.string(), source_url: z.string(), strength: z.enum(["direct", "adjacent"]) })),
+        qualified: z.boolean(), rejection_reason: z.string(),
+      }).refine((o) => o.qualified || o.rejection_reason.trim().length > 0, { message: "rejection_reason is required when qualified is false", path: ["rejection_reason"] });
+      const { value: out, usedFallback } = await generateJsonWithFallback({
+        tier: "smart", userId, system: QUALIFY_SYSTEM, user,
+        responseSchema: { type: "OBJECT", properties: {
+          headquarters_country: { type: "STRING" }, website: { type: "STRING", nullable: true },
+          industry: dimS, business_model: dimS, regulatory: dimS, operational: dimS, organizational: dimS, technology: dimS,
+          evidence: { type: "ARRAY", items: { type: "OBJECT", properties: { summary: { type: "STRING" }, quote: { type: "STRING" }, source_url: { type: "STRING" }, strength: { type: "STRING", enum: ["direct", "adjacent"] } }, required: ["summary", "quote", "source_url", "strength"] } },
+          qualified: { type: "BOOLEAN" }, rejection_reason: { type: "STRING" },
+        }, required: ["headquarters_country", "website", "industry", "business_model", "regulatory", "operational", "organizational", "technology", "evidence", "qualified", "rejection_reason"] },
+        zodSchema: zod,
+      });
+
+      const checked = checkQualification({
+        name, domain: domain || (out.website ? domainOf(out.website) : ""), materials,
+        dimensions: Object.fromEntries(DIM_KEYS.map((k) => [k, out[k]])), evidence: out.evidence,
+        qualified: out.qualified, rejection_reason: out.rejection_reason,
+      });
+      const country = out.headquarters_country?.trim() || t.hq_country;
+      await db.from("targets").update({
+        status: checked.status, rejection_reason: checked.rejection_reason, dimensions: checked.dimensions, evidence: checked.evidence,
+        hq_country: country || null, website: t.website || out.website || null,
+        in_target_region: analysis.target_region === "global" ? null : countryInRegion(country, analysis.target_region), error: null,
+      }).eq("id", t.id);
+
+      await db.from("facts").delete().eq("target_id", t.id).eq("subject", "target_evidence");
+      if (checked.status === "qualified") {
+        for (const e of checked.evidence) {
+          const { data: f } = await db.from("facts").insert({
+            analysis_id: analysis.id, user_id: userId, target_id: t.id, subject: "target_evidence", attribute: e.strength,
+            value: e.summary, origin: "external", agent: "qualify-company", label: "inference", confidence: e.verified ? "medium" : "low", status: "active",
+          }).select("id").single();
+          if (f) await db.from("citations").insert({ fact_id: f.id, user_id: userId, quote: e.quote, source_url: e.source_url, source_title: e.source_title, verified: e.verified });
+        }
+      }
+      await recomputeTarget(t.id);
+      return { status: checked.status, usedFallback };
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).slice(0, 300);
+      await db.from("targets").update({ status: "failed", error: msg }).eq("id", t.id);
+      throw e;
+    }
+  });
+
+/** Close the discovery run once every company has been researched (or mark it failed). */
+export const endDiscovery = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { analysis_id: string; failed?: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { loadOwnedAnalysis, adminClient } = await import("./auth.server");
+    const { finishRun, failRun } = await import("./runs.server");
+    const analysis = await loadOwnedAnalysis(data.analysis_id, context.userId);
+    const db = await adminClient();
+    const { data: run } = await db.from("runs").select("id").eq("analysis_id", analysis.id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (!run) return { ok: false };
+    if (data.failed) await failRun(run.id, new Error(data.failed));
+    else await finishRun(run.id);
+    return { ok: true };
   });
