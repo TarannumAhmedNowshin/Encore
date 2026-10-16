@@ -38,7 +38,7 @@ const outreachQuery = (id: string) => queryOptions({
   queryKey: ["outreach", id],
   queryFn: async () => {
     const [a, contacts, targets, drafts, scores] = await Promise.all([
-      supabase.from("analyses").select("is_showcase").eq("id", id).maybeSingle(),
+      supabase.from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
       supabase.from("contacts").select("id, target_id, name, title, linkedin_url").eq("analysis_id", id),
       supabase.from("targets").select("id, name, opportunity_score").eq("analysis_id", id).eq("status", "qualified"),
       supabase.from("outreach_drafts").select("*").eq("analysis_id", id),

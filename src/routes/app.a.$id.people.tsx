@@ -40,7 +40,7 @@ const peopleQuery = (id: string) => queryOptions({
   queryKey: ["people", id],
   queryFn: async () => {
     const [a, targets, contacts, scores, personas] = await Promise.all([
-      supabase.from("analyses").select("is_showcase").eq("id", id).maybeSingle(),
+      supabase.from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
       supabase.from("targets").select("*").eq("analysis_id", id).eq("status", "qualified"),
       supabase.from("contacts").select("*").eq("analysis_id", id),
       supabase.from("contact_scores").select("*"),
