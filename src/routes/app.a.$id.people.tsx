@@ -146,6 +146,16 @@ function PeoplePage() {
     await refresh();
   };
 
+  if (d?.readOnly) {
+    return (
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Users className="size-4" aria-hidden /> People</div>
+        <h1 className="mt-1 text-2xl font-semibold">The buying committee at each account</h1>
+        <EmptyState title="People data is private to the analysis owner" line="Run your own analysis with the sample deal to see this stage." />
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">
       <div className="flex flex-wrap items-start justify-between gap-4">
