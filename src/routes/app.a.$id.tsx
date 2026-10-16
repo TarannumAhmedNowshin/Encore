@@ -55,8 +55,8 @@ function AnalysisLayout() {
                   title={meta.reason}
                   aria-current={active ? "step" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary",
-                    active && "bg-primary/10 text-primary hover:bg-primary/10",
+                    "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary",
+                    active && "rail-glow bg-primary/10 text-primary hover:bg-primary/10",
                   )}
                 >
                   <span className="hidden font-mono text-xs text-muted-foreground md:inline">0{i + 1}</span>
