@@ -9,9 +9,23 @@ export const LIMIT_LABELS: Record<LimitedKind, string> = {
   ai_call: "AI calls",
 };
 
+/** Global daily safety caps across all users (rolling 24 hours). */
+export const GLOBAL_DAILY_LIMITS: Record<LimitedKind, number> = {
+  discovery: 15,
+  people_search: 40,
+  ai_call: 600,
+};
+
+/** Friendly message shown when a global cap is hit. */
+export const CAPACITY_MESSAGE =
+  "Today's live demo capacity is used up — explore the finished example analysis instead, or try again tomorrow.";
+
+/** The app owner's account: exempt from global caps, sees capacity on Settings. */
+export const OWNER_USER_ID = "5cfb1fae-faad-4044-8765-9383bde38407";
+
 /** Temporary higher limits for the app builder's own account while building. */
 const BUILDER_OVERRIDES: Record<string, Partial<Record<LimitedKind, number>>> = {
-  "5cfb1fae-faad-4044-8765-9383bde38407": { discovery: 10 },
+  [OWNER_USER_ID]: { discovery: 10 },
 };
 
 export function dailyLimitFor(kind: UsageKind, userId: string): number | undefined {
