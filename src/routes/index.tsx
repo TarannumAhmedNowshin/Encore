@@ -19,7 +19,7 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="min-h-screen">
-      <div className="hero-ruled"><SiteHeader transparent /></div>
+      <SiteHeader transparent />
       <main><LandingStory /></main>
       <SiteFooter />
     </div>
