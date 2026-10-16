@@ -46,6 +46,8 @@ export function EchoHero() {
   // Before data arrives (or if it fails) the document card shows the sample's own SOW sentence.
   const sentence = data?.sentence ?? SOW_QUOTES[0]!.text;
   const [a, b] = data?.highlight ?? keyPhrase(sentence);
+  const [on, setOn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setOn(true), 500); return () => clearTimeout(t); }, []);
   const count = useCountTo(data?.qualified ?? 0, !reduced && !!data);
 
   return (
@@ -56,7 +58,7 @@ export function EchoHero() {
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-verified" />
             {data ? `One signed deal · ${numberWord(data.qualified)} look-alikes · every claim sourced` : "One signed deal · look-alikes · every claim sourced"}
           </p>
-          <h1 className="mt-5 font-display text-[44px] font-semibold leading-[.95] tracking-[-0.045em] md:text-[clamp(44px,7vw,104px)]">
+          <h1 className="mt-5 font-display text-[44px] font-semibold leading-[.95] tracking-[-0.045em] md:text-[clamp(44px,6.4vw,92px)]">
             Your last{" "}
             <span className="relative inline-block text-[#3D3BF3]">
               <span aria-hidden className="absolute inset-0 -translate-x-[.32em] opacity-[.12]">win</span>
@@ -91,11 +93,7 @@ export function EchoHero() {
             </div>
             <p className="mt-3 font-serif-doc text-[18px] leading-snug md:text-[21px]">
               {sentence.slice(0, a)}
-              <span className="relative">
-                <motion.span aria-hidden className="absolute inset-x-0 top-[18%] h-[70%] origin-left rounded-sm bg-[rgba(61,59,243,.24)]"
-                  initial={{ scaleX: reduced ? 1 : 0 }} animate={{ scaleX: 1 }} transition={{ duration: reduced ? 0 : 1.1, delay: reduced ? 0 : 0.5, ease: "easeInOut" }} />
-                <span className="relative">{sentence.slice(a, b)}</span>
-              </span>
+              <span className={`hero-mark ${reduced ? "is-on is-instant" : on ? "is-on" : ""}`}>{sentence.slice(a, b)}</span>
               {sentence.slice(b)}
             </p>
           </div>

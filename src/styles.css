@@ -242,3 +242,12 @@
 .hero-doc { transform: rotate(-0.6deg); }
 @media (min-width: 768px) { .hero-doc { transform: rotate(-1.2deg); } }
 @utility font-serif-doc { font-family: "Newsreader", Georgia, serif; }
+
+.hero-mark {
+  background-image: linear-gradient(rgba(61, 59, 243, 0.24), rgba(61, 59, 243, 0.24));
+  background-repeat: no-repeat; background-position: 0 70%; background-size: 0% 70%;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+  transition: background-size 1.1s ease-in-out;
+}
+.hero-mark.is-on { background-size: 100% 70%; }
+.hero-mark.is-instant { transition: none; }

@@ -9,12 +9,12 @@ export type HeroData = {
 };
 
 /** Shorten a quote only by cutting whole words at the start/end, marked with "…"; words are never edited. */
-export function trimQuote(q: string, max = 150): string {
+export function trimQuote(q: string, max = 120): string {
   const t = q.replace(/\s+/g, " ").trim();
   if (t.length <= max) return t;
   // Prefer the first sentence when it fits.
   const first = t.match(/^.+?[.!?](?=\s|$)/)?.[0];
-  if (first && first.length <= max && first.length >= 40) return `${first}…`;
+  if (first && first.length <= max && first.length >= 40) return `${first.replace(/[.!?]$/, "")}…`;
   const cut = t.slice(0, max);
   return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:]$/, "")}…`;
 }
