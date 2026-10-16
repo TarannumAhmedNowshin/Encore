@@ -61,29 +61,29 @@
   --ink-foreground: oklch(0.97 0.005 95);
   --ink-muted: oklch(0.72 0.012 274);
   --ink-line: oklch(0.3 0.012 274);
-  --radius: 12px;
+  --radius: 14px;
   --background: oklch(0.973 0.005 95.1);
-  --foreground: oklch(0.203 0.014 285.1);
+  --foreground: oklch(0.165 0.008 274);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.203 0.014 285.1);
+  --card-foreground: oklch(0.165 0.008 274);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.203 0.014 285.1);
-  --primary: oklch(0.499 0.261 272.2);
-  --primary-foreground: oklch(0.99 0.005 95);
+  --popover-foreground: oklch(0.165 0.008 274);
+  --primary: oklch(0.165 0.008 274);
+  --primary-foreground: oklch(0.973 0.005 95.1);
   --secondary: oklch(0.948 0.007 95);
-  --secondary-foreground: oklch(0.203 0.014 285.1);
+  --secondary-foreground: oklch(0.165 0.008 274);
   --muted: oklch(0.948 0.007 95);
-  --muted-foreground: oklch(0.532 0.017 285.8);
-  --accent: oklch(0.948 0.007 95);
-  --accent-foreground: oklch(0.203 0.014 285.1);
-  --destructive: oklch(0.586 0.222 17.6);
+  --muted-foreground: oklch(0.508 0.013 281);
+  --accent: oklch(0.499 0.261 272.2);
+  --accent-foreground: oklch(0.99 0.005 95);
+  --destructive: oklch(0.521 0.172 38.5);
   --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.916 0.01 87.5);
   --input: oklch(0.916 0.01 87.5);
   --ring: oklch(0.499 0.261 272.2);
-  --verified: oklch(0.622 0.133 162.3);
-  --inference: oklch(0.666 0.157 58.3);
-  --risk: oklch(0.586 0.222 17.6);
+  --verified: oklch(0.542 0.113 158.9);
+  --inference: oklch(0.603 0.114 64.6);
+  --risk: oklch(0.521 0.172 38.5);
 }
 
 .dark {
@@ -93,19 +93,19 @@
   --card-foreground: oklch(0.958 0.007 97.4);
   --popover: oklch(0.209 0.01 268.2);
   --popover-foreground: oklch(0.958 0.007 97.4);
-  --primary: oklch(0.65 0.191 280);
+  --primary: oklch(0.958 0.007 97.4);
   --primary-foreground: oklch(0.169 0.008 274.4);
   --secondary: oklch(0.25 0.012 270);
   --secondary-foreground: oklch(0.958 0.007 97.4);
   --muted: oklch(0.25 0.012 270);
   --muted-foreground: oklch(0.69 0.017 285.9);
-  --accent: oklch(0.25 0.012 270);
-  --accent-foreground: oklch(0.958 0.007 97.4);
+  --accent: oklch(0.68 0.18 280);
+  --accent-foreground: oklch(0.169 0.008 274.4);
   --destructive: oklch(0.719 0.169 13.4);
   --destructive-foreground: oklch(0.169 0.008 274.4);
   --border: oklch(0.294 0.013 272.9);
   --input: oklch(0.294 0.013 272.9);
-  --ring: oklch(0.65 0.191 280);
+  --ring: oklch(0.68 0.18 280);
   --verified: oklch(0.773 0.153 163.2);
   --inference: oklch(0.837 0.164 84.4);
   --risk: oklch(0.719 0.169 13.4);
@@ -157,8 +157,8 @@
 }
 
 @keyframes encore-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 45%, transparent); }
-  50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-primary) 0%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 45%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-accent) 0%, transparent); }
 }
 
 @utility animate-run-pulse {
@@ -182,8 +182,8 @@
 
 /* Journey rail: progress line + current-stage glow */
 .rail-line { position: absolute; left: 15px; top: 8px; bottom: 8px; width: 2px; background: var(--color-border); border-radius: 2px; }
-.rail-fill { position: absolute; inset: 0; background: var(--color-primary); border-radius: 2px; transform-origin: top; transition: transform 500ms ease-out; }
-.rail-glow { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 18%, transparent); }
+.rail-fill { position: absolute; inset: 0; background: var(--color-accent); border-radius: 2px; transform-origin: top; transition: transform 500ms ease-out; }
+.rail-glow { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 18%, transparent); }
 
 /* Landing mini-orbit loop: bubbles fly in, quote card fades, then it loops */
 @keyframes mini-orbit-loop {
@@ -210,7 +210,7 @@
 
 /* Guided demo spotlight: dims the page around one element with a soft indigo glow. */
 .tour-spot {
-  box-shadow: 0 0 0 9999px color-mix(in oklab, var(--foreground) 45%, transparent), 0 0 0 2px var(--primary), 0 0 24px 4px color-mix(in oklab, var(--primary) 45%, transparent);
+  box-shadow: 0 0 0 9999px color-mix(in oklab, var(--foreground) 45%, transparent), 0 0 0 2px var(--accent), 0 0 24px 4px color-mix(in oklab, var(--accent) 45%, transparent);
   transition: top 220ms ease-out, left 220ms ease-out, width 220ms ease-out, height 220ms ease-out;
 }
 @keyframes tour-note-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -227,7 +227,7 @@
 /* One chip everywhere: 24px tall, 12px text, 8px radius, icon + label. */
 @utility chip {
   display: inline-flex; align-items: center; gap: 0.25rem; height: 1.5rem; padding-inline: 0.5rem;
-  border-radius: 0.5rem; border-width: 1px; font-size: 0.75rem; line-height: 1rem; font-weight: 500; white-space: nowrap; max-width: 100%; overflow: hidden; min-width: 0;
+  border-radius: 999px; border-width: 1px; font-size: 0.75rem; line-height: 1rem; font-weight: 500; white-space: nowrap; max-width: 100%; overflow: hidden; min-width: 0;
   & > svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
 }
 

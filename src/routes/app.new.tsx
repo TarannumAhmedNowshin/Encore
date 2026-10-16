@@ -160,7 +160,7 @@ function NewAnalysis() {
               onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
               onDragLeave={() => setDrag(false)}
               onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) void onFile(f); }}
-              className={`dot-grid flex w-full flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center transition-colors ${drag ? "border-primary bg-primary/5" : "border-border"}`}
+              className={`dot-grid flex w-full flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center transition-colors ${drag ? "border-accent bg-accent/5" : "border-border"}`}
             >
               <FileUp className="size-6 text-muted-foreground" aria-hidden />
               <span className="mt-2 text-sm font-medium">{loaded ? loaded.filename : "Drop a PDF or DOCX, or click to choose"}</span>

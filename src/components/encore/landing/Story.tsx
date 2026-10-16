@@ -9,7 +9,7 @@ import {
 import { ArrowRight, Check, FileText, Link2 } from "lucide-react";
 import { EchoHero } from "./EchoHero";
 import { Button } from "@/components/ui/button";
-import { EvidenceChip, Pill } from "@/components/encore/primitives";
+import { EvidenceChip, GapCard, Pill } from "@/components/encore/primitives";
 
 /* Every quote, name and number in the story comes from the public demo snapshot. */
 const StoryCtx = createContext<StoryData | null>(null);
@@ -37,16 +37,16 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
   const done = useMotionValue(1);
   const head = (
     <div className="mx-auto max-w-3xl text-center">
-      <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+      <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-accent">{eyebrow}</p>
       <h2 className="mt-4 text-[32px] font-semibold leading-[1.1] sm:text-5xl">{title}</h2>
     </div>
   );
   if (!cinematic) {
     return (
-      <section className="overflow-hidden px-gutter py-20">
+      <section className="overflow-hidden px-gutter py-12">
         <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.5, ease: "easeOut" }}>
           {head}
-          <div className="mx-auto mt-12 max-w-5xl">{children(done)}</div>
+          <div className="mx-auto mt-8 max-w-5xl">{children(done)}</div>
         </motion.div>
       </section>
     );
@@ -60,7 +60,7 @@ function Sticky({ vh, head, children }: { vh: number; head: ReactNode; children:
     <section ref={ref} style={{ height: `${vh}vh` }} className="relative">
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden px-gutter">
         {head}
-        <div className="mx-auto mt-12 w-full max-w-5xl">{children(p)}</div>
+        <div className="mx-auto mt-8 w-full max-w-5xl">{children(p)}</div>
       </div>
     </section>
   );
@@ -69,7 +69,7 @@ function Sticky({ vh, head, children }: { vh: number; head: ReactNode; children:
 /* ---------- 2 Document ---------- */
 function QuoteLine({ p, i, text }: { p: MotionValue<number>; i: number; text: string }) {
   const s = 0.12 + i * 0.25;
-  const bg = useTransform(p, [s, s + 0.08], ["color-mix(in oklab, var(--primary) 0%, transparent)", "color-mix(in oklab, var(--primary) 18%, transparent)"]);
+  const bg = useTransform(p, [s, s + 0.08], ["color-mix(in oklab, var(--accent) 0%, transparent)", "color-mix(in oklab, var(--accent) 18%, transparent)"]);
   return <motion.span style={{ backgroundColor: bg }} className="rounded px-0.5 text-foreground">{text}</motion.span>;
 }
 function FactCard({ p, i, q }: { p: MotionValue<number>; i: number; q: StoryQuote }) {
@@ -134,8 +134,8 @@ function DnaCard({ p }: { p: MotionValue<number> }) {
   const opacity = useTransform(p, [0.35, 0.5], [0, 1]);
   const scale = useTransform(p, [0.35, 0.5], [0.85, 1]);
   return (
-    <motion.div style={{ opacity, scale }} className="mx-auto w-full max-w-md rounded-xl border border-primary/30 bg-card p-6 shadow-sm">
-      <div className="flex items-center justify-between gap-2"><p className="font-mono text-[13px] text-primary">Sales DNA</p><EvidenceChip kind="inference" /></div>
+    <motion.div style={{ opacity, scale }} className="mx-auto w-full max-w-md rounded-xl border border-accent/30 bg-card p-6 shadow-sm">
+      <div className="flex items-center justify-between gap-2"><p className="font-mono text-[13px] text-accent">Sales DNA</p><EvidenceChip kind="inference" /></div>
       <dl className="mt-3 space-y-2 text-sm">
         {dna && <>
           <div><dt className="text-muted-foreground">Problem</dt><dd>{dna.problem}</dd></div>
@@ -160,18 +160,22 @@ function DnaScene({ p }: { p: MotionValue<number> }) {
 }
 
 /* ---------- 4 Orbit ---------- */
-function Bubble({ p, i, name, qualified, total }: { p: MotionValue<number>; i: number; name: string; qualified: boolean; total: number }) {
+function Bubble({ p, i, name, status, total }: { p: MotionValue<number>; i: number; name: string; status: string; total: number }) {
   const s = 0.15 + i * 0.055;
   const ring = [110, 150, 190][i % 3] ?? 110;
   const a = (i / Math.max(1, total)) * Math.PI * 2 - Math.PI / 2;
   const cx = 250 + ring * Math.cos(a), cy = 250 + ring * Math.sin(a);
-  const opacity = useTransform(p, [s, s + 0.05], [0, qualified ? 1 : 0.4]);
+  const qualified = status === "qualified";
+  const watch = status === "watch";
+  const opacity = useTransform(p, [s, s + 0.05], [0, qualified ? 1 : watch ? 0.75 : 0.4]);
   const tx = useTransform(p, [s, s + 0.06], [(cx - 250) * 1.8, 0]);
   const ty = useTransform(p, [s, s + 0.06], [(cy - 250) * 1.8, 0]);
+  const fill = qualified ? "fill-accent" : watch ? "fill-inference" : "fill-muted-foreground/40";
   return (
-    <motion.g style={{ opacity, x: tx, y: ty }}>
-      <circle cx={cx} cy={cy} r={qualified ? 20 : 15} className={qualified ? "fill-primary" : "fill-muted-foreground/40"} />
-      <text x={cx} y={cy + 4} textAnchor="middle" fontSize="11" className="fill-primary-foreground font-mono">{initials(name)}</text>
+    <motion.g style={{ opacity, x: tx, y: ty }} className="group">
+      <circle cx={cx} cy={cy} r={qualified ? 20 : 15} className={fill} />
+      <text x={cx} y={cy + 4} textAnchor="middle" fontSize="11" className={qualified || watch ? "fill-accent-foreground font-mono" : "fill-muted-foreground font-mono"}>{initials(name)}</text>
+      <text x={cx} y={cy - (qualified ? 28 : 22)} textAnchor="middle" fontSize="12" className="fill-foreground font-medium opacity-0 transition-opacity group-hover:opacity-100">{name}</text>
       <title>{name}</title>
     </motion.g>
   );
@@ -192,14 +196,14 @@ function OrbitScene({ p }: { p: MotionValue<number> }) {
       <svg viewBox="0 0 500 500" className="mx-auto w-full max-w-[460px]" role="img" aria-label={`Orbit of ${d?.found ?? 0} look-alike companies around the won deal`}>
         {[110, 150, 190].map((r) => <circle key={r} cx="250" cy="250" r={r} fill="none" className="stroke-border" strokeDasharray="3 6" />)}
         <motion.g style={{ scale: shrink, transformOrigin: "250px 250px" }}>
-          <rect x="205" y="225" width="90" height="50" rx="12" className="fill-card stroke-primary" />
-          <text x="250" y="255" textAnchor="middle" fontSize="13" className="fill-primary font-mono">DNA</text>
+          <rect x="205" y="225" width="90" height="50" rx="12" className="fill-card stroke-accent" />
+          <text x="250" y="255" textAnchor="middle" fontSize="13" className="fill-accent font-mono">DNA</text>
         </motion.g>
-        {companies.map((c, i) => <Bubble key={c.name} p={p} i={i} name={c.name} qualified={c.qualified} total={companies.length} />)}
+        {companies.map((c, i) => <Bubble key={c.name} p={p} i={i} name={c.name} status={c.status} total={companies.length} />)}
       </svg>
       <div className="flex justify-center gap-10 lg:flex-col lg:gap-6">
         <div><p className="text-5xl font-semibold"><Counter p={p} from={0.15} to={end} max={d?.found ?? 0} /></p><p className="text-sm text-muted-foreground">found</p></div>
-        <div><p className="text-5xl font-semibold text-primary"><Counter p={p} from={0.15} to={end - 0.055} max={d?.qualified ?? 0} /></p><p className="text-sm text-muted-foreground">qualified with verified evidence</p></div>
+        <div><p className="text-5xl font-semibold text-accent"><Counter p={p} from={0.15} to={end - 0.055} max={d?.qualified ?? 0} /></p><p className="text-sm text-muted-foreground">qualified with verified evidence</p></div>
       </div>
     </div>
   );
@@ -207,17 +211,19 @@ function OrbitScene({ p }: { p: MotionValue<number> }) {
 
 /* ---------- 5 Committee ---------- */
 function RoleCol({ p, i, role, who: w }: { p: MotionValue<number>; i: number; role: string; who: string | null }) {
-  const who = w ?? "Gap — no match found";
   const s = 0.4 + i * 0.1;
   const opacity = useTransform(p, [s, s + 0.08], [0, 1]);
   const y = useTransform(p, [s, s + 0.08], [16, 0]);
-  const gap = who.startsWith("Gap");
   return (
     <div className="min-w-0 rounded-lg border border-border bg-background p-3">
       <p className="text-xs font-medium text-muted-foreground">{role}</p>
-      <motion.div style={{ opacity, y }} className={`mt-3 rounded-md border p-2 text-xs ${gap ? "border-dashed border-border text-muted-foreground" : "border-primary/25 bg-primary/5"}`}>
-        {!gap && <span className="mb-1 block font-mono text-[10px] text-primary">{initials(who)}</span>}
-        {who}
+      <motion.div style={{ opacity, y }} className="mt-3">
+        {w == null ? <GapCard className="py-3" /> : (
+          <div className="rounded-md border border-accent/25 bg-accent/5 p-2 text-xs">
+            <span className="mb-1 block font-mono text-[10px] text-accent">{initials(w)}</span>
+            {w}
+          </div>
+        )}
       </motion.div>
     </div>
   );
@@ -230,7 +236,7 @@ function CommitteeScene({ p }: { p: MotionValue<number> }) {
   const boardScale = useTransform(p, [0.25, 0.38], [0.9, 1]);
   return (
     <div className="relative grid place-items-center">
-      <motion.div style={{ scale: bubbleScale, opacity: bubbleOpacity }} className="absolute hidden size-16 place-items-center rounded-full bg-primary font-mono text-primary-foreground lg:grid" aria-hidden>{c ? initials(c.company) : ""}</motion.div>
+      <motion.div style={{ scale: bubbleScale, opacity: bubbleOpacity }} className="absolute hidden size-16 place-items-center rounded-full bg-accent font-mono text-accent-foreground lg:grid" aria-hidden>{c ? initials(c.company) : ""}</motion.div>
       <motion.div style={{ opacity: boardOpacity, scale: boardScale }} className="w-full rounded-xl border border-border bg-card p-5 shadow-sm">
         <p className="mb-4 font-display font-semibold">{c?.company ?? "Top account"} · buying committee</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
@@ -263,7 +269,7 @@ function EmailScene({ p }: { p: MotionValue<number> }) {
   const chars = useTransform(p, [0.05, 0.75], [0, total]);
   const [n, setN] = useState(Math.round(chars.get()));
   useMotionValueEvent(chars, "change", (x) => setN(Math.round(x)));
-  const glow = useTransform(p, [0.78, 0.9], ["0 0 0 0 transparent", "0 0 0 8px color-mix(in oklab, var(--primary) 25%, transparent)"]);
+  const glow = useTransform(p, [0.78, 0.9], ["0 0 0 0 transparent", "0 0 0 8px color-mix(in oklab, var(--accent) 25%, transparent)"]);
   let left = n;
   const sources = new Set<string>();
   return (
@@ -277,7 +283,7 @@ function EmailScene({ p }: { p: MotionValue<number> }) {
           if (!shown) return null;
           if (s.src && complete) sources.add(s.src);
           return s.src ? (
-            <span key={i} className={complete ? "underline decoration-primary decoration-2 underline-offset-4" : ""}>{shown}</span>
+            <span key={i} className={complete ? "underline decoration-accent decoration-2 underline-offset-4" : ""}>{shown}</span>
           ) : <span key={i}>{shown}</span>;
         })}
         {n < total && <span className="ml-0.5 inline-block h-5 w-px translate-y-1 animate-pulse bg-foreground" aria-hidden />}
@@ -306,11 +312,11 @@ export function LandingStory() {
   return (
     <StoryCtx.Provider value={data}>
       <EchoHero />
-      <Scene cinematic={cinematic} vh={300} eyebrow="01 · Deal" title="It starts with one document.">{(p) => <DocScene p={p} />}</Scene>
-      <Scene cinematic={cinematic} vh={200} eyebrow="02 · Playbook" title="We learn why they bought.">{(p) => <DnaScene p={p} />}</Scene>
-      <Scene cinematic={cinematic} vh={250} eyebrow="03 · Accounts" title="Then we find who else has the same problem.">{(p) => <OrbitScene p={p} />}</Scene>
-      <Scene cinematic={cinematic} vh={200} eyebrow="04 · People" title="And who to talk to.">{(p) => <CommitteeScene p={p} />}</Scene>
-      <Scene cinematic={cinematic} vh={250} eyebrow="05 · Outreach" title="With words you can defend.">{(p) => <EmailScene p={p} />}</Scene>
+      <Scene cinematic={cinematic} vh={210} eyebrow="01 · Deal" title="It starts with one document.">{(p) => <DocScene p={p} />}</Scene>
+      <Scene cinematic={cinematic} vh={150} eyebrow="02 · Playbook" title="We learn why they bought.">{(p) => <DnaScene p={p} />}</Scene>
+      <Scene cinematic={cinematic} vh={180} eyebrow="03 · Accounts" title="Then we find who else has the same problem.">{(p) => <OrbitScene p={p} />}</Scene>
+      <Scene cinematic={cinematic} vh={150} eyebrow="04 · People" title="And who to talk to.">{(p) => <CommitteeScene p={p} />}</Scene>
+      <Scene cinematic={cinematic} vh={180} eyebrow="05 · Outreach" title="With words you can defend.">{(p) => <EmailScene p={p} />}</Scene>
 
       <section className="border-y border-border bg-card px-gutter py-24">
         <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-3">
@@ -320,7 +326,7 @@ export function LandingStory() {
             ["f(x)", "Scores are formulas you can read", "Fit and urgency come from counted signals, shown in full."],
           ].map(([n, h, d]) => (
             <motion.div key={h} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-              <p className="font-display text-6xl font-semibold text-primary lg:text-7xl">{n}</p>
+              <p className="font-display text-6xl font-semibold text-accent lg:text-7xl">{n}</p>
               <p className="mt-3 text-xl font-semibold">{h}</p>
               <p className="mt-2 text-muted-foreground">{d}</p>
             </motion.div>

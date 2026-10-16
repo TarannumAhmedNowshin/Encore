@@ -1,16 +1,16 @@
-import { useId, useRef, type ReactNode } from "react";
+import { useId, useRef, type ComponentType, type ReactNode } from "react";
 import { Check, Quote, Sparkles, AlertTriangle, X } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useCountUp, useMounted } from "@/lib/encore/use-count-up";
 
-/** Score band colors: ≥75 green, 50–74 indigo, <50 amber. */
+/** Score band colors: ≥80 green, 50–79 indigo, <50 amber. */
 export function scoreBand(v: number): "high" | "mid" | "low" {
-  return v >= 75 ? "high" : v >= 50 ? "mid" : "low";
+  return v >= 80 ? "high" : v >= 50 ? "mid" : "low";
 }
-const bandText = { high: "text-verified", mid: "text-primary", low: "text-inference" } as const;
-const bandBg = { high: "bg-verified", mid: "bg-primary", low: "bg-inference" } as const;
+const bandText = { high: "text-verified", mid: "text-accent", low: "text-inference" } as const;
+const bandBg = { high: "bg-verified", mid: "bg-accent", low: "bg-inference" } as const;
 
 const logoPx = { sm: 24, md: 30, lg: 44 } as const;
 export function Logo({ size = "md", showWordmark = true, className }: { size?: keyof typeof logoPx; showWordmark?: boolean; className?: string }) {
@@ -34,7 +34,7 @@ export function Card({ className, children }: { className?: string; children: Re
 type Tone = "neutral" | "primary" | "verified" | "inference" | "risk";
 const toneClass: Record<Tone, string> = {
   neutral: "bg-secondary text-muted-foreground border-border",
-  primary: "bg-primary/10 text-primary border-primary/20",
+  primary: "bg-accent/10 text-accent border-accent/20",
   verified: "bg-verified/10 text-verified border-verified/25",
   inference: "bg-inference/10 text-inference border-inference/30",
   risk: "bg-risk/10 text-risk border-risk/25",
@@ -112,7 +112,7 @@ export type StageStatus = "not_started" | "running" | "done" | "blocked";
 export function StatusDot({ status, className }: { status: StageStatus; className?: string }) {
   const cls = {
     not_started: "bg-border",
-    running: "bg-primary animate-run-pulse",
+    running: "bg-accent animate-run-pulse",
     done: "bg-verified",
     blocked: "bg-risk",
   }[status];
@@ -143,6 +143,31 @@ export function EmptyState({ title, line, action }: { title: string; line: strin
   );
 }
 
+/** Dashed, muted placeholder for a slot with no match — used on People boards and the landing committee. */
+export function GapCard({ label = "Gap — no match found", className, children }: { label?: string; className?: string; children?: ReactNode }) {
+  return (
+    <div className={cn("grid place-items-center rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground", className)}>
+      {children ?? label}
+    </div>
+  );
+}
+
+/** Consistent page header: mono kicker with icon, display title, muted description, right-aligned actions. */
+export function PageHeader({ icon: Icon, kicker, title, description, actions }: {
+  icon: ComponentType<{ className?: string }>; kicker: string; title: string; description?: string; actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground"><Icon className="size-4" aria-hidden /> {kicker}</div>
+        <h1 className="mt-1 font-display text-[26px] font-semibold leading-8 sm:text-[32px] sm:leading-10">{title}</h1>
+        {description && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+    </div>
+  );
+}
+
 export type RunStep = { label: string; state: "waiting" | "running" | "done" | "failed"; elapsed?: string; message?: string };
 export function RunTimeline({ steps }: { steps: RunStep[] }) {
   return (
@@ -154,14 +179,14 @@ export function RunTimeline({ steps }: { steps: RunStep[] }) {
             className={cn(
               "relative z-10 grid size-5 shrink-0 place-items-center rounded-full border",
               s.state === "waiting" && "border-border bg-card",
-              s.state === "running" && "border-primary bg-primary/15 animate-run-pulse",
-              s.state === "done" && "border-verified bg-verified text-primary-foreground",
-              s.state === "failed" && "border-risk bg-risk text-primary-foreground",
+              s.state === "running" && "border-accent bg-accent/15 animate-run-pulse",
+              s.state === "done" && "border-verified bg-verified text-accent-foreground",
+              s.state === "failed" && "border-risk bg-risk text-accent-foreground",
             )}
           >
             {s.state === "done" && <Check className="size-3" aria-hidden />}
             {s.state === "failed" && <X className="size-3" aria-hidden />}
-            {s.state === "running" && <span className="size-1.5 rounded-full bg-primary" />}
+            {s.state === "running" && <span className="size-1.5 rounded-full bg-accent" />}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">

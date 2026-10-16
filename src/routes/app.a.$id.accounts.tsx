@@ -179,7 +179,7 @@ function AccountsPage() {
               <div className="flex flex-wrap gap-2 border-b border-border p-3">
                 {FILTERS.map(([f, l]) => (
                   <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f}
-                    className={cn("chip", filter === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                    className={cn("chip", filter === f ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground")}>
                     {l} <span className="font-mono">{targets.filter((t) => matchesFilter(t, f)).length}</span>
                   </button>
                 ))}
@@ -274,7 +274,7 @@ function HqCell({ t }: { t: Target }) {
       {countryCode(t.hq_country)}
       {t.in_target_region && (
         <TooltipProvider delayDuration={150}><Tooltip><TooltipTrigger asChild>
-          <span tabIndex={0} aria-label="In target region" className="size-2 rounded-full bg-primary" />
+          <span tabIndex={0} aria-label="In target region" className="size-2 rounded-full bg-accent" />
         </TooltipTrigger><TooltipContent>In your target region</TooltipContent></Tooltip></TooltipProvider>
       )}
     </span>
@@ -334,7 +334,7 @@ function Quadrant({ targets, onOpen }: { targets: Target[]; onOpen: (id: string)
       </div>
       <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-verified" /> Qualified</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2 border-primary" /> In target region</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2 border-accent" /> In target region</span>
         <span>Bubble size = opportunity · names shown for the top 5</span>
       </div>
     </Card>
@@ -378,8 +378,8 @@ function Dossier({ t, readOnly }: { t: Target; readOnly: boolean }) {
     <div className="space-y-6 text-sm">
       <div className="space-y-1">
         {faviconUrl(t.website) && <img src={faviconUrl(t.website)!} alt="" className="mb-2 size-8 rounded-md border border-border" />}
-        {t.website && <a href={/^https?:/.test(t.website) ? t.website : `https://${t.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 font-mono text-xs text-primary hover:underline">{t.website} <ExternalLink className="size-3" /></a>}
-        {t.linkedin_url && <a href={t.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline"><Linkedin className="size-3" /> LinkedIn</a>}
+        {t.website && <a href={/^https?:/.test(t.website) ? t.website : `https://${t.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 font-mono text-xs text-accent hover:underline">{t.website} <ExternalLink className="size-3" /></a>}
+        {t.linkedin_url && <a href={t.linkedin_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-accent hover:underline"><Linkedin className="size-3" /> LinkedIn</a>}
         <div className="text-xs text-muted-foreground">HQ: {t.hq_country ?? "unknown"} {t.in_target_region && <Pill tone="primary" className="ml-1">In region</Pill>}</div>
       </div>
 
@@ -392,7 +392,7 @@ function Dossier({ t, readOnly }: { t: Target; readOnly: boolean }) {
           {parts.map((p) => (
             <div key={p.label}>
               <div className="mb-1 flex justify-between text-xs"><span>{p.label} <span className="text-muted-foreground">× {Math.round(p.w * 100)}%</span></span><span className="font-mono">{p.v} → {(p.v * p.w).toFixed(1)}</span></div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{ width: `${p.v}%` }} /></div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-accent" style={{ width: `${p.v}%` }} /></div>
             </div>
           ))}
           <div className="flex justify-between border-t border-border pt-2 text-xs font-medium"><span>Opportunity score</span><span className="font-mono">{t.opportunity_score ?? 0}</span></div>
@@ -409,7 +409,7 @@ function Dossier({ t, readOnly }: { t: Target; readOnly: boolean }) {
                 <div className="flex items-center gap-2"><span className="font-medium">{l}</span>{dm && <Pill tone={RATING_TONE[dm.rating] ?? "neutral"}>{dm.rating}</Pill>}
                   {dm?.capped && <span className="text-xs text-muted-foreground">capped: no source</span>}</div>
                 <p className="mt-0.5 text-xs text-muted-foreground">{dm?.reason ?? "Not assessed."}</p>
-                {dm?.source_url && <a href={dm.source_url} target="_blank" rel="noreferrer" className="block truncate font-mono text-xs text-primary hover:underline">{dm.source_url}</a>}
+                {dm?.source_url && <a href={dm.source_url} target="_blank" rel="noreferrer" className="block truncate font-mono text-xs text-accent hover:underline">{dm.source_url}</a>}
               </li>
             );
           })}
@@ -426,7 +426,7 @@ function Dossier({ t, readOnly }: { t: Target; readOnly: boolean }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <Pill tone={e.strength === "direct" ? "primary" : "neutral"}>{e.strength}</Pill>
                   <EvidenceChip kind={e.verified ? "verified" : "unverified"} />
-                  <a href={e.source_url} target="_blank" rel="noreferrer" className="truncate text-xs text-primary hover:underline">{e.source_title || e.source_url}</a>
+                  <a href={e.source_url} target="_blank" rel="noreferrer" className="truncate text-xs text-accent hover:underline">{e.source_title || e.source_url}</a>
                 </div>
               </li>
             ))}
@@ -454,7 +454,7 @@ function Dossier({ t, readOnly }: { t: Target; readOnly: boolean }) {
                 {x.quote && <blockquote className="mt-1.5 border-l-2 border-border pl-2 font-mono text-[11px] text-muted-foreground">"{x.quote}"</blockquote>}
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <EvidenceChip kind={x.verified ? "verified" : "unverified"} />
-                  {x.source_url && <a href={x.source_url} target="_blank" rel="noreferrer" className="truncate text-xs text-primary hover:underline">{x.source_url}</a>}
+                  {x.source_url && <a href={x.source_url} target="_blank" rel="noreferrer" className="truncate text-xs text-accent hover:underline">{x.source_url}</a>}
                 </div>
               </div>
             ))}

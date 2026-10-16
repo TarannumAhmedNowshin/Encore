@@ -127,7 +127,7 @@ export function OrbitLegend() {
           <span className="size-2.5 rounded-full" style={outline ? { border: `2px solid ${c}` } : { background: c }} />{l}
         </span>
       ))}
-      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2 border-primary" /> In target region</span>
+      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2 border-accent" /> In target region</span>
       <span>Closer = more similar · Size = opportunity · Line = evidence</span>
     </div>
   );

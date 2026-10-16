@@ -55,7 +55,7 @@ function SettingsPage() {
             <ul className="divide-y divide-border">
               {run.data.map((r) => (
                 <li key={r.id} className="flex items-start gap-3 py-3">
-                  {r.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" /> : <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />}
+                  {r.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" /> : <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />}
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{r.label}</p>
                     <p className={`break-words font-mono text-xs ${r.ok ? "text-muted-foreground" : "text-destructive"}`}>{r.detail}</p>
@@ -81,7 +81,7 @@ function SettingsPage() {
                 <span className="font-mono text-xs text-muted-foreground">{u.used}/{u.limit}</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (u.used / u.limit) * 100)}%` }} />
+                <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (u.used / u.limit) * 100)}%` }} />
               </div>
             </div>
           ))}
@@ -102,7 +102,7 @@ function SettingsPage() {
                   <span className="font-mono text-xs text-muted-foreground">{Math.max(0, u.limit - u.used)}/{u.limit} left</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (u.used / u.limit) * 100)}%` }} />
+                  <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (u.used / u.limit) * 100)}%` }} />
                 </div>
               </div>
             ))}

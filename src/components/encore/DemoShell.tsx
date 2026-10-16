@@ -20,7 +20,7 @@ export function DemoShell() {
           <span className="min-w-0 flex-1 truncate text-muted-foreground">
             Guided demo<span className="hidden sm:inline"> · Harrowgate Mutual (fictional)</span>
           </span>
-          <Link to="/auth" className="ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md font-medium text-primary hover:underline">
+          <Link to="/auth" className="ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md font-medium text-accent hover:underline">
             <span className="hidden sm:inline">Run it on your own deal</span><span className="sm:hidden">Try yours</span> <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
@@ -140,7 +140,7 @@ function GuidedTour() {
         <div className="flex flex-col gap-1.5" role="status" aria-live="polite">
           {notes.map((n) => (
             <div key={n.id} className="tour-note pointer-events-auto flex items-center gap-2 self-end rounded-full border border-border bg-card px-3 py-1.5 text-xs shadow-sm">
-              <Sparkles className="size-3.5 text-primary" aria-hidden /> <span className="font-mono">{n.text}</span>
+              <Sparkles className="size-3.5 text-accent" aria-hidden /> <span className="font-mono">{n.text}</span>
             </div>
           ))}
         </div>
@@ -167,7 +167,7 @@ function GuidedTour() {
             <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
             <div className="mt-4 flex items-center gap-1.5" aria-hidden>
               {TOUR_STEPS.map((x, i) => (
-                <span key={x.key} className={cn("h-1.5 rounded-full transition-all duration-200", i === step ? "w-5 bg-primary" : i < step ? "w-1.5 bg-primary/50" : "w-1.5 bg-border")} />
+                <span key={x.key} className={cn("h-1.5 rounded-full transition-all duration-200", i === step ? "w-5 bg-accent" : i < step ? "w-1.5 bg-accent/50" : "w-1.5 bg-border")} />
               ))}
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2">

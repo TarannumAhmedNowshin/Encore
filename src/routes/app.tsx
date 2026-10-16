@@ -31,7 +31,7 @@ function RunsPill() {
   return (
     <Link to="/app/a/$id/accounts" params={{ id: j.analysisId }} role="status"
       className="flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-xs">
-      <span className="size-2 animate-run-pulse rounded-full bg-primary" aria-hidden />
+      <span className="size-2 animate-run-pulse rounded-full bg-accent" aria-hidden />
       {j.label}{j.total > 0 ? <span className="font-mono">{j.done} of {j.total}</span> : null}{more}
     </Link>
   );
@@ -47,7 +47,7 @@ function UsageMeter() {
     <Link to="/app/settings" className="hidden items-center gap-2 rounded-md md:flex" aria-label={`Usage today: ${summary}`} title={summary}>
       <span className="text-xs text-muted-foreground">{LIMIT_LABELS[top.kind]}</span>
       <span className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary">
-        <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (top.used / top.limit) * 100)}%` }} />
+        <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (top.used / top.limit) * 100)}%` }} />
       </span>
       <span className="font-mono text-xs text-muted-foreground">{top.used}/{top.limit}</span>
     </Link>
@@ -72,6 +72,7 @@ function AppShell() {
 }
 
 function SignedInShell() {
+  const { pathname } = useLocation();
   const { user } = useSession();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
@@ -96,15 +97,17 @@ function SignedInShell() {
           <div className="ml-auto flex items-center gap-3">
             <RunsPill />
             <UsageMeter />
-            <Button asChild size="sm">
-              <Link to="/app/new">
-                <Plus /> <span className="hidden sm:inline">New analysis</span>
-              </Link>
-            </Button>
+            {pathname !== "/app" && (
+              <Button asChild size="sm">
+                <Link to="/app/new">
+                  <Plus /> <span className="hidden sm:inline">New analysis</span>
+                </Link>
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger className="rounded-full" aria-label="Account menu">
                 <Avatar className="size-8">
-                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{initials}</AvatarFallback>
+                  <AvatarFallback className="bg-accent/10 text-xs font-semibold text-accent">{initials}</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

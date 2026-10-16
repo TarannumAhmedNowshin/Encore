@@ -254,7 +254,7 @@ const PILL: Record<EvidencePillKind, { text: string; cls: string }> = {
   verified: { text: "Stated · Verified", cls: "border-verified/25 bg-verified/10 text-verified" },
   inferred: { text: "Inferred", cls: "border-inference/25 bg-inference/10 text-inference" },
   unverified: { text: "Unverified", cls: "border-risk/25 bg-risk/10 text-risk" },
-  user: { text: "Added by you", cls: "border-primary/25 bg-primary/10 text-primary" },
+  user: { text: "Added by you", cls: "border-accent/25 bg-accent/10 text-accent" },
 };
 const CONF_BAR = { high: "bg-verified", medium: "bg-inference", low: "bg-risk" } as const;
 
@@ -275,7 +275,7 @@ function SectionNav({ sections }: { sections: readonly { key: string; label: str
         <button key={s.key} type="button" aria-current={active === s.key ? "true" : undefined}
           onClick={() => document.getElementById(`sec-${s.key}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
           className={cn("shrink-0 chip h-8 px-3 text-sm transition-colors lg:rounded-lg lg:border-0 lg:border-l-2 lg:px-3 lg:py-1.5 lg:text-left lg:rounded-l-none",
-            active === s.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
+            active === s.key ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
           {s.label}
         </button>
       ))}
@@ -305,14 +305,14 @@ function QuoteView({ text, target, onClose }: { text: string; target: QuoteTarge
       <div ref={bodyRef} className="min-w-0 flex-1 overflow-y-auto p-4 pr-3 font-mono text-xs leading-relaxed whitespace-pre-wrap sm:p-5">
         {range ? (<>
           {text.slice(0, range[0])}
-          <mark ref={markRef} className="rounded bg-primary/20 text-foreground">{text.slice(range[0], range[1])}</mark>
+          <mark ref={markRef} className="rounded bg-accent/20 text-foreground">{text.slice(range[0], range[1])}</mark>
           {text.slice(range[1])}
         </>) : text}
       </div>
       <div className="relative w-3 shrink-0 border-l border-border bg-muted/40" aria-label="Quote positions in the document">
         {marks.map(([a], i) => (
           <button key={i} type="button" aria-label={`Jump to quote ${i + 1}`} onClick={() => jump(a)}
-            className={cn("absolute left-0.5 right-0.5 h-1 rounded-sm", range && a === range[0] ? "bg-primary" : "bg-muted-foreground/40 hover:bg-primary/60")}
+            className={cn("absolute left-0.5 right-0.5 h-1 rounded-sm", range && a === range[0] ? "bg-accent" : "bg-muted-foreground/40 hover:bg-accent/60")}
             style={{ top: `${(a / len) * 100}%` }} />
         ))}
       </div>
@@ -357,7 +357,7 @@ function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote, on
             <tr key={r.id} className="group hover:bg-muted/60">
               <td className="rounded-l-lg py-1.5 pl-2">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-[10px] font-semibold text-primary">{ini(r)}</span>
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent/10 font-mono text-[10px] font-semibold text-accent">{ini(r)}</span>
                   <div className="min-w-0"><div className="truncate">{r.name ?? "—"}</div><div className="truncate text-xs text-muted-foreground">{r.title ?? ""}</div></div>
                 </div>
               </td>
@@ -376,7 +376,7 @@ function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote, on
         {edit && !edit.id && <li className="py-2"><table className="w-full"><tbody><EditRow edit={edit} setEdit={setEdit} save={save} fields={F} /></tbody></table></li>}
         {rows.map((r) => edit?.id === r.id ? <li key={r.id} className="py-2"><table className="w-full"><tbody><EditRow edit={edit} setEdit={setEdit} save={save} fields={F} /></tbody></table></li> : (
           <li key={r.id} className="flex min-w-0 items-start gap-3 py-3">
-            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-[10px] font-semibold text-primary">{ini(r)}</span>
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent/10 font-mono text-[10px] font-semibold text-accent">{ini(r)}</span>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="break-words font-medium">{r.name ?? "—"}</p>
               <p className="break-words text-xs text-muted-foreground">{[r.title, r.department, r.project_role].filter(Boolean).join(" · ")}</p>

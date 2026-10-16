@@ -167,7 +167,7 @@ function PlaybookPage() {
             {personas.map((p) => (
               <Card key={p.id} className="lift p-5">
                 <div className="flex min-w-0 items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs font-semibold text-primary" aria-hidden>{initialsOf(p.label)}</span>
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent/10 font-mono text-xs font-semibold text-accent" aria-hidden>{initialsOf(p.label)}</span>
                   <div className="min-w-0">
                     <h3 className="font-semibold leading-tight">{p.label}</h3>
                     <p className="text-xs text-muted-foreground">{[p.function, p.seniority].filter(Boolean).join(" · ")}</p>
@@ -195,7 +195,7 @@ function PlaybookPage() {
           <>
             <Card className="p-6">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-[13px] text-primary">Ideal customer · v{dna.version}</span>
+                <span className="font-mono text-[13px] text-accent">Ideal customer · v{dna.version}</span>
                 <OwnerPill id={dna.id} value={dna.owning_department} readOnly={readOnly} onSaved={refresh} />
               </div>
               <p className="mt-3 font-display text-xl font-semibold leading-snug sm:text-2xl">{idealSentence(dna)}</p>
@@ -282,7 +282,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
 }
 
 function ChipBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className="chip block max-w-full truncate border-border bg-secondary text-left hover:bg-primary/10">{children}</button>;
+  return <button type="button" onClick={onClick} className="chip block max-w-full truncate border-border bg-secondary text-left hover:bg-accent/10">{children}</button>;
 }
 
 type DnaKey = "problem_summary" | "current_process_summary" | "solution_capabilities_summary" | "measurable_outcomes_summary" | "primary_buyers_summary"
@@ -324,7 +324,7 @@ function OwnerPill({ id, value, readOnly, onSaved }: { id: string; value: string
   );
   return (
     <span className="group inline-flex items-center gap-1">
-      <span className="chip h-7 border-primary/30 bg-primary/10 text-sm font-semibold text-primary">
+      <span className="chip h-7 border-accent/30 bg-accent/10 text-sm font-semibold text-accent">
         <span className="text-xs font-normal opacity-80">Owned by</span> {value || "—"}
       </span>
       {!readOnly && <Button size="icon-sm" variant="ghost" className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label="Edit owning department" onClick={() => setDraft(value ?? "")}><Pencil className="size-3.5" /></Button>}
@@ -352,7 +352,7 @@ function DnaField({ id, field, label, value, readOnly, onSaved, single, tile, ic
           <p className="font-semibold leading-snug">{head || "—"}</p>
           {rest && <>
             <p className={open ? "mt-1 text-muted-foreground" : "mt-1 line-clamp-2 text-muted-foreground"}>{rest}</p>
-            <button type="button" onClick={() => setOpen(!open)} className="mt-1 text-xs text-primary hover:underline">{open ? "Less" : "More"}</button>
+            <button type="button" onClick={() => setOpen(!open)} className="mt-1 text-xs text-accent hover:underline">{open ? "Less" : "More"}</button>
           </>}
         </div>
       ) : <p className={single ? "font-display text-lg font-semibold" : "text-sm"}>{value || "—"}</p>) : (
