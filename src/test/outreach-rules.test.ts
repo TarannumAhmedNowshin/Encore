@@ -16,8 +16,18 @@ describe("outreach fact list", () => {
     expect(buildFactList("Acme", tf, df).map((f) => f.line)).toEqual([
       "[0] (about Acme) Hiring route planners",
       "[1] (about Acme) Plans routes by hand",
-      "[2] (from our engagement) Cut planning time by 40%",
+      "[2] (from our engagement) TARGET (not yet achieved): Cut planning time by 40%",
     ]);
+  });
+  it("marks expected_outcomes facts as goals and business_impact as BEFORE", () => {
+    const facts = buildFactList("Acme", tf, [
+      { id: "d4", value: "Cut costs by 20%", subject: "solution", attribute: "success_criteria", status: "active", target_id: null, verified: true },
+      { id: "d5", value: "Planners worked nights", subject: "solution", attribute: "business_impact", status: "active", target_id: null, verified: true },
+    ]);
+    expect(facts[2]!.line).toBe("[2] (from our engagement) TARGET (not yet achieved): Cut costs by 20%");
+    expect(facts[2]!.goal).toBe(true);
+    expect(facts[3]!.line).toBe("[3] (from our engagement) BEFORE: Planners worked nights");
+    expect(facts[3]!.goal).toBe(false);
   });
 });
 
