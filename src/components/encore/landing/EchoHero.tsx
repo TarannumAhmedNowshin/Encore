@@ -105,10 +105,10 @@ export function EchoHero() {
               <span aria-hidden className="absolute bottom-6 left-[7px] top-0 w-px bg-gradient-to-b from-[#3D3BF3]/60 to-transparent md:left-[9px]" />
               <div aria-live="polite">
                 <AnimatePresence mode="wait">
-                  <motion.div key={page} className="space-y-3" exit={reduced ? undefined : { opacity: 0, transition: { duration: 0.4 } }}>
+                  <motion.div key={page} className="space-y-3" exit={{ opacity: 0, transition: { duration: reduced ? 0 : 0.4 } }}>
                     {shown.map((e, i) => (
                       <motion.div key={e.name} className={`${INDENT[i]} flex min-w-0 gap-3`}
-                        initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: OPACITY[i], y: 0 }}
+                        initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: OPACITY[i] ?? 1, y: 0 }}
                         transition={{ duration: 0.45, delay: reduced ? 0 : 1.6 + i * 0.7, ease: "easeOut" }}>
                         <span aria-hidden className="mt-2 grid size-7 shrink-0 place-items-center rounded-full border border-[#3D3BF3] bg-background font-mono text-[10px] text-[#3D3BF3]">{initials(e.name)}</span>
                         <div className="min-w-0 flex-1 rounded-md border border-border bg-card/90 px-4 py-3">
