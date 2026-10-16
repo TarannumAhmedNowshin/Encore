@@ -37,6 +37,7 @@ export const findDepartments = createServerFn({ method: "POST" })
     const { recomputeTarget } = await import("./scoring.server");
     const { HttpError } = await import("./http.server");
     const { excerpt, domainOf, quoteVerified } = await import("./text");
+    const { isUsableEvidence } = await import("./discover");
     const { owningFunctions, searchName } = await import("./discover");
 
     const userId = context.userId;
@@ -89,8 +90,13 @@ export const findDepartments = createServerFn({ method: "POST" })
       return value.departments.slice(0, 2).map((d) => {
         const m = d.source_url ? byUrl.get(d.source_url) : undefined;
         const verified = !!m && !!d.quote && quoteVerified(d.quote, m.text, 3);
-        return { ...d, source_url: m ? d.source_url : null, verified };
-      });
+        return { ...d, source_url: m ? d.source_url : null, verified, title: m?.title ?? "" };
+      }).filter((d) => !d.quote || !d.source_url
+        // LinkedIn employee lists are judged by the job title itself, so they skip the length/contact rules.
+        || /\(LinkedIn\)/.test(d.title)
+        || isUsableEvidence({ quote: d.quote, url: d.source_url, title: d.title, companyName: name, domain: t.website ? domainOf(t.website) : undefined }))
+        .filter((d) => !!d.quote)
+        .map(({ title: _t, ...d }) => d);
     };
 
     let found = await ask(materials);

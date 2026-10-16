@@ -163,7 +163,7 @@ export function checkQualification(input: {
     const verified = !!m && quoteVerified(e.quote, m.text ?? "", 5) && mentionsCompany({ url: m.url, title: m.title ?? "", text: m.text ?? "" }, aliases, input.domain || undefined);
     return { ...e, source_title: m?.title ?? "", verified };
   }).filter((e) => isUsableEvidence({ quote: e.quote, url: e.source_url, title: e.source_title, companyName: input.name, domain: input.domain }));
-  if (!evidence.length && (input.qualified || input.evidence.length))
+  if (!evidence.length && input.qualified)
     return { dimensions, evidence, status: "rejected", rejection_reason: NO_EVIDENCE_REASON };
   const anyVerified = evidence.some((e) => e.verified);
   if (input.qualified && anyVerified) return { dimensions, evidence, status: "qualified", rejection_reason: null };
