@@ -90,10 +90,15 @@ export const extractDeal = createServerFn({ method: "POST" })
         `Existing solution: ${analysis.existing_solution ?? "(not given)"}`,
         `Stakeholders: ${(userSh ?? []).map((s) => [s.name, s.title, s.project_role].filter(Boolean).join(", ")).join("; ") || "(none)"}`,
       ];
-      const out = await generateJson({
-        tier: "smart", userId, system: SYSTEM, maxOutputTokens: 16000,
+      const ask = (tier: "smart" | "fast") => generateJson({
+        tier, userId, system: SYSTEM, maxOutputTokens: 16000,
         user: `USER-PROVIDED CONTEXT:\n${ctxLines.join("\n")}\n\nDOCUMENT TEXT:\n${text.slice(0, 300000)}`,
         responseSchema: schema, zodSchema: zod,
+      });
+      // If the smart model is overloaded, fall back to the fast model rather than failing.
+      const out = await ask("smart").catch((e) => {
+        if (e instanceof HttpError && e.status === 503) return ask("fast");
+        throw e;
       });
       await progress(runId, 2, "Checking every quote");
 
