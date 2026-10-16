@@ -5,6 +5,7 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { ArrowRight, Check, FileText, Link2 } from "lucide-react";
+import { EchoHero } from "./EchoHero";
 import { Button } from "@/components/ui/button";
 import { EvidenceChip, Pill } from "@/components/encore/primitives";
 
@@ -66,55 +67,6 @@ function Sticky({ vh, head, children }: { vh: number; head: ReactNode; children:
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden px-gutter">
         {head}
         <div className="mx-auto mt-12 w-full max-w-5xl">{children(p)}</div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- 1 Hero ---------- */
-function HeroOrbit() {
-  const dots = Array.from({ length: 28 }, (_, i) => {
-    const ring = [180, 280, 380][i % 3] ?? 180;
-    const a = (i * 137.5 * Math.PI) / 180;
-    return { x: 500 + ring * Math.cos(a), y: 500 + ring * Math.sin(a), r: 2 + (i % 4) * 1.5, o: 0.25 + (i % 5) * 0.12 };
-  });
-  return (
-    <svg viewBox="0 0 1000 1000" className="pointer-events-none absolute left-1/2 top-1/2 h-[140vmax] w-[140vmax] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-70" aria-hidden>
-      <defs>
-        <filter id="glow"><feGaussianBlur stdDeviation="4" /></filter>
-      </defs>
-      <g className="orbit-spin">
-        {[180, 280, 380].map((r) => <circle key={r} cx="500" cy="500" r={r} fill="none" className="stroke-ink-line" strokeDasharray="2 8" />)}
-        {dots.map((d, i) => (
-          <g key={i} opacity={d.o}>
-            <circle cx={d.x} cy={d.y} r={d.r * 3} className="fill-primary" filter="url(#glow)" opacity="0.5" />
-            <circle cx={d.x} cy={d.y} r={d.r} className="fill-primary" />
-          </g>
-        ))}
-      </g>
-    </svg>
-  );
-}
-
-function Hero() {
-  return (
-    <section className="relative isolate flex min-h-[calc(100vh-4rem)] items-center overflow-hidden bg-ink text-ink-foreground">
-      <HeroOrbit />
-      <div className="relative mx-auto max-w-4xl px-gutter py-24 text-center">
-        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-[40px] font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-          Your last win already knows who to sell to next.
-        </motion.h1>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.6 }}
-          className="mx-auto mt-6 max-w-2xl text-lg text-ink-muted">
-          Upload one won SOW. Encore finds companies with the same problem, proves it with quoted evidence, maps who buys and drafts outreach you approve.
-        </motion.p>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.6 }} className="mt-10 flex flex-wrap justify-center gap-3">
-          <Button asChild size="lg"><Link to="/demo">See it work — no sign-up <ArrowRight /></Link></Button>
-          <Button asChild size="lg" variant="outline" className="border-ink-line bg-transparent text-ink-foreground hover:bg-ink-line hover:text-ink-foreground">
-            <Link to="/auth" search={{ redirect: "/app/new" }}>Start with your SOW</Link>
-          </Button>
-        </motion.div>
       </div>
     </section>
   );
@@ -348,7 +300,7 @@ export function LandingStory() {
   const cinematic = useCinematic();
   return (
     <>
-      <Hero />
+      <EchoHero />
       <Scene cinematic={cinematic} vh={300} eyebrow="01 · Deal" title="It starts with one document.">{(p) => <DocScene p={p} />}</Scene>
       <Scene cinematic={cinematic} vh={200} eyebrow="02 · Playbook" title="We learn why they bought.">{(p) => <DnaScene p={p} />}</Scene>
       <Scene cinematic={cinematic} vh={250} eyebrow="03 · Accounts" title="Then we find who else has the same problem.">{(p) => <OrbitScene p={p} />}</Scene>

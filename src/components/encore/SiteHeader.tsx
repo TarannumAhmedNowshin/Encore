@@ -2,9 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./primitives";
 
-export function SiteHeader() {
+export function SiteHeader({ transparent = false }: { transparent?: boolean }) {
   return (
-    <header className="border-b border-border bg-background/80 backdrop-blur">
+    <header className={transparent ? "bg-transparent" : "border-b border-border bg-background/80 backdrop-blur"}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-gutter">
         <Link to="/" aria-label="Encore home" className="rounded-md">
           <Logo />
@@ -16,7 +16,7 @@ export function SiteHeader() {
           <Button asChild variant="ghost" size="sm">
             <Link to="/auth">Sign in</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className={transparent ? "rounded-full bg-foreground px-4 text-background hover:bg-foreground/90" : undefined}>
             <Link to="/auth" search={{ redirect: "/app/new" }}>Get started</Link>
           </Button>
         </nav>

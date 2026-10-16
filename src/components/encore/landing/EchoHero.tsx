@@ -103,11 +103,11 @@ export function EchoHero() {
           {!failed && shown.length > 0 && (
             <div className="relative mt-5 pl-5 md:pl-6">
               <span aria-hidden className="absolute bottom-6 left-[7px] top-0 w-px bg-gradient-to-b from-[#3D3BF3]/60 to-transparent md:left-[9px]" />
-              <ul className="space-y-3" aria-live="polite">
+              <div aria-live="polite">
                 <AnimatePresence mode="wait">
                   <motion.div key={page} className="space-y-3" exit={reduced ? undefined : { opacity: 0, transition: { duration: 0.4 } }}>
                     {shown.map((e, i) => (
-                      <motion.li key={e.name} className={`${INDENT[i]} flex min-w-0 gap-3`}
+                      <motion.div key={e.name} className={`${INDENT[i]} flex min-w-0 gap-3`}
                         initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: OPACITY[i], y: 0 }}
                         transition={{ duration: 0.45, delay: reduced ? 0 : 1.6 + i * 0.7, ease: "easeOut" }}>
                         <span aria-hidden className="mt-2 grid size-7 shrink-0 place-items-center rounded-full border border-[#3D3BF3] bg-background font-mono text-[10px] text-[#3D3BF3]">{initials(e.name)}</span>
@@ -119,11 +119,11 @@ export function EchoHero() {
                           <p className="mt-1.5 break-words font-serif-doc text-[15px] italic leading-snug md:text-[16px]">“{e.quote}”</p>
                           {e.domain && <p className="mt-1 font-mono text-[11px] text-muted-foreground">{e.domain}</p>}
                         </div>
-                      </motion.li>
+                      </motion.div>
                     ))}
                   </motion.div>
                 </AnimatePresence>
-              </ul>
+              </div>
               <p className="mt-5 flex items-baseline gap-3">
                 <span className="font-display text-[40px] font-semibold leading-none tracking-tight">{count}</span>
                 <span className="text-sm text-muted-foreground">companies with the same problem</span>

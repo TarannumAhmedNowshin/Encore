@@ -230,3 +230,15 @@
   border-radius: 0.5rem; border-width: 1px; font-size: 0.75rem; line-height: 1rem; font-weight: 500; white-space: nowrap; max-width: 100%; overflow: hidden; min-width: 0;
   & > svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
 }
+
+/* Landing hero: notebook-paper rules fading toward the bottom. */
+.hero-ruled {
+  background-image: repeating-linear-gradient(to bottom, transparent 0 35px, var(--border) 35px 36px);
+}
+section.hero-ruled {
+  -webkit-mask-image: none;
+}
+section.hero-ruled::before { content: none; }
+.hero-doc { transform: rotate(-0.6deg); }
+@media (min-width: 768px) { .hero-doc { transform: rotate(-1.2deg); } }
+@utility font-serif-doc { font-family: "Newsreader", Georgia, serif; }
