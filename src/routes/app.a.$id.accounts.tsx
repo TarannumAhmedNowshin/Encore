@@ -137,9 +137,15 @@ function AccountsPage() {
 
       {!has ? (
         <section className="mt-8">
-          <EmptyState title="No companies yet"
-            line="Discovery searches the web for companies like your customer, then researches each one for proof of the same problem. It takes about 5–7 minutes."
-            action={!readOnly && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Find look-alike companies"}</Button>} />
+          {d.data?.hasDna === false ? (
+            <EmptyState title="Build the playbook first"
+              line="Discovery needs the Sales DNA from the Playbook stage to know which companies to look for."
+              action={<Button asChild variant="outline"><Link to="/app/a/$id/playbook" params={{ id }}>Build the playbook first <ArrowRight /></Link></Button>} />
+          ) : (
+            <EmptyState title="No companies yet"
+              line="Discovery searches the web for companies like your customer, then researches each one for proof of the same problem. It takes about 5–7 minutes."
+              action={!readOnly && <Button onClick={onStart} disabled={d.active}>{d.active ? "Running…" : "Find look-alike companies"}</Button>} />
+          )}
         </section>
       ) : (
         <>
