@@ -60,3 +60,18 @@ export const FIELD_LABEL: Record<string, string> = {
   pain_points: "Pain points", strategic_drivers: "Strategic drivers", solution_capabilities: "Solution capabilities",
   data_sources: "Data sources", integrations: "Integrations", deliverables: "Deliverables", expected_outcomes: "Expected outcomes",
 };
+
+/** Locate a quote in text ignoring case, whitespace and punctuation. Returns [start, end) or null. */
+export function findQuoteRange(text: string, quote: string): [number, number] | null {
+  const idx: number[] = [];
+  let norm = "";
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!.toLowerCase();
+    if (/[\p{L}\p{N}]/u.test(ch)) { norm += ch; idx.push(i); }
+  }
+  const q = quote.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  if (!q) return null;
+  const at = norm.indexOf(q);
+  if (at < 0) return null;
+  return [idx[at]!, idx[at + q.length - 1]! + 1];
+}

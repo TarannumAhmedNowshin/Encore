@@ -24,3 +24,14 @@ describe("deal rules", () => {
     expect(stakeholderKey("TBD", "CTO")).not.toBe(stakeholderKey("tbd", "CFO"));
   });
 });
+
+describe("quote highlight", () => {
+  it("matches ignoring case, spaces, punctuation", async () => {
+    const { findQuoteRange } = await import("@/lib/encore/deal");
+    expect(findQuoteRange("We cut  manual review, by 40%.", "manual review by 40")).toEqual([7, 29]);
+  });
+  it("null when absent", async () => {
+    const { findQuoteRange } = await import("@/lib/encore/deal");
+    expect(findQuoteRange("abc", "xyz")).toBeNull();
+  });
+});
