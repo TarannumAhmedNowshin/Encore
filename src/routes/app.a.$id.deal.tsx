@@ -61,6 +61,8 @@ function DealPage() {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const [gapEdit, setGapEdit] = useState<{ attr: string; value: string } | null>(null);
   const rechecked = useRef(false);
+  const runNow = data?.run ?? null;
+  const elapsed = useElapsed(!!runNow && runNow.status === "running", runNow?.created_at ?? null);
 
   // Re-check stored quotes against the current document-quote rule (owner only).
   useEffect(() => {
@@ -108,7 +110,6 @@ function DealPage() {
     } finally { setBusy(false); refresh(); }
   }
 
-  const elapsed = useElapsed(running, run?.created_at ?? null);
   const steps: RunStep[] = ["Reading the document", "Extracting facts", "Checking every quote"].map((label, i) => {
     const done = run?.done ?? 0;
     const state: RunStep["state"] = run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting";
