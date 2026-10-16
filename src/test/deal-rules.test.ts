@@ -58,3 +58,11 @@ describe("playbook index guard", () => {
     expect([inRange(0, 2), inRange(1, 2), inRange(2, 2), inRange(-1, 2)]).toEqual([true, true, false, false]);
   });
 });
+
+import { evidencePill } from "@/lib/encore/deal";
+describe("evidence pill", () => {
+  it("user-added facts are 'Added by you'", () => expect(evidencePill({ origin: "user", label: "user" })).toBe("user"));
+  it("inferred facts are 'Inferred'", () => expect(evidencePill({ label: "inferred", quote: "x", verified: true })).toBe("inferred"));
+  it("stated + verified quote is 'Stated · Verified'", () => expect(evidencePill({ label: "explicitly_stated", quote: "q", verified: true })).toBe("verified"));
+  it("stated without a verified quote is 'Unverified'", () => expect(evidencePill({ label: "explicitly_stated", quote: "q", verified: false })).toBe("unverified"));
+});

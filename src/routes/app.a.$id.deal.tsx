@@ -10,9 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Card, EmptyState, EvidenceChip, Pill, RunTimeline, type RunStep } from "@/components/encore/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { extractDeal } from "@/lib/encore/deal.functions";
-import { checkDocQuote, FIELD_GROUPS, FIELD_LABEL, findQuoteRange, overallConfidence, type FieldSubject } from "@/lib/encore/deal";
+import { evidencePill, type EvidencePillKind, checkDocQuote, FIELD_GROUPS, FIELD_LABEL, findQuoteRange, overallConfidence, type FieldSubject } from "@/lib/encore/deal";
 import { ConfirmDialog, type ConfirmRequest } from "@/components/encore/ConfirmDialog";
-import { REGION_LABEL } from "@/lib/encore/intake";
 import { toastError } from "@/lib/encore/toast";
 import { hasActiveRun } from "@/lib/encore/run-guard";
 import { useElapsed } from "@/lib/encore/use-elapsed";
@@ -46,11 +45,6 @@ const dealQuery = (id: string) => ({
   refetchInterval: (q: any) => (q.state.data?.run?.status === "running" ? 2500 : false),
 });
 
-const LABEL_PILL: Record<string, { text: string; tone: "verified" | "inference" | "risk" | "primary" }> = {
-  explicitly_stated: { text: "Stated", tone: "verified" }, inferred: { text: "Inferred", tone: "inference" },
-  potentially_outdated: { text: "Possibly outdated", tone: "risk" }, user: { text: "Added by you", tone: "primary" },
-};
-const CONF_DOT: Record<string, string> = { high: "bg-verified", medium: "bg-inference", low: "bg-risk" };
 
 function DealPage() {
   const { id } = Route.useParams();
@@ -132,92 +126,122 @@ function DealPage() {
     refresh();
   }
 
+  const SECTIONS = [
+    { key: "problem", label: "Problem" }, { key: "solution", label: "Solution" }, { key: "company", label: "Company" },
+    { key: "stakeholders", label: "Stakeholders" }, { key: "gaps", label: "Gaps" },
+  ] as const;
+  const quoted = facts.filter((f) => f.origin !== "user");
+  const verifiedPct = quoted.length ? Math.round((quoted.filter((f) => (f as any).citations?.[0]?.verified).length / quoted.length) * 100) : 0;
+  const problemLine = facts.find((f) => f.attribute === "business_problem")?.value ?? facts.find((f) => f.attribute === "pain_points")?.value ?? null;
+  const allQuotes = facts.map((f) => (f as any).citations?.[0]?.quote as string | null).filter(Boolean) as string[];
+  const openFact = (f: (typeof facts)[number]) => {
+    const c = (f as any).citations?.[0] as { quote: string | null } | undefined;
+    if (c?.quote) setQuote({ quote: c.quote, label: f.label, value: f.value, field: FIELD_LABEL[f.attribute ?? ""] ?? f.attribute, all: allQuotes });
+  };
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-gutter">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><FileText className="size-4" aria-hidden /> Deal</div>
-          <h1 className="mt-1 break-words text-2xl font-semibold">{doc?.filename ?? analysis?.title ?? "Document"}</h1>
-          <p className="mt-1 font-mono text-xs text-muted-foreground">
-            {doc?.page_count ? `${doc.page_count} pages · ` : ""}{REGION_LABEL[analysis?.target_region as keyof typeof REGION_LABEL] ?? analysis?.target_region}
-          </p>
-        </div>
-        {canEdit && <Button onClick={onExtract} disabled={running}>{running ? "Extracting…" : hasFacts ? "Re-extract" : "Extract deal facts"}</Button>}
-      </div>
-
-      {!running && run?.status === "done" && run.used_fallback_model && (
-        <p className="mt-3 text-xs text-muted-foreground">Extracted with the fast model because the main model was busy.</p>
-      )}
-
-      {(running || run?.status === "failed") && <Card className="mt-6"><RunTimeline steps={steps} /></Card>}
-
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-gutter">
+      {(running || run?.status === "failed") && <Card className="mb-6"><RunTimeline steps={steps} /></Card>}
       {!hasFacts && !running ? (
-        <div className="mt-6"><EmptyState title="No facts yet" line="Extract the deal to pull the company, problem and solution out of your document, each with its quote." /></div>
+        <div className="space-y-4">
+          {canEdit && <Button onClick={onExtract}>Extract deal facts</Button>}
+          <EmptyState title="No facts yet" line="Extract the deal to pull the company, problem and solution out of your document, each with its quote." />
+        </div>
       ) : hasFacts && (
-        <>
-          <Card className="mt-6">
-            <div className="flex flex-wrap items-center gap-6">
-              <div>
-                <div className="text-xs text-muted-foreground">Overall confidence</div>
-                <div className="font-mono text-3xl font-semibold">{overallConfidence(facts.map((f) => f.confidence))}%</div>
+        <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+          <aside className="min-w-0 lg:sticky lg:top-20">
+            <Card className="p-5">
+              <p className="text-xs text-muted-foreground">Deal</p>
+              <h1 className="mt-0.5 break-words text-xl font-semibold">{analysis?.customer_name ?? analysis?.title}</h1>
+              <p className="mt-1 flex min-w-0 items-center gap-1.5 font-mono text-xs text-muted-foreground"><FileText className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{doc?.filename ?? "Document"}</span></p>
+              {problemLine && <p className="mt-3 line-clamp-2 text-sm">{problemLine}</p>}
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {[[facts.length, "facts"], [`${verifiedPct}%`, "verified"], [stakeholders.length, "people"]].map(([v, l]) => (
+                  <div key={l as string} className="rounded-lg border border-border bg-background p-2 text-center">
+                    <div className="font-mono text-lg font-semibold">{v}</div><div className="text-[11px] text-muted-foreground">{l}</div>
+                  </div>
+                ))}
               </div>
-              <div className="text-sm text-muted-foreground">
-                <div>Mean of {facts.length} facts: high = 1, medium = 0.6, low = 0.3</div>
-                <div className="mt-1 font-mono text-xs">high {byConf['high'] ?? 0} · medium {byConf['medium'] ?? 0} · low {byConf['low'] ?? 0}</div>
-                <div className="font-mono text-xs">{Object.entries(byOrigin).map(([k, v]) => `${k === "user" ? "you" : k} ${v}`).join(" · ")}</div>
+              <div className="mt-4">
+                <div className="flex justify-between text-[11px] text-muted-foreground"><span>Confidence</span><span className="font-mono">{overallConfidence(facts.map((f) => f.confidence))}%</span></div>
+                <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`High ${byConf["high"] ?? 0}, medium ${byConf["medium"] ?? 0}, low ${byConf["low"] ?? 0}`}>
+                  {(["high", "medium", "low"] as const).map((k) => <div key={k} className={CONF_BAR[k]} style={{ width: `${((byConf[k] ?? 0) / facts.length) * 100}%` }} />)}
+                </div>
+                <div className="mt-1 font-mono text-[11px] text-muted-foreground">high {byConf["high"] ?? 0} · med {byConf["medium"] ?? 0} · low {byConf["low"] ?? 0}</div>
               </div>
-            </div>
-          </Card>
-          <div className="mt-6 grid gap-6 lg:grid-cols-3">
-            {(["company", "business_problem", "solution"] as const).map((subj) => (
-              <Card key={subj} className="p-5">
-                <h2 className="text-base font-semibold">{{ company: "Company", business_problem: "Problem", solution: "Solution" }[subj]}</h2>
-                <ul className="mt-3 space-y-4">
-                  {facts.filter((f) => f.subject === subj).map((f) => {
-                    const c = (f as any).citations?.[0] as { quote: string | null; verified: boolean | null } | undefined;
-                    const pill = LABEL_PILL[f.label ?? ""];
-                    return (
-                      <li key={f.id}>
-                        <div className="text-xs text-muted-foreground">{FIELD_LABEL[f.attribute ?? ""] ?? f.attribute}</div>
-                        <p className="text-sm">{f.value}</p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          {pill && <Pill tone={pill.tone}>{pill.text}</Pill>}
-                          <span title={`${f.confidence} confidence`} className={cn("size-2 rounded-full", CONF_DOT[f.confidence ?? "low"])} />
-                          {f.origin !== "user" && (c?.quote
-                            ? <EvidenceChip kind={c.verified ? "verified" : "unverified"} onClick={() => setQuote({ quote: c.quote!, label: f.label, value: f.value, field: FIELD_LABEL[f.attribute ?? ""] ?? f.attribute })} />
-                            : <EvidenceChip kind="inference" />)}
+              {canEdit && <Button className="mt-4 w-full" size="sm" variant="secondary" onClick={onExtract} disabled={running}>{running ? "Extracting…" : "Re-extract"}</Button>}
+              {!running && run?.status === "done" && run.used_fallback_model && <p className="mt-2 text-[11px] text-muted-foreground">Extracted with the fast model because the main model was busy.</p>}
+            </Card>
+            <SectionNav sections={SECTIONS} />
+          </aside>
+
+          <div className="min-w-0 space-y-6">
+            {(["business_problem", "solution", "company"] as const).map((subj) => (
+              <Card key={subj} className="scroll-mt-20 p-0" >
+                <section id={`sec-${{ business_problem: "problem", solution: "solution", company: "company" }[subj]}`} className="scroll-mt-20 p-5">
+                  <h2 className="text-lg font-semibold">{{ company: "Company", business_problem: "Problem", solution: "Solution" }[subj]}</h2>
+                  <div className="mt-2 space-y-3">
+                    {FIELD_GROUPS[subj].map((attr) => {
+                      const rows = facts.filter((f) => f.subject === subj && f.attribute === attr);
+                      if (!rows.length) return null;
+                      return (
+                        <div key={attr}>
+                          <h3 className="px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{FIELD_LABEL[attr]}</h3>
+                          <ul className="mt-0.5">
+                            {rows.map((f) => {
+                              const c = (f as any).citations?.[0] as { quote: string | null; verified: boolean | null } | undefined;
+                              const kind = evidencePill({ origin: f.origin, label: f.label, quote: c?.quote ?? null, verified: c?.verified ?? null });
+                              const P = PILL[kind];
+                              return (
+                                <li key={f.id}>
+                                  <button type="button" disabled={!c?.quote} onClick={() => openFact(f)}
+                                    className="flex w-full flex-col gap-1.5 rounded-lg px-2 py-1 text-left text-sm leading-snug transition-colors hover:bg-muted/60 disabled:cursor-default sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                    <span className="min-w-0">{f.value}</span>
+                                    <span title={`${f.confidence ?? "low"} confidence${c?.quote ? " · click to see the quote" : ""}`} className={cn("shrink-0 self-start whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium sm:self-auto", P.cls)}>{P.text}</span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
                         </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                      );
+                    })}
+                  </div>
+                </section>
               </Card>
             ))}
-          </div>
-          {gaps.length > 0 && (
-            <Card className="mt-6">
-              <h2 className="text-base font-semibold">Gaps</h2>
-              <p className="text-sm text-muted-foreground">Not found in the document.</p>
-              <ul className="mt-3 divide-y divide-border">
-                {gaps.map((g) => (
-                  <li key={g} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                    <span>{FIELD_LABEL[g]}</span>
-                    {gapEdit?.attr === g ? (
-                      <form className="flex w-full gap-2 sm:w-auto sm:flex-1 sm:justify-end" onSubmit={(e) => { e.preventDefault(); void addGap(g, gapEdit.value); }}>
-                        <Input autoFocus aria-label={FIELD_LABEL[g]} className="sm:max-w-sm" value={gapEdit.value} onChange={(e) => setGapEdit({ attr: g, value: e.target.value })} />
-                        <Button size="sm" type="submit" disabled={!gapEdit.value.trim()}>Save</Button>
-                        <Button size="sm" type="button" variant="ghost" onClick={() => setGapEdit(null)}>Cancel</Button>
-                      </form>
-                    ) : canEdit && <Button size="sm" variant="secondary" onClick={() => setGapEdit({ attr: g, value: "" })}>Add it yourself</Button>}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-        </>
-      )}
 
-      {analysis && <Stakeholders rows={stakeholders} analysisId={id} userId={analysis.user_id} canEdit={canEdit} onChange={refresh} onQuote={setQuote} onAsk={setAsk} />}
+            <section id="sec-stakeholders" className="scroll-mt-20">
+              {analysis && <Stakeholders rows={stakeholders} analysisId={id} userId={analysis.user_id} canEdit={canEdit} onChange={refresh} onQuote={(q) => setQuote({ ...q, all: allQuotes })} onAsk={setAsk} />}
+            </section>
+
+            <section id="sec-gaps" className="scroll-mt-20">
+              <Card className="p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold">Gaps</h2>
+                  {gaps.length === 0 ? <Pill tone="verified">All fields found</Pill> : <span className="text-xs text-muted-foreground">{gaps.length} not in the document</span>}
+                </div>
+                {gaps.length > 0 && (
+                  <ul className="mt-2">
+                    {gaps.map((g) => (
+                      <li key={g} className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted/60">
+                        <span className="text-muted-foreground">{FIELD_LABEL[g]}</span>
+                        {gapEdit?.attr === g ? (
+                          <form className="flex w-full gap-2 sm:w-auto sm:flex-1 sm:justify-end" onSubmit={(e) => { e.preventDefault(); void addGap(g, gapEdit.value); }}>
+                            <Input autoFocus aria-label={FIELD_LABEL[g]} className="h-8 sm:max-w-sm" value={gapEdit.value} onChange={(e) => setGapEdit({ attr: g, value: e.target.value })} />
+                            <Button size="sm" type="submit" disabled={!gapEdit.value.trim()}>Save</Button>
+                            <Button size="sm" type="button" variant="ghost" onClick={() => setGapEdit(null)}>Cancel</Button>
+                          </form>
+                        ) : canEdit && <Button size="sm" variant="ghost" onClick={() => setGapEdit({ attr: g, value: "" })}><Plus /> Add</Button>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </section>
+          </div>
+        </div>
+      )}
 
       {quote !== null && <QuoteView text={doc?.text ?? ""} target={quote} onClose={() => setQuote(null)} />}
       <ConfirmDialog request={ask} onClose={() => setAsk(null)} />
@@ -225,37 +249,79 @@ function DealPage() {
   );
 }
 
-type QuoteTarget = { quote: string; label: string | null; value: string | null; field?: string | null };
+const PILL: Record<EvidencePillKind, { text: string; cls: string }> = {
+  verified: { text: "Stated · Verified", cls: "border-verified/25 bg-verified/10 text-verified" },
+  inferred: { text: "Inferred", cls: "border-inference/25 bg-inference/10 text-inference" },
+  unverified: { text: "Unverified", cls: "border-risk/25 bg-risk/10 text-risk" },
+  user: { text: "Added by you", cls: "border-primary/25 bg-primary/10 text-primary" },
+};
+const CONF_BAR = { high: "bg-verified", medium: "bg-inference", low: "bg-risk" } as const;
+
+function SectionNav({ sections }: { sections: readonly { key: string; label: string }[] }) {
+  const [active, setActive] = useState<string>(sections[0]!.key);
+  useEffect(() => {
+    const els = sections.map((s) => document.getElementById(`sec-${s.key}`)).filter(Boolean) as HTMLElement[];
+    const io = new IntersectionObserver((es) => {
+      const vis = es.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (vis) setActive(vis.target.id.replace("sec-", ""));
+    }, { rootMargin: "-80px 0px -60% 0px" });
+    els.forEach((e) => io.observe(e));
+    return () => io.disconnect();
+  }, [sections]);
+  return (
+    <nav aria-label="Deal sections" className="mt-4 flex gap-2 overflow-x-auto lg:flex-col lg:gap-0.5 lg:overflow-visible">
+      {sections.map((s) => (
+        <button key={s.key} type="button" aria-current={active === s.key ? "true" : undefined}
+          onClick={() => document.getElementById(`sec-${s.key}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className={cn("shrink-0 rounded-full border px-3 py-1 text-sm transition-colors lg:rounded-lg lg:border-0 lg:border-l-2 lg:px-3 lg:py-1.5 lg:text-left lg:rounded-l-none",
+            active === s.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
+          {s.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+type QuoteTarget = { quote: string; label: string | null; value: string | null; field?: string | null; all?: string[] };
 const CHECK_TEXT = { found: "Found word for word in the document", not_found: "Not found word for word", too_short: "Too short to verify" } as const;
 
 function QuoteView({ text, target, onClose }: { text: string; target: QuoteTarget; onClose: () => void }) {
   const { quote } = target;
   const check = checkDocQuote(quote, text);
   const range = useMemo(() => (check === "too_short" ? null : findQuoteRange(text, quote)), [text, quote, check]);
-  const pill = LABEL_PILL[target.label ?? ""];
+  const marks = useMemo(() => (target.all ?? []).map((q) => findQuoteRange(text, q)).filter(Boolean) as [number, number][], [text, target.all]);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const markRef = useRef<HTMLElement>(null);
+  useEffect(() => { markRef.current?.scrollIntoView({ block: "center" }); }, [range]);
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === "Escape" && onClose(); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
+  const len = Math.max(1, text.length);
+  const jump = (pos: number) => { const el = bodyRef.current; if (el) el.scrollTop = (pos / len) * el.scrollHeight - el.clientHeight / 2; };
   return (
     <div className="fixed inset-0 z-50 flex bg-foreground/20" onClick={onClose}>
-      <div className="ml-auto grid h-full w-full max-w-5xl grid-cols-1 bg-card md:grid-cols-[1fr_1.4fr]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Quote in document">
-        <div className="border-b border-border p-6 md:border-r md:border-b-0">
-          <div className="flex items-center justify-between"><h2 className="font-semibold">Quote</h2><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close"><X /></Button></div>
-          <p className={cn("mt-4 rounded-lg border px-3 py-2 text-sm font-medium", check === "found" ? "border-verified/25 bg-verified/10 text-verified" : "border-risk/25 bg-risk/10 text-risk")}>
-            {CHECK_TEXT[check]}
-          </p>
-          {(target.value || pill) && (
-            <div className="mt-4">
-              {target.field && <div className="text-xs text-muted-foreground">{target.field}</div>}
-              {target.value && <p className="text-sm">{target.value}</p>}
-              {pill && <Pill tone={pill.tone} className="mt-1.5">{pill.text}</Pill>}
-            </div>
-          )}
-          <blockquote className="mt-4 rounded-lg border border-border bg-background p-4 font-mono text-sm">“{quote}”</blockquote>
+      <div className="drawer-in ml-auto flex h-full w-full flex-col bg-card shadow-sm sm:w-[560px] sm:border-l sm:border-border" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Quote in document">
+        <div className="border-b border-border p-5">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="min-w-0 truncate font-semibold">{target.field ?? "Quote"}</h2>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close"><X /></Button>
+          </div>
+          {target.value && <p className="mt-1 text-sm">{target.value}</p>}
+          <p className={cn("mt-3 inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium", check === "found" ? "border-verified/25 bg-verified/10 text-verified" : "border-risk/25 bg-risk/10 text-risk")}>{CHECK_TEXT[check]}</p>
         </div>
-        <div className="overflow-y-auto p-6 font-mono text-xs leading-relaxed whitespace-pre-wrap">
-          {range ? (<>
-            {text.slice(0, range[0])}
-            <mark ref={(el) => el?.scrollIntoView({ block: "center" })} className="rounded bg-primary/20 text-foreground">{text.slice(range[0], range[1])}</mark>
-            {text.slice(range[1])}
-          </>) : text}
+        <div className="relative flex min-h-0 flex-1">
+          <div ref={bodyRef} className="min-w-0 flex-1 overflow-y-auto p-5 pr-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+            {range ? (<>
+              {text.slice(0, range[0])}
+              <mark ref={markRef} className="rounded bg-primary/20 text-foreground">{text.slice(range[0], range[1])}</mark>
+              {text.slice(range[1])}
+            </>) : text}
+          </div>
+          <div className="relative w-3 shrink-0 border-l border-border bg-muted/40" aria-label="Quote positions in the document">
+            {marks.map(([a], i) => (
+              <button key={i} type="button" aria-label={`Jump to quote ${i + 1}`} onClick={() => jump(a)}
+                className={cn("absolute left-0.5 right-0.5 h-1 rounded-sm", range && a === range[0] ? "bg-primary" : "bg-muted-foreground/40 hover:bg-primary/60")}
+                style={{ top: `${(a / len) * 100}%` }} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -284,27 +350,34 @@ function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote, on
     });
   }
   const F = ["name", "title", "department", "project_role"] as const;
+  const ini = (r: SRow) => (r.name ?? r.title ?? "?").split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   return (
-    <Card className="mt-6 overflow-x-auto">
+    <Card className="overflow-x-auto p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Stakeholders</h2>
-        {canEdit && <Button size="sm" variant="secondary" onClick={() => setEdit({})}><Plus /> Add</Button>}
+        <h2 className="text-lg font-semibold">Stakeholders</h2>
+        {canEdit && <Button size="sm" variant="ghost" onClick={() => setEdit({})}><Plus /> Add</Button>}
       </div>
-      <table className="mt-3 w-full text-sm">
-        <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">Name</th><th>Title</th><th>Department</th><th>Project role</th><th>Source</th><th /></tr></thead>
-        <tbody className="divide-y divide-border">
+      <table className="mt-2 w-full min-w-[560px] text-sm">
+        <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1.5 pl-2 font-medium">Person</th><th className="font-medium">Department</th><th className="font-medium">Project role</th><th className="font-medium">Source</th><th /></tr></thead>
+        <tbody>
           {edit && !edit.id && <EditRow edit={edit} setEdit={setEdit} save={save} fields={F} />}
           {rows.map((r) => edit?.id === r.id ? <EditRow key={r.id} edit={edit} setEdit={setEdit} save={save} fields={F} /> : (
-            <tr key={r.id}>
-              <td className="py-2">{r.name ?? "—"}</td><td>{r.title ?? "—"}</td><td>{r.department ?? "—"}</td><td>{r.project_role ?? "—"}</td>
+            <tr key={r.id} className="group hover:bg-muted/60">
+              <td className="rounded-l-lg py-1.5 pl-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-[10px] font-semibold text-primary">{ini(r)}</span>
+                  <div className="min-w-0"><div className="truncate">{r.name ?? "—"}</div><div className="truncate text-xs text-muted-foreground">{r.title ?? ""}</div></div>
+                </div>
+              </td>
+              <td>{r.department ?? "—"}</td><td>{r.project_role ?? "—"}</td>
               <td>{r.user_provided ? <Pill tone="primary">Added by you</Pill> : r.quote ? <EvidenceChip kind={r.quote_verified ? "verified" : "unverified"} onClick={() => onQuote({ quote: r.quote!, label: "explicitly_stated", value: [r.name, r.title].filter(Boolean).join(", "), field: "Stakeholder" })} /> : <EvidenceChip kind="inference" />}</td>
-              <td className="whitespace-nowrap text-right">{canEdit && <>
+              <td className="whitespace-nowrap rounded-r-lg text-right">{canEdit && <span className="opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                 <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setEdit(r)}><Pencil /></Button>
                 <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del(r)}><Trash2 /></Button>
-              </>}</td>
+              </span>}</td>
             </tr>
           ))}
-          {!rows.length && !edit && <tr><td colSpan={6} className="py-4 text-muted-foreground">No stakeholders yet.</td></tr>}
+          {!rows.length && !edit && <tr><td colSpan={5} className="py-4 text-muted-foreground">No stakeholders yet.</td></tr>}
         </tbody>
       </table>
     </Card>
@@ -314,8 +387,12 @@ function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote, on
 function EditRow({ edit, setEdit, save, fields }: { edit: Partial<SRow>; setEdit: (e: Partial<SRow> | null) => void; save: () => void; fields: readonly ("name" | "title" | "department" | "project_role")[] }) {
   return (
     <tr>
-      {fields.map((k) => <td key={k} className="py-2 pr-2"><Input aria-label={k} value={edit[k] ?? ""} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} /></td>)}
-      <td colSpan={2} className="whitespace-nowrap text-right"><Button size="sm" onClick={save}>Save</Button> <Button size="sm" variant="ghost" onClick={() => setEdit(null)}>Cancel</Button></td>
+      <td colSpan={5} className="py-2">
+        <div className="flex flex-wrap gap-2">
+          {fields.map((k) => <Input key={k} aria-label={k} placeholder={k.replace("_", " ")} className="h-8 w-36" value={edit[k] ?? ""} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} />)}
+          <Button size="sm" onClick={save}>Save</Button><Button size="sm" variant="ghost" onClick={() => setEdit(null)}>Cancel</Button>
+        </div>
+      </td>
     </tr>
   );
 }

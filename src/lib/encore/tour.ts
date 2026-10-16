@@ -43,7 +43,7 @@ export const TOUR_STEPS: TourStep[] = [
     text: "Each fact pulled from the SOW links to its exact sentence, highlighted here in the document itself.",
     action: async ({ waitFor }) => {
       if (document.querySelector('[aria-label="Quote in document"]')) return;
-      const chip = await waitFor(() => [...document.querySelectorAll("button")].find((b) => b.textContent?.includes("Verified quote")) ?? null);
+      const chip = await waitFor(() => [...document.querySelectorAll("button")].find((b) => b.textContent?.includes("Verified")) ?? null);
       chip?.click();
     },
     find: () => document.querySelector('[aria-label="Quote in document"] > div') ?? document.querySelector('[aria-label="Quote in document"]'),

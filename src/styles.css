@@ -220,3 +220,6 @@
 @keyframes orbit-spin { to { transform: rotate(360deg); } }
 .orbit-spin { transform-origin: center; transform-box: fill-box; animation: orbit-spin 120s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .orbit-spin { animation: none; } }
+@keyframes drawer-in { from { transform: translateX(24px); opacity: 0; } }
+.drawer-in { animation: drawer-in 220ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .drawer-in { animation: none; } }
