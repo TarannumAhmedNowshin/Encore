@@ -14,7 +14,7 @@ export const discoverResearch = createServerFn({ method: "POST" })
     const { z } = await import("zod");
     const { loadOwnedAnalysis, adminClient } = await import("./auth.server");
     const { checkQuota, recordUsage } = await import("./usage.server");
-    const { startRun, progress, finishRun, failRun } = await import("./runs.server");
+    const { startRun, progress, failRun } = await import("./runs.server");
     const { generateJson } = await import("./gemini.server");
     const { gatherMaterials } = await import("./serper.server");
     const { HttpError } = await import("./http.server");
@@ -65,9 +65,8 @@ export const discoverResearch = createServerFn({ method: "POST" })
     } catch (e) {
       await failRun(runId, e);
       throw e;
-    } finally {
-      void finishRun; // the run stays open for discover-leads to finish
     }
+    // The run stays open: discover-leads and per-company research continue it.
   });
 
 export const discoverLeads = createServerFn({ method: "POST" })
