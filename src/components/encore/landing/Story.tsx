@@ -196,8 +196,8 @@ function OrbitScene({ p }: { p: MotionValue<number> }) {
       <svg viewBox="0 0 500 500" className="mx-auto w-full max-w-[460px]" role="img" aria-label={`Orbit of ${d?.found ?? 0} look-alike companies around the won deal`}>
         {[110, 150, 190].map((r) => <circle key={r} cx="250" cy="250" r={r} fill="none" className="stroke-border" strokeDasharray="3 6" />)}
         <motion.g style={{ scale: shrink, transformOrigin: "250px 250px" }}>
-          <rect x="205" y="225" width="90" height="50" rx="12" className="fill-card stroke-primary" />
-          <text x="250" y="255" textAnchor="middle" fontSize="13" className="fill-primary font-mono">DNA</text>
+          <rect x="205" y="225" width="90" height="50" rx="12" className="fill-card stroke-accent" />
+          <text x="250" y="255" textAnchor="middle" fontSize="13" className="fill-accent font-mono">DNA</text>
         </motion.g>
         {companies.map((c, i) => <Bubble key={c.name} p={p} i={i} name={c.name} status={c.status} total={companies.length} />)}
       </svg>
@@ -269,7 +269,7 @@ function EmailScene({ p }: { p: MotionValue<number> }) {
   const chars = useTransform(p, [0.05, 0.75], [0, total]);
   const [n, setN] = useState(Math.round(chars.get()));
   useMotionValueEvent(chars, "change", (x) => setN(Math.round(x)));
-  const glow = useTransform(p, [0.78, 0.9], ["0 0 0 0 transparent", "0 0 0 8px color-mix(in oklab, var(--primary) 25%, transparent)"]);
+  const glow = useTransform(p, [0.78, 0.9], ["0 0 0 0 transparent", "0 0 0 8px color-mix(in oklab, var(--accent) 25%, transparent)"]);
   let left = n;
   const sources = new Set<string>();
   return (
@@ -283,7 +283,7 @@ function EmailScene({ p }: { p: MotionValue<number> }) {
           if (!shown) return null;
           if (s.src && complete) sources.add(s.src);
           return s.src ? (
-            <span key={i} className={complete ? "underline decoration-primary decoration-2 underline-offset-4" : ""}>{shown}</span>
+            <span key={i} className={complete ? "underline decoration-accent decoration-2 underline-offset-4" : ""}>{shown}</span>
           ) : <span key={i}>{shown}</span>;
         })}
         {n < total && <span className="ml-0.5 inline-block h-5 w-px translate-y-1 animate-pulse bg-foreground" aria-hidden />}
@@ -326,7 +326,7 @@ export function LandingStory() {
             ["f(x)", "Scores are formulas you can read", "Fit and urgency come from counted signals, shown in full."],
           ].map(([n, h, d]) => (
             <motion.div key={h} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-              <p className="font-display text-6xl font-semibold text-primary lg:text-7xl">{n}</p>
+              <p className="font-display text-6xl font-semibold text-accent lg:text-7xl">{n}</p>
               <p className="mt-3 text-xl font-semibold">{h}</p>
               <p className="mt-2 text-muted-foreground">{d}</p>
             </motion.div>
