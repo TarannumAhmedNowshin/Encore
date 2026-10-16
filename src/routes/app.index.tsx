@@ -36,7 +36,7 @@ function OnboardingCard({ rows, funnels, onDismiss }: { rows: Row[]; funnels: Re
         {steps.map((s, i) => (
           <li key={s.label}>
             <Link to={s.to as string} className="flex items-center gap-3 rounded-md px-1 py-1 text-sm transition-colors hover:bg-secondary">
-              <span className={`grid size-5 shrink-0 place-items-center rounded-full border ${s.done ? "border-verified bg-verified text-primary-foreground" : "border-border text-muted-foreground"}`}>
+              <span className={`grid size-5 shrink-0 place-items-center rounded-full border ${s.done ? "border-verified bg-verified text-accent-foreground" : "border-border text-muted-foreground"}`}>
                 {s.done ? <Check className="size-3" aria-hidden /> : <span className="font-mono text-[10px]">{i + 1}</span>}
               </span>
               <span className={s.done ? "text-muted-foreground line-through" : "font-medium"}>{s.label}</span>

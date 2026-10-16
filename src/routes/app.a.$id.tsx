@@ -38,7 +38,7 @@ function AnalysisLayout() {
               aria-current={overviewActive ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary",
-                overviewActive && "bg-primary/10 text-primary hover:bg-primary/10",
+                overviewActive && "bg-accent/10 text-accent hover:bg-accent/10",
               )}
             >
               <span className="hidden font-mono text-xs text-muted-foreground md:inline">00</span>
@@ -58,7 +58,7 @@ function AnalysisLayout() {
                   aria-current={active ? "step" : undefined}
                   className={cn(
                     "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary",
-                    active && "rail-glow bg-primary/10 text-primary hover:bg-primary/10",
+                    active && "rail-glow bg-accent/10 text-accent hover:bg-accent/10",
                   )}
                 >
                   <span className="hidden font-mono text-xs text-muted-foreground md:inline">0{i + 1}</span>

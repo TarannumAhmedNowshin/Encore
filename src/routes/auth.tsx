@@ -146,7 +146,7 @@ function AuthPage() {
               </form>
               <p className="mt-5 text-center text-sm text-muted-foreground">
                 {mode === "signin" ? "New to Encore?" : "Already have an account?"}{" "}
-                <button type="button" className="rounded font-medium text-primary hover:underline" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
+                <button type="button" className="rounded font-medium text-accent hover:underline" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
                   {mode === "signin" ? "Create an account" : "Sign in"}
                 </button>
               </p>

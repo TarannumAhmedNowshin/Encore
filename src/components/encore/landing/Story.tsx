@@ -134,7 +134,7 @@ function DnaCard({ p }: { p: MotionValue<number> }) {
   const opacity = useTransform(p, [0.35, 0.5], [0, 1]);
   const scale = useTransform(p, [0.35, 0.5], [0.85, 1]);
   return (
-    <motion.div style={{ opacity, scale }} className="mx-auto w-full max-w-md rounded-xl border border-primary/30 bg-card p-6 shadow-sm">
+    <motion.div style={{ opacity, scale }} className="mx-auto w-full max-w-md rounded-xl border border-accent/30 bg-card p-6 shadow-sm">
       <div className="flex items-center justify-between gap-2"><p className="font-mono text-[13px] text-accent">Sales DNA</p><EvidenceChip kind="inference" /></div>
       <dl className="mt-3 space-y-2 text-sm">
         {dna && <>
@@ -174,7 +174,7 @@ function Bubble({ p, i, name, status, total }: { p: MotionValue<number>; i: numb
   return (
     <motion.g style={{ opacity, x: tx, y: ty }} className="group">
       <circle cx={cx} cy={cy} r={qualified ? 20 : 15} className={fill} />
-      <text x={cx} y={cy + 4} textAnchor="middle" fontSize="11" className={qualified || watch ? "fill-primary-foreground font-mono" : "fill-muted-foreground font-mono"}>{initials(name)}</text>
+      <text x={cx} y={cy + 4} textAnchor="middle" fontSize="11" className={qualified || watch ? "fill-accent-foreground font-mono" : "fill-muted-foreground font-mono"}>{initials(name)}</text>
       <text x={cx} y={cy - (qualified ? 28 : 22)} textAnchor="middle" fontSize="12" className="fill-foreground font-medium opacity-0 transition-opacity group-hover:opacity-100">{name}</text>
       <title>{name}</title>
     </motion.g>

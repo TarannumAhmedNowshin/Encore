@@ -263,7 +263,7 @@ function OutreachPage() {
             <div className="mb-3 flex flex-wrap gap-1">
               {FILTERS.map(([f, l]) => (
                 <button key={f} type="button" onClick={() => setFilter(f)}
-                  className={cn("chip", filter === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>{l}</button>
+                  className={cn("chip", filter === f ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground")}>{l}</button>
               ))}
             </div>
             {groups.map((g) => {
@@ -306,7 +306,7 @@ function OutreachPage() {
                 <div className="mt-4 flex flex-wrap gap-1 border-b border-border">
                   {CHANNELS.map((ch) => (
                     <button key={ch} type="button" onClick={() => { setChannel(ch); setEditing(null); setRejecting(null); }}
-                      className={cn("-mb-px border-b-2 px-3 py-1.5 text-sm", channel === ch ? "border-primary font-medium text-primary" : "border-transparent text-muted-foreground")}>
+                      className={cn("-mb-px border-b-2 px-3 py-1.5 text-sm", channel === ch ? "border-accent font-medium text-accent" : "border-transparent text-muted-foreground")}>
                       {CHANNEL_LABELS[ch]}
                     </button>
                   ))}
@@ -342,7 +342,7 @@ function OutreachPage() {
                       <p data-tour="draft" className="whitespace-pre-wrap text-sm leading-relaxed">
                         {draft.status === "edited" ? shownBody : segments(shownBody, claims).map((sg, k) => sg.i === undefined ? <span key={k}>{sg.text}</span> : (
                           <span key={k} onMouseEnter={() => setHover(sg.i!)} onMouseLeave={() => setHover(null)}
-                            className={cn("underline decoration-2 underline-offset-4", claims[sg.i]?.verified ? "decoration-verified/60" : "decoration-risk/60", hover === sg.i && "bg-primary/10")}>{sg.text}</span>
+                            className={cn("underline decoration-2 underline-offset-4", claims[sg.i]?.verified ? "decoration-verified/60" : "decoration-risk/60", hover === sg.i && "bg-accent/10")}>{sg.text}</span>
                         ))}
                       </p>
                     )}
@@ -377,7 +377,7 @@ function OutreachPage() {
                   const about = f?.subject === "target_evidence" ? `about ${current?.t.name ?? "the company"}` : "from our engagement";
                   return (
                     <li key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
-                      className={cn("min-w-0 break-words rounded-md border p-2 text-xs", hover === i ? "border-primary bg-primary/5" : "border-border")}>
+                      className={cn("min-w-0 break-words rounded-md border p-2 text-xs", hover === i ? "border-accent bg-accent/5" : "border-border")}>
                       <p className="font-medium">"{c.claim}"</p>
                       {f ? <p className="mt-1 text-muted-foreground">{f.value}</p> : <p className="mt-1 text-risk">{(c as { ungrounded?: boolean }).ungrounded ? "Factual sentence with no backing fact" : "Not tied to a fact"}</p>}
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -401,7 +401,7 @@ function OutreachPage() {
               <div key={k} className="space-y-1">
                 <EvidenceChip kind={ci.verified ? "verified" : "unverified"} />
                 <blockquote className="border-l-2 border-border pl-3 font-mono text-xs">"{ci.quote}"</blockquote>
-                {ci.source_url ? <a href={ci.source_url} target="_blank" rel="noreferrer" className="break-all font-mono text-xs text-primary underline">{ci.source_title || ci.source_url}</a>
+                {ci.source_url ? <a href={ci.source_url} target="_blank" rel="noreferrer" className="break-all font-mono text-xs text-accent underline">{ci.source_title || ci.source_url}</a>
                   : ci.source_title && <div className="text-xs text-muted-foreground">{ci.source_title}</div>}
               </div>
             )) : <p className="text-muted-foreground">No quote stored for this fact.</p>}

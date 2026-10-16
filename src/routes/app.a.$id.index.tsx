@@ -106,9 +106,9 @@ function OverviewPage() {
   const next = nextAction(d.state);
   const pipeline = [
     { stage: "deal", name: "Deal", n: d.state.facts, unit: "facts", vis: <span className="font-mono text-xs text-verified">{d.verifiedPct}% verified</span> },
-    { stage: "playbook", name: "Playbook", n: d.personas.length, unit: "personas", vis: <span className="flex -space-x-1">{d.personas.slice(0, 4).map((p) => <span key={p} title={p} className="grid size-5 place-items-center rounded-full border border-card bg-primary/15 font-mono text-[8px] text-primary">{ini(p)}</span>)}</span> },
+    { stage: "playbook", name: "Playbook", n: d.personas.length, unit: "personas", vis: <span className="flex -space-x-1">{d.personas.slice(0, 4).map((p) => <span key={p} title={p} className="grid size-5 place-items-center rounded-full border border-card bg-accent/15 font-mono text-[8px] text-accent">{ini(p)}</span>)}</span> },
     { stage: "accounts", name: "Accounts", n: d.counts.qualified, unit: "qualified", vis: (
-      <svg width="44" height="22" viewBox="0 0 44 22" aria-hidden>{d.orbit.map((q, i) => { const ang = (i / Math.max(1, d.orbit.length)) * Math.PI * 2; return <circle key={i} cx={22 + 17 * Math.cos(ang)} cy={11 + 8 * Math.sin(ang)} r="2" className={q ? "fill-primary" : "fill-muted-foreground/40"} />; })}<circle cx="22" cy="11" r="3" className="fill-primary" /></svg>
+      <svg width="44" height="22" viewBox="0 0 44 22" aria-hidden>{d.orbit.map((q, i) => { const ang = (i / Math.max(1, d.orbit.length)) * Math.PI * 2; return <circle key={i} cx={22 + 17 * Math.cos(ang)} cy={11 + 8 * Math.sin(ang)} r="2" className={q ? "fill-accent" : "fill-muted-foreground/40"} />; })}<circle cx="22" cy="11" r="3" className="fill-accent" /></svg>
     ) },
     { stage: "people", name: "People", n: d.counts.contacts, unit: "decision-makers", vis: <span className="flex -space-x-1.5">{d.contactTitles.map((t, i) => <span key={i} className="grid size-5 place-items-center rounded-full border border-card bg-secondary font-mono text-[8px]">{ini(t)}</span>)}</span> },
     { stage: "outreach", name: "Outreach", n: d.counts.drafts, unit: "drafts", vis: <span className="font-mono text-xs text-muted-foreground">{d.counts.approved} approved</span> },
@@ -128,7 +128,7 @@ function OverviewPage() {
       <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-label="Pipeline">
         {pipeline.map((p, i) => (
           <li key={p.stage} className="relative min-w-0">
-            <Link to={`/app/a/$id/${p.stage}`} params={{ id }} className="lift surface block h-full p-4 hover:border-primary/40">
+            <Link to={`/app/a/$id/${p.stage}`} params={{ id }} className="lift surface block h-full p-4 hover:border-accent/40">
               <span className="font-mono text-[11px] text-muted-foreground">0{i + 1} · {p.name}</span>
               <span className="mt-1 block font-mono text-2xl font-semibold">{p.n}</span>
               <span className="block text-xs text-muted-foreground">{p.unit}</span>

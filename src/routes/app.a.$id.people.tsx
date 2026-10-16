@@ -282,7 +282,7 @@ function ContactCard({ c, score, persona }: { c: Contact; score?: Score | undefi
         {persona && <Pill tone="primary" className="h-auto whitespace-normal py-0.5">{persona}</Pill>}
         {c.linkedin_url && (
           <a href={c.linkedin_url} target="_blank" rel="noreferrer" aria-label={`${c.name} on LinkedIn`}
-            className="text-muted-foreground hover:text-primary">
+            className="text-muted-foreground hover:text-accent">
             <Linkedin className="size-3.5" />
           </a>
         )}

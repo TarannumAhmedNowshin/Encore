@@ -180,8 +180,8 @@ export function RunTimeline({ steps }: { steps: RunStep[] }) {
               "relative z-10 grid size-5 shrink-0 place-items-center rounded-full border",
               s.state === "waiting" && "border-border bg-card",
               s.state === "running" && "border-accent bg-accent/15 animate-run-pulse",
-              s.state === "done" && "border-verified bg-verified text-primary-foreground",
-              s.state === "failed" && "border-risk bg-risk text-primary-foreground",
+              s.state === "done" && "border-verified bg-verified text-accent-foreground",
+              s.state === "failed" && "border-risk bg-risk text-accent-foreground",
             )}
           >
             {s.state === "done" && <Check className="size-3" aria-hidden />}
