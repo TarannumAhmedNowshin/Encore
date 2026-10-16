@@ -83,7 +83,7 @@ export const findPeople = createServerFn({ method: "POST" })
       db.from("departments").select("id, name").eq("target_id", t.id),
     ]);
     if (!personas?.length) throw new HttpError(400, "Build the playbook first");
-    await checkQuota(userId, "people_search", 10);
+    await checkQuota(userId, "people_search");
 
     let liUrl: string | null = t.linkedin_url;
     if (!liUrl) {
