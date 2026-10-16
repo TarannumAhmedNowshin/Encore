@@ -21,10 +21,14 @@ function AnalysisLayout() {
   const { data: access } = useQuery({ ...accessQuery(id), enabled: typeof window !== "undefined" });
   const readOnly = !!access?.readOnly;
   const overviewActive = pathname === `/app/a/${id}` || pathname === `/app/a/${id}/`;
+  const doneCount = STAGES.filter((s) => stages?.[s.key]?.status === "done").length;
   return (
     <div className="flex flex-1 flex-col md:flex-row">
       <nav aria-label="Analysis stages" className="border-b border-border bg-card md:sticky md:top-[57px] md:h-[calc(100vh-57px)] md:self-start md:overflow-y-auto md:w-[260px] md:shrink-0 md:border-r md:border-b-0">
-        <ol className="flex gap-1 overflow-x-auto p-2 md:flex-col md:p-4">
+        <ol className="relative flex gap-1 overflow-x-auto p-2 md:flex-col md:p-4">
+          <span aria-hidden className="rail-line left-[27px] top-4 bottom-4 hidden md:block" style={{ position: "absolute" }}>
+            <span className="rail-fill" style={{ transform: `scaleY(${doneCount / STAGES.length})` }} />
+          </span>
           <li className="shrink-0">
             <Link
               to="/app/a/$id"
