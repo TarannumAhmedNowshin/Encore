@@ -72,6 +72,7 @@ function AppShell() {
 }
 
 function SignedInShell() {
+  const { pathname } = useLocation();
   const { user } = useSession();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
