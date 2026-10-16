@@ -25,7 +25,7 @@ export const updateAnalysisSettings = createServerFn({ method: "POST" })
     const { adminClient, loadOwnedAnalysis } = await import("./auth.server");
     const { HttpError } = await import("./http.server");
     await loadOwnedAnalysis(data.analysis_id, context.userId);
-    const patch: Record<string, unknown> = {};
+    const patch: { target_region?: string; anonymise_customer?: boolean } = {};
     if (typeof data.target_region === "string") patch.target_region = data.target_region;
     if (typeof data.anonymise_customer === "boolean") patch.anonymise_customer = data.anonymise_customer;
     if (!Object.keys(patch).length) throw new HttpError(400, "Nothing to update");
