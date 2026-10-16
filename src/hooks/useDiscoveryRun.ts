@@ -19,14 +19,15 @@ type S = RunStep["state"];
 export const targetsQuery = (id: string) => ({
   queryKey: ["targets", id],
   queryFn: async () => {
-    const [t, run, a] = await Promise.all([
+    const [t, run, a, dna] = await Promise.all([
       supabase.from("targets").select("*").eq("analysis_id", id).order("created_at"),
       supabase.from("runs").select("id, status, error, used_fallback_model, created_at").eq("analysis_id", id).eq("step", "discover").order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("analyses").select("is_showcase, target_region, customer_name, anonymise_customer, user_id").eq("id", id).maybeSingle(),
+      supabase.from("sales_dna").select("id").eq("analysis_id", id).maybeSingle(),
     ]);
     const { data: u } = await supabase.auth.getUser();
     const readOnly = !u.user || a.data?.user_id !== u.user.id;
-    return { targets: t.data ?? [], run: run.data, readOnly, region: a.data?.target_region ?? "global", customer: a.data?.customer_name ?? null };
+    return { targets: t.data ?? [], run: run.data, readOnly, region: a.data?.target_region ?? "global", customer: a.data?.customer_name ?? null, hasDna: !!dna.data };
   },
 });
 
