@@ -24,3 +24,4 @@
 - Public guided demo lives at /app/a/demo (/demo redirects; app.tsx skips the sign-in gate and renders `DemoShell` there). Stage pages read through `dbFor(id)` (`src/lib/encore/demo-db.ts`), which serves the sanitised `getDemo` snapshot for the demo id; privacy rules (no contact names/LinkedIn/location, "[First name]" in drafts, 60/min per IP) are pure in `demo.ts`, tour steps in `tour.ts`. Why: one set of stage pages for both real and demo data, with no real person's identity ever public.
 
 - Subdirectories have their own `AGENTS.md` (e.g. `src/lib/encore/AGENTS.md`); read it before changing files there.
+- Landing story lives in src/components/encore/landing/Story.tsx: framer-motion scroll scenes are sticky only at ≥1024px without reduced motion, otherwise stacked final states; why: phones and reduced-motion users get a simple, fast page.

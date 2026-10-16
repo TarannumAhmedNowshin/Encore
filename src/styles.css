@@ -20,6 +20,10 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-line: var(--ink-line);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -53,6 +57,10 @@
 }
 
 :root {
+  --ink: oklch(0.165 0.008 274);
+  --ink-foreground: oklch(0.97 0.005 95);
+  --ink-muted: oklch(0.72 0.012 274);
+  --ink-line: oklch(0.3 0.012 274);
   --radius: 12px;
   --background: oklch(0.973 0.005 95.1);
   --foreground: oklch(0.203 0.014 285.1);
@@ -208,3 +216,7 @@
 @keyframes tour-note-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .tour-note { animation: tour-note-in 200ms ease-out both; }
 @media (prefers-reduced-motion: reduce) { .tour-spot { transition: none; } .tour-note { animation: none; } }
+
+@keyframes orbit-spin { to { transform: rotate(360deg); } }
+.orbit-spin { transform-origin: center; transform-box: fill-box; animation: orbit-spin 120s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .orbit-spin { animation: none; } }
