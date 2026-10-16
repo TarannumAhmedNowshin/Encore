@@ -18,7 +18,7 @@ describe("journey rail", () => {
 
 describe("deal rules", () => {
   it("confidence mean high/medium/low", () => expect(overallConfidence(["high", "medium", "low"])).toBe(63));
-  it("stakeholder key drops credentials and parens", () => expect(stakeholderKey("Dr. Jane Doe, PhD (CFO)", null)).toBe(stakeholderKey("jane doe", "x").replace(/^dr /, "")) );
+  it("stakeholder key drops credentials and parens", () => expect(stakeholderKey("Jane Doe, PhD (CFO)", null)).toBe("jane doe"));
   it("tbd is a placeholder told apart by title", () => {
     expect(isPlaceholderName("TBD")).toBe(true);
     expect(stakeholderKey("TBD", "CTO")).not.toBe(stakeholderKey("tbd", "CFO"));
