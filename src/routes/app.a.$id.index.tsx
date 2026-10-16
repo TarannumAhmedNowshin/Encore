@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, ConfirmDialog, Pill } from "@/components/encore/primitives";
+import { Card } from "@/components/encore/primitives";
 import { accessQuery } from "@/lib/encore/ownership";
 import { funnelSteps, nextAction, type FunnelCounts, type OverviewState } from "@/lib/encore/overview";
 import { overallConfidence } from "@/lib/encore/deal";

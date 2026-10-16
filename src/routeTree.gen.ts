@@ -17,6 +17,7 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppNewRouteImport } from './routes/app.new'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppAIdRouteImport } from './routes/app.a.$id'
+import { Route as AppAIdIndexRouteImport } from './routes/app.a.$id.index'
 import { Route as AppAIdAccountsRouteImport } from './routes/app.a.$id.accounts'
 import { Route as AppAIdDealRouteImport } from './routes/app.a.$id.deal'
 import { Route as AppAIdOutreachRouteImport } from './routes/app.a.$id.outreach'
@@ -63,6 +64,11 @@ const AppAIdRoute = AppAIdRouteImport.update({
   path: '/a/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAIdIndexRoute = AppAIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAIdRoute,
+} as any)
 const AppAIdAccountsRoute = AppAIdAccountsRouteImport.update({
   id: '/accounts',
   path: '/accounts',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/app/a/$id/outreach': typeof AppAIdOutreachRoute
   '/app/a/$id/people': typeof AppAIdPeopleRoute
   '/app/a/$id/playbook': typeof AppAIdPlaybookRoute
+  '/app/a/$id/': typeof AppAIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -111,12 +118,12 @@ export interface FileRoutesByTo {
   '/app/new': typeof AppNewRoute
   '/app/settings': typeof AppSettingsRoute
   '/app': typeof AppIndexRoute
-  '/app/a/$id': typeof AppAIdRouteWithChildren
   '/app/a/$id/accounts': typeof AppAIdAccountsRoute
   '/app/a/$id/deal': typeof AppAIdDealRoute
   '/app/a/$id/outreach': typeof AppAIdOutreachRoute
   '/app/a/$id/people': typeof AppAIdPeopleRoute
   '/app/a/$id/playbook': typeof AppAIdPlaybookRoute
+  '/app/a/$id': typeof AppAIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,6 +140,7 @@ export interface FileRoutesById {
   '/app/a/$id/outreach': typeof AppAIdOutreachRoute
   '/app/a/$id/people': typeof AppAIdPeopleRoute
   '/app/a/$id/playbook': typeof AppAIdPlaybookRoute
+  '/app/a/$id/': typeof AppAIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,6 +158,7 @@ export interface FileRouteTypes {
     | '/app/a/$id/outreach'
     | '/app/a/$id/people'
     | '/app/a/$id/playbook'
+    | '/app/a/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -158,12 +167,12 @@ export interface FileRouteTypes {
     | '/app/new'
     | '/app/settings'
     | '/app'
-    | '/app/a/$id'
     | '/app/a/$id/accounts'
     | '/app/a/$id/deal'
     | '/app/a/$id/outreach'
     | '/app/a/$id/people'
     | '/app/a/$id/playbook'
+    | '/app/a/$id'
   id:
     | '__root__'
     | '/'
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/app/a/$id/outreach'
     | '/app/a/$id/people'
     | '/app/a/$id/playbook'
+    | '/app/a/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -246,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/a/$id/': {
+      id: '/app/a/$id/'
+      path: '/'
+      fullPath: '/app/a/$id/'
+      preLoaderRoute: typeof AppAIdIndexRouteImport
+      parentRoute: typeof AppAIdRoute
+    }
     '/app/a/$id/accounts': {
       id: '/app/a/$id/accounts'
       path: '/accounts'
@@ -290,6 +307,7 @@ interface AppAIdRouteChildren {
   AppAIdOutreachRoute: typeof AppAIdOutreachRoute
   AppAIdPeopleRoute: typeof AppAIdPeopleRoute
   AppAIdPlaybookRoute: typeof AppAIdPlaybookRoute
+  AppAIdIndexRoute: typeof AppAIdIndexRoute
 }
 
 const AppAIdRouteChildren: AppAIdRouteChildren = {
@@ -298,6 +316,7 @@ const AppAIdRouteChildren: AppAIdRouteChildren = {
   AppAIdOutreachRoute: AppAIdOutreachRoute,
   AppAIdPeopleRoute: AppAIdPeopleRoute,
   AppAIdPlaybookRoute: AppAIdPlaybookRoute,
+  AppAIdIndexRoute: AppAIdIndexRoute,
 }
 
 const AppAIdRouteWithChildren =

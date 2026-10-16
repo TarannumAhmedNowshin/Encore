@@ -1,9 +1,12 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
+import { LayoutDashboard, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STAGES } from "@/components/encore/stages";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { StatusDot, type StageStatus } from "@/components/encore/primitives";
 import { stagesQuery } from "@/lib/encore/stages-query";
+import { accessQuery } from "@/lib/encore/ownership";
 
 export const Route = createFileRoute("/app/a/$id")({
   component: AnalysisLayout,
@@ -15,10 +18,28 @@ function AnalysisLayout() {
   const { id } = Route.useParams();
   const { pathname } = useLocation();
   const { data: stages } = useQuery({ ...stagesQuery(id), enabled: typeof window !== "undefined" });
+  const { data: access } = useQuery({ ...accessQuery(id), enabled: typeof window !== "undefined" });
+  const readOnly = !!access?.readOnly;
+  const overviewActive = pathname === `/app/a/${id}` || pathname === `/app/a/${id}/`;
   return (
     <div className="flex flex-1 flex-col md:flex-row">
       <nav aria-label="Analysis stages" className="border-b border-border bg-card md:sticky md:top-[57px] md:h-[calc(100vh-57px)] md:self-start md:overflow-y-auto md:w-[260px] md:shrink-0 md:border-r md:border-b-0">
         <ol className="flex gap-1 overflow-x-auto p-2 md:flex-col md:p-4">
+          <li className="shrink-0">
+            <Link
+              to="/app/a/$id"
+              params={{ id }}
+              aria-current={overviewActive ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary",
+                overviewActive && "bg-primary/10 text-primary hover:bg-primary/10",
+              )}
+            >
+              <span className="hidden font-mono text-xs text-muted-foreground md:inline">00</span>
+              <LayoutDashboard className="size-4" aria-hidden />
+              <span className="font-medium">Overview</span>
+            </Link>
+          </li>
           {STAGES.map((s, i) => {
             const meta: { status: StageStatus; count: number; reason?: string } = stages?.[s.key] ?? { status: "not_started", count: 0 };
             const active = pathname.endsWith(`/${s.key}`);
@@ -53,6 +74,15 @@ function AnalysisLayout() {
         </ol>
       </nav>
       <div className="min-w-0 flex-1">
+        {readOnly && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-inference/30 bg-inference/5 px-4 py-2.5 text-sm sm:px-gutter">
+            <Lock className="size-4 shrink-0 text-inference" aria-hidden />
+            <span>Example analysis — read only. Run your own with the sample deal.</span>
+            <Button asChild size="sm" variant="secondary" className="ml-auto">
+              <Link to="/app/new" search={{ sample: 1 }}>Try the sample deal</Link>
+            </Button>
+          </div>
+        )}
         <Outlet />
       </div>
     </div>
