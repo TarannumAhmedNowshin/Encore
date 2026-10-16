@@ -203,7 +203,7 @@ function OutreachPage() {
       const { error } = await supabase.from("outreach_drafts").update(patch as never).eq("id", did);
       if (error) throw error;
       if (patch.status === "approved") toast.success("Draft approved");
-      qc.setQueryData(outreachQuery(id).queryKey, (old: typeof d) => old ? { ...old, drafts: old.drafts.map((x) => x.id === did ? { ...x, ...patch } : x) } : old);
+      qc.setQueryData(outreachQuery(id).queryKey, (old) => old ? { ...old, drafts: old.drafts.map((x) => x.id === did ? { ...x, ...patch } : x) } : old);
       await refresh();
       return true;
     } catch (e) { toastError(e, "Couldn't save draft", () => void update(did, patch)); return false; }
