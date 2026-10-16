@@ -52,7 +52,7 @@ export const extractDeal = createServerFn({ method: "POST" })
         ...Object.fromEntries(SINGLE.map((k) => [k, LV])),
         ...Object.fromEntries(LIST.map((k) => [k, z.array(LV)])),
         stakeholders: z.array(SH),
-      }) as unknown as import("zod").ZodType<Record<string, any>>;
+      }) as unknown as import("zod").ZodType<any>;
 
       const lvS = {
         type: "OBJECT" as const,
@@ -124,7 +124,7 @@ export const extractDeal = createServerFn({ method: "POST" })
         const verified = s.quote ? quoteVerified(s.quote, text, 3) : null;
         const match = existing.get(stakeholderKey(s.name, s.title));
         if (match) {
-          const patch: Record<string, string> = {};
+          const patch: { title?: string; project_role?: string; department?: string } = {};
           if (!match.title && s.title) patch.title = s.title;
           if (!match.project_role && s.project_role) patch.project_role = s.project_role;
           if (!match.department && s.department) patch.department = s.department;

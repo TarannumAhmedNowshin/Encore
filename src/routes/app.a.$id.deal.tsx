@@ -76,7 +76,7 @@ function DealPage() {
 
   const steps: RunStep[] = ["Reading the document", "Extracting facts", "Checking every quote"].map((label, i) => {
     const done = run?.done ?? 0;
-    return { label, state: run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting", message: run?.error ?? undefined };
+    return { label, state: run?.status === "failed" && i === done ? "failed" : i < done ? "done" : i === done ? "running" : "waiting", ...(run?.error ? { message: run.error } : {}) };
   });
 
   const presentAttrs = new Set(facts.map((f) => f.attribute));
@@ -119,7 +119,7 @@ function DealPage() {
               </div>
               <div className="text-sm text-muted-foreground">
                 <div>Mean of {facts.length} facts: high = 1, medium = 0.6, low = 0.3</div>
-                <div className="mt-1 font-mono text-xs">high {byConf.high ?? 0} · medium {byConf.medium ?? 0} · low {byConf.low ?? 0}</div>
+                <div className="mt-1 font-mono text-xs">high {byConf['high'] ?? 0} · medium {byConf['medium'] ?? 0} · low {byConf['low'] ?? 0}</div>
                 <div className="font-mono text-xs">{Object.entries(byOrigin).map(([k, v]) => `${k === "user" ? "you" : k} ${v}`).join(" · ")}</div>
               </div>
             </div>
@@ -205,7 +205,7 @@ function Stakeholders({ rows, analysisId, userId, canEdit, onChange, onQuote }: 
     const { error } = edit.id
       ? await supabase.from("stakeholders").update(v).eq("id", edit.id)
       : await supabase.from("stakeholders").insert({ ...v, analysis_id: analysisId, user_id: userId, user_provided: true, label: "user", confidence: "high" });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setEdit(null); onChange();
   }
   async function del(id: string) {
