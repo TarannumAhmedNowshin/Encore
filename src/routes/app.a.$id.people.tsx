@@ -40,14 +40,15 @@ const peopleQuery = (id: string) => queryOptions({
   queryKey: ["people", id],
   queryFn: async () => {
     const [a, targets, contacts, scores, personas] = await Promise.all([
-      supabase.from("analyses").select("is_showcase").eq("id", id).maybeSingle(),
+      supabase.from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
       supabase.from("targets").select("*").eq("analysis_id", id).eq("status", "qualified"),
       supabase.from("contacts").select("*").eq("analysis_id", id),
       supabase.from("contact_scores").select("*"),
       supabase.from("personas").select("id, label").eq("analysis_id", id),
     ]);
+    const { data: u } = await supabase.auth.getUser();
     return {
-      readOnly: !!a.data?.is_showcase,
+      readOnly: !u.user || a.data?.user_id !== u.user.id,
       targets: ((targets.data ?? []) as AccountRow[]).sort(defaultOrder),
       contacts: (contacts.data ?? []) as Contact[],
       scores: (scores.data ?? []) as Score[],
@@ -144,6 +145,16 @@ function PeoplePage() {
     setBulk(null);
     await refresh();
   };
+
+  if (d?.readOnly) {
+    return (
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Users className="size-4" aria-hidden /> People</div>
+        <h1 className="mt-1 text-2xl font-semibold">The buying committee at each account</h1>
+        <EmptyState title="People data is private to the analysis owner" line="Run your own analysis with the sample deal to see this stage." />
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">

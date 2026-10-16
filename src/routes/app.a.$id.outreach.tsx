@@ -38,7 +38,7 @@ const outreachQuery = (id: string) => queryOptions({
   queryKey: ["outreach", id],
   queryFn: async () => {
     const [a, contacts, targets, drafts, scores] = await Promise.all([
-      supabase.from("analyses").select("is_showcase").eq("id", id).maybeSingle(),
+      supabase.from("analyses").select("is_showcase, user_id").eq("id", id).maybeSingle(),
       supabase.from("contacts").select("id, target_id, name, title, linkedin_url").eq("analysis_id", id),
       supabase.from("targets").select("id, name, opportunity_score").eq("analysis_id", id).eq("status", "qualified"),
       supabase.from("outreach_drafts").select("*").eq("analysis_id", id),
@@ -49,8 +49,9 @@ const outreachQuery = (id: string) => queryOptions({
     const facts = factIds.length
       ? await supabase.from("facts").select("id, value, subject, target_id, citations(quote, source_title, source_url, verified)").in("id", factIds)
       : { data: [] };
+    const { data: u } = await supabase.auth.getUser();
     return {
-      readOnly: !!a.data?.is_showcase,
+      readOnly: !u.user || a.data?.user_id !== u.user.id,
       contacts: (contacts.data ?? []) as Contact[],
       targets: (targets.data ?? []) as { id: string; name: string | null; opportunity_score: number | null }[],
       drafts: ds,
@@ -137,6 +138,15 @@ function OutreachPage() {
   }, [d]);
 
   if (!d) return <main className="p-8"><div className="surface h-40 animate-pulse" /></main>;
+  if (d.readOnly) {
+    return (
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-gutter">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Send className="size-4" aria-hidden /> Outreach</div>
+        <h1 className="mt-1 text-2xl font-semibold">Grounded drafts, reviewed by you</h1>
+        <EmptyState title="People data is private to the analysis owner" line="Run your own analysis with the sample deal to see this stage." />
+      </main>
+    );
+  }
 
   const all = groups.flatMap((g) => g.contacts.map((x) => ({ ...x, t: g.t })));
   const current = all.find((x) => x.c.id === selected) ?? all[0];
