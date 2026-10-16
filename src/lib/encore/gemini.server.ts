@@ -72,3 +72,14 @@ export async function generateJson<T>(opts: {
   if (second.ok) return second.value;
   throw new HttpError(502, `The AI answer failed validation: ${second.error}`);
 }
+
+/** Smart model first; if it is overloaded (503), retry once on the fast model. */
+export async function generateJsonWithFallback<T>(opts: Parameters<typeof generateJson<T>>[0]): Promise<{ value: T; usedFallback: boolean }> {
+  try {
+    return { value: await generateJson<T>(opts), usedFallback: false };
+  } catch (e) {
+    if (opts.tier === "smart" && e instanceof HttpError && e.status === 503)
+      return { value: await generateJson<T>({ ...opts, tier: "fast" }), usedFallback: true };
+    throw e;
+  }
+}
