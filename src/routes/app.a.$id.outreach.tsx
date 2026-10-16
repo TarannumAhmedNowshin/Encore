@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, EmptyState, EvidenceChip, EvidenceDrawer, Pill, RunTimeline } from "@/components/encore/primitives";
 import { draftOutreach } from "@/lib/encore/outreach.functions";
 import { CHANNELS, CHANNEL_LABELS, type Channel } from "@/lib/encore/outreach";
+import { toastError } from "@/lib/encore/toast";
 import { clearJob, setJob, useRunState } from "@/lib/encore/run-store";
 import { cn } from "@/lib/utils";
 
@@ -154,13 +155,14 @@ function OutreachPage() {
   const approved = all.flatMap((x) => x.drafts.filter((dr) => dr.status === "approved" || dr.status === "edited").map((dr) => ({ ...x, dr })));
 
   const draftOne = async (cid: string) => {
+    if (busy.includes(cid)) return false; // never draft the same contact twice at once
     setBusy((b) => [...b, cid]);
     try {
       const r = await draftFn({ data: { contact_id: cid } });
       if (r.flagged) toast(`${r.flagged} draft${r.flagged > 1 ? "s" : ""} need edits: some claims couldn't be tied to a fact.`);
       setNoEvidence((m) => ({ ...m, [cid]: !!r.noTargetEvidence }));
       return true;
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Drafting failed"); return false; }
+    } catch (e) { toastError(e, "Drafting failed", () => void draftOne(cid)); return false; }
     finally { setBusy((b) => b.filter((x) => x !== cid)); await refresh(); }
   };
 
