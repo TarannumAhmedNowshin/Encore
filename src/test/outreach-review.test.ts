@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { finalBody, matchesFilter, recheckEditedBody } from "@/lib/encore/outreach-review";
+import { countReviewDrafts, finalBody, matchesFilter, recheckEditedBody, reviewStatus } from "@/lib/encore/outreach-review";
 
 describe("edited outreach", () => {
   it("approval retains exactly the edited text rather than the AI history", () => {
@@ -16,6 +16,19 @@ describe("edited outreach", () => {
   });
 });
 describe("real draft statuses", () => {
+  it("counts 7 needs-review drafts when 3 of 11 are approved and 1 is rejected", () => {
+    const drafts = [...Array.from({ length: 7 }, () => ({ status: "pending" })), ...Array.from({ length: 3 }, () => ({ status: "approved" })), { status: "rejected" }];
+    expect(countReviewDrafts(drafts, "pending")).toBe(7);
+    expect(countReviewDrafts(drafts, "approved")).toBe(3);
+    expect(countReviewDrafts(drafts, "rejected")).toBe(1);
+    expect(countReviewDrafts(drafts, "all")).toBe(11);
+  });
+  it("uses the displayed channel's exact status for its contact indicator", () => {
+    expect(reviewStatus({ status: "approved" })).toBe("approved");
+    expect(reviewStatus({ status: "rejected" })).toBe("rejected");
+    expect(reviewStatus({ status: "edited" })).toBe("pending");
+    expect(reviewStatus(undefined)).toBe("none");
+  });
   it("edited is reviewable, not approved", () => {
     expect(matchesFilter([{ status: "edited" }], "pending")).toBe(true);
     expect(matchesFilter([{ status: "edited" }], "approved")).toBe(false);

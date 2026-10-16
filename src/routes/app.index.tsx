@@ -49,7 +49,7 @@ function OnboardingCard({ rows, funnels, onDismiss }: { rows: Row[]; funnels: Re
 }
 
 export const Route = createFileRoute("/app/")({
-  head: () => ({ meta: [{ title: "My analyses — Encore" }, { name: "description", content: "Your Encore analyses, one per won deal." }] }),
+  head: () => ({ meta: [{ title: "My analyses — Encore" }, { name: "description", content: "Your Encore analyses, one per won deal." }, { property: "og:title", content: "My analyses — Encore" }, { property: "og:description", content: "Your evidence-backed Encore analyses, one per won deal." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Dashboard,
 });
 

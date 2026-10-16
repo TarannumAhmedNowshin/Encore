@@ -27,6 +27,10 @@ export type TourStep = {
   find: () => Element | null; action?: (c: Ctx) => Promise<void>; note?: (s: DemoStats | null) => string | null;
 };
 
+export function tourDuration(step: Pick<TourStep, "text">, firstMove = false): number {
+  return firstMove ? 1500 : step.text.length > 130 ? 6000 : 5000;
+}
+
 const heading = (text: string, sel = "h2, h3") =>
   [...document.querySelectorAll(sel)].find((h) => h.textContent?.trim() === text) ?? null;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

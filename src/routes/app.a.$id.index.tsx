@@ -16,6 +16,7 @@ import { deleteAnalysis, renameAnalysis, updateAnalysisSettings } from "@/lib/en
 import { useServerFn } from "@tanstack/react-start";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { isDemoId } from "@/lib/encore/demo";
 
 export const Route = createFileRoute("/app/a/$id/")({
   head: () => ({ meta: [
@@ -64,7 +65,7 @@ const overviewQuery = (id: string) => queryOptions({
     const deptTargets = new Set(((depts.data ?? []) as { target_id: string }[]).map((d) => d.target_id));
     const counts: FunnelCounts = {
       found: T.length, qualified: Q.length, withDepartment: Q.filter((t) => deptTargets.has(t.id)).length,
-      contacts: C.length, drafts: D.length, approved: D.filter((d) => d.status === "approved" || d.status === "edited").length,
+      contacts: C.length, drafts: D.length, approved: D.filter((d) => d.status === "approved").length,
     };
     const state: OverviewState = { facts: F.length, hasSalesDna: !!dna.data, qualified: counts.qualified, contacts: counts.contacts, drafts: counts.drafts, approved: counts.approved };
     const docFacts = F.filter((f) => f.origin !== "user");
@@ -151,7 +152,7 @@ function OverviewPage() {
         </Card>
         <Card className="min-w-0 p-4 sm:p-5">
           <p className="text-xs text-muted-foreground">Best-fit contact</p>
-          {d.bestContact ? (<div className="mt-2 flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold capitalize">{(d.bestContact.role ?? "contact").replace(/_/g, " ")}</p><p className="truncate text-xs text-muted-foreground">{d.bestContact.title}</p></div><ScoreRing value={Math.round(d.bestContact.score)} size={44} /></div>)
+          {d.bestContact ? (<div className="mt-2 flex items-center justify-between gap-3"><div className="min-w-0"><p className="line-clamp-2 break-words font-semibold capitalize" title={(d.bestContact.role ?? "contact").replace(/_/g, " ")}>{(d.bestContact.role ?? "contact").replace(/_/g, " ")}</p><p className="line-clamp-2 text-xs text-muted-foreground" title={d.bestContact.title ?? undefined}>{d.bestContact.title}</p></div><ScoreRing value={Math.round(d.bestContact.score)} size={44} /></div>)
             : <p className="mt-2 text-sm text-muted-foreground">No scored contacts yet.</p>}
         </Card>
       </div>
@@ -190,7 +191,7 @@ function OverviewPage() {
         </div>
       </div>
 
-      <Card className="mt-6 p-4 sm:p-5">
+      {!isDemoId(id) && <Card className="mt-6 p-4 sm:p-5">
         <h2 className="mb-3 text-sm font-semibold">Recent runs</h2>
         {d.runs.length === 0 ? (
           <p className="text-sm text-muted-foreground">No runs yet.</p>
@@ -210,7 +211,7 @@ function OverviewPage() {
             })}
           </ol>
         )}
-      </Card>
+      </Card>}
     </main>
   );
 }

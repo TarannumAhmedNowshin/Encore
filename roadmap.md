@@ -1,4 +1,10 @@
 # Roadmap
+- [x] Remove white flashes, add branded loading, font preload and browser demo cache
+- [x] Restore light phone story motion and preserve complete email typing
+- [x] Improve tour timing, keyboard controls, progress and 375px placement
+- [x] Correct outreach status counts/dots and disable approved regeneration
+- [x] Show stage-specific usage and retry empty people searches broadly with clear failures
+- [x] Wrap best-fit contact and hide demo recent runs; verify flows and tests
 - [x] Preserve edited approvals and recheck claim highlights; correct status filters and counts
 - [x] Fix first-click actions and immediate pending feedback
 - [x] Surface people-search failures, consistent usage/reset time, owner limit 25

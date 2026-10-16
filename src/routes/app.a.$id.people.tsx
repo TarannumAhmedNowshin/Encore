@@ -108,7 +108,7 @@ function PeoplePage() {
     setErrors((prev) => ({ ...prev, [targetId]: "" }));
     try {
       const r = await findFn({ data: { target_id: targetId } });
-      if (r.message) toast(r.message);
+      if (r.message) toast(r.message, { action: { label: "Retry", onClick: () => void runFind(targetId) } });
       await refresh();
     } catch (e) {
       const message = e instanceof Error ? e.message : "People search failed";
@@ -245,7 +245,7 @@ function PeoplePage() {
                         {inSlot.length === 0 ? (
                           <GapCard className="flex-1 py-4">
                             {busy ? <span className="flex items-center gap-1"><Loader2 className="size-3 animate-spin" aria-hidden /> Searching…</span>
-                              : searched ? "Gap — no match found" : "Not searched yet"}
+                              : errors[t.id] ? "Search unavailable — retry" : searched ? "Gap — no match found" : "Not searched yet"}
                           </GapCard>
                         ) : (
                           <div className="flex min-w-0 flex-1 flex-wrap gap-2">

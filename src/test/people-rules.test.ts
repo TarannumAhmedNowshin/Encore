@@ -1,6 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { isCreditError, titleKeywords, ROLE_SLOTS } from "@/lib/encore/people";
+import { isCreditError, titleKeywords, ROLE_SLOTS, peopleWithBroaderRetry, type PeopleSearchInput } from "@/lib/encore/people";
 import { contactScore } from "@/lib/encore/scoring";
+
+describe("empty people-search retry", () => {
+  const initial = { companyLinkedinUrl: "https://linkedin.com/company/example", jobTitles: ["Claims intake department"], seniorityIds: ["300", "310"] };
+  it("retries once for the same company with claims/operations and VP/CXO/Director, without department restrictions", async () => {
+    const calls: PeopleSearchInput[] = [];
+    const result = await peopleWithBroaderRetry(async (input) => { calls.push(input); return calls.length === 1 ? [] : ["match"]; }, initial);
+    expect(result).toEqual(["match"]);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toEqual({ companyLinkedinUrl: initial.companyLinkedinUrl, jobTitles: ["claims", "operations"], seniorityIds: ["300", "310", "220"], maxItems: 25 });
+  });
+  it("shows empty results only after two successful empty searches", async () => {
+    let calls = 0;
+    expect(await peopleWithBroaderRetry(async () => { calls++; return []; }, initial)).toEqual([]);
+    expect(calls).toBe(2);
+  });
+  it("propagates provider failure rather than converting it to gaps or retrying it as empty", async () => {
+    let calls = 0;
+    await expect(peopleWithBroaderRetry(async () => { calls++; throw new Error("LinkedIn search is unavailable right now"); }, initial)).rejects.toThrow("LinkedIn search is unavailable right now");
+    expect(calls).toBe(1);
+  });
+});
 
 describe("titleKeywords", () => {
   it("splits department names on /, ,, & and ' and '", () => {

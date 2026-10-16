@@ -5,8 +5,25 @@ import { getDemo } from "./demo.functions";
 import { isDemoId, type DemoSnapshot } from "./demo";
 
 let snapshot: Promise<DemoSnapshot> | null = null;
+const CACHE_KEY = "encore:public-demo:v2";
+const CACHE_MS = 10 * 60 * 1000;
 export function loadDemo(): Promise<DemoSnapshot> {
-  if (!snapshot) snapshot = getDemo().then((j) => JSON.parse(j) as DemoSnapshot).catch((e) => { snapshot = null; throw e; });
+  if (!snapshot) {
+    // Only the server-sanitised public response is persisted, never real analysis data.
+    if (typeof window !== "undefined") {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? "null") as { expires: number; data: DemoSnapshot } | null;
+        if (cached && cached.expires > Date.now() && Array.isArray(cached.data?.analyses)) snapshot = Promise.resolve(cached.data);
+      } catch { /* Storage can be disabled; fall through to the public request. */ }
+    }
+    if (!snapshot) snapshot = getDemo().then((j) => {
+      const data = JSON.parse(j) as DemoSnapshot;
+      if (typeof window !== "undefined") {
+        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ expires: Date.now() + CACHE_MS, data })); } catch { /* Optional cache. */ }
+      }
+      return data;
+    }).catch((e) => { snapshot = null; throw e; });
+  }
   return snapshot;
 }
 

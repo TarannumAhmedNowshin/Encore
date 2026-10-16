@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ROLE_SLOTS, titleKeywords, type RoleSlot } from "./people";
+import { ROLE_SLOTS, titleKeywords, peopleWithBroaderRetry, type RoleSlot } from "./people";
 
 const FIND_SYSTEM = `You map employees of a target company to the buying committee. You get the buyer personas from the original engagement, the primary buyers described in the Sales DNA, the department that owns the problem, and a numbered list of candidates (name and title from LinkedIn, via an approved data provider). For each candidate worth selecting, choose the persona they best match (or an empty string if only the primary buyer description or owning department fits) and one slot: executive_buyer, business_sponsor, operational_buyer, technical_influencer or end_user. Reference candidates only by index; never invent anyone. Skip weak matches. Select at most 5 people, best first: those who lead the owning department, then the executives who would sponsor or approve. The rationale must cite the person's actual title.`;
 
@@ -99,12 +99,7 @@ export const findPeople = createServerFn({ method: "POST" })
 
     let people;
     try {
-      people = await searchPeople({ companyLinkedinUrl: liUrl, jobTitles: keywords, seniorityIds: ["300", "310"], maxItems: 25 });
-      if (people.length < 5) {
-        const more = await searchPeople({ companyLinkedinUrl: liUrl, seniorityIds: ["300", "310"], maxItems: 25 });
-        const seen = new Set(people.map((p) => p.linkedinUrl));
-        for (const p of more) if (!seen.has(p.linkedinUrl)) { seen.add(p.linkedinUrl); people.push(p); }
-      }
+      people = await peopleWithBroaderRetry(searchPeople, { companyLinkedinUrl: liUrl, jobTitles: keywords, seniorityIds: ["300", "310"], maxItems: 25 });
     } catch (e) {
       throw new HttpError(400, e instanceof Error ? e.message : "People search failed");
     }
@@ -157,7 +152,7 @@ export const findPeople = createServerFn({ method: "POST" })
       if (error) throw new HttpError(500, error.message);
     }
     await recomputeTarget(t.id);
-    return { contacts: picked.length };
+    return { contacts: picked.length, message: picked.length ? undefined : `No matching people found at ${t.name} after checking the available titles against your buyer roles.` };
   });
 
 export const scoreContacts = createServerFn({ method: "POST" })
