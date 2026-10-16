@@ -17,7 +17,7 @@ function AnalysisLayout() {
   const { data: stages } = useQuery({ ...stagesQuery(id), enabled: typeof window !== "undefined" });
   return (
     <div className="flex flex-1 flex-col md:flex-row">
-      <nav aria-label="Analysis stages" className="border-b border-border bg-card md:w-[260px] md:shrink-0 md:border-r md:border-b-0">
+      <nav aria-label="Analysis stages" className="border-b border-border bg-card md:sticky md:top-[57px] md:h-[calc(100vh-57px)] md:self-start md:overflow-y-auto md:w-[260px] md:shrink-0 md:border-r md:border-b-0">
         <ol className="flex gap-1 overflow-x-auto p-2 md:flex-col md:p-4">
           {STAGES.map((s, i) => {
             const meta: { status: StageStatus; count: number; reason?: string } = stages?.[s.key] ?? { status: "not_started", count: 0 };

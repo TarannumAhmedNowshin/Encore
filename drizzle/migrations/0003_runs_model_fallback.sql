@@ -1,0 +1,1 @@
+ALTER TABLE public.runs ADD COLUMN IF NOT EXISTS used_fallback_model boolean NOT NULL DEFAULT false;

@@ -15,3 +15,4 @@
 - Every Encore pipeline step (including requests phrased as "Cloud server function" or Edge Function paths) is a `createServerFn` with `requireSupabaseAuth` in `src/lib/encore/*.functions.ts`, reuses the `*.server.ts` helpers, calls `loadOwnedAnalysis` before any write, and finishes in under ~120s; why: showcase analyses must stay read-only and the worker caps request time.
 - AI usage is recorded only after a call returns a usable answer; why: failed calls must not consume the daily limit.
 - Journey-rail stage statuses are computed by the pure `computeStages` in `src/lib/encore/deal.ts` from live counts (`stages-query.ts`); why: one tested rule set, no hard-coded statuses.
+- Never use window.prompt/alert/confirm (blocked in the preview); use inline editors or `ConfirmDialog` in `src/components/encore/`; why: native dialogs silently fail there.
