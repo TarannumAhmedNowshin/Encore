@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { discoverLeads, discoverResearch, endDiscovery, qualifyCompany } from "@/lib/encore/discover.functions";
 import { isBusyError } from "@/lib/encore/discover";
+import { toastError } from "@/lib/encore/toast";
+import { hasActiveRun } from "@/lib/encore/run-guard";
+import { useElapsed } from "@/lib/encore/use-elapsed";
 import type { RunStep } from "@/components/encore/primitives";
 
 const CONCURRENCY = 2; // free Gemini tier
@@ -103,6 +106,11 @@ export function useDiscoveryRun(id: string) {
 
   const start = useCallback(async () => {
     if (busyRef.current) return;
+    const lastRun = q.data?.run;
+    if (lastRun && hasActiveRun([lastRun], "discover", Date.now())) {
+      toast.error("Discovery is already running for this analysis.");
+      return;
+    }
     busyRef.current = true; setActive(true); setMessage(undefined);
     setSteps({ plan: "running", search: "running", list: "waiting", each: "waiting", verify: "waiting" });
     try {
