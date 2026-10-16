@@ -257,9 +257,9 @@ function OutreachPage() {
           ))}
         </section>
       ) : (
-        <div className="mt-6 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
           {/* Left: contacts */}
-          <aside className="surface p-3">
+          <aside className="surface min-w-0 p-3">
             <div className="mb-3 flex flex-wrap gap-1">
               {FILTERS.map(([f, l]) => (
                 <button key={f} type="button" onClick={() => setFilter(f)}
@@ -368,7 +368,7 @@ function OutreachPage() {
           </section>
 
           {/* Right: claims */}
-          <aside className="surface p-4">
+          <aside className="surface min-w-0 p-4">
             <h2 className="text-sm font-semibold">Claims</h2>
             {!claims.length ? <p className="mt-2 text-xs text-muted-foreground">No claims in this draft.</p> : (
               <ol className="mt-3 space-y-2">
