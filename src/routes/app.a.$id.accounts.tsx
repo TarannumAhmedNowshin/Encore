@@ -111,7 +111,7 @@ function AccountsPage() {
           <p className="mt-1 text-sm text-muted-foreground">Each company is researched on the web and only qualifies with a quote found word for word.</p>
           {fallback && <p className="mt-1 text-xs text-muted-foreground">Some steps used the fast model because the main model was busy.</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {has && <Button variant="outline" onClick={exportCsv}><Download /> Export CSV</Button>}
           {!readOnly && sum.qualified > 0 && (
             <Button variant="outline" onClick={() => void findDepsBulk()} disabled={!!bulk?.running || d.active}>

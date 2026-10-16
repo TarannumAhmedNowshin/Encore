@@ -166,7 +166,7 @@ function PeoplePage() {
           <p className="mt-1 text-sm text-muted-foreground">People at qualified companies, matched to your buyer personas by their real titles.</p>
         </div>
         {!d.readOnly && d.targets.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void runBulk("find")} disabled={!!bulk?.running || !!busyId}>
               {bulk?.running && bulk.kind === "find" ? `Finding people ${bulk.done} of ${bulk.total}…` : "Find people at top 3 accounts"}
             </Button>
@@ -220,7 +220,7 @@ function PeoplePage() {
                   )}
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 [&>*]:min-w-0">
                   {ROLE_SLOTS.map((slot) => {
                     const inSlot = contacts.filter((c) => c.buying_role_slot === slot);
                     return (
