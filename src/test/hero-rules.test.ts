@@ -39,8 +39,23 @@ describe("landing story data", () => {
   });
   it("uses the complete stored sample body including decimal numbers and line breaks", () => {
     const body = "Hi there,\nReduce 2.6 business days to the same business day.\nA closing line.";
-    const snap = { facts: [], citations: [], sales_dna: [], personas: [], targets: [], contacts: [], documents: [], outreach_drafts: [{ body, channel: "email", all_claims_verified: true, claims: [] }] } as unknown as DemoSnapshot;
+    const snap = { facts: [], citations: [], sales_dna: [], personas: [], targets: [], contacts: [], documents: [], outreach_drafts: [{ body, status: "approved", channel: "email", all_claims_verified: true, claims: [] }] } as unknown as DemoSnapshot;
     expect(storyData(snap).email?.body).toBe(body);
+  });
+  it("selects the shortest approved email using its edited text, never a pending draft", () => {
+    const snap = { facts: [], citations: [], sales_dna: [], personas: [], targets: [], contacts: [], documents: [], outreach_drafts: [
+      { body: "Pending", status: "pending", channel: "email", all_claims_verified: true },
+      { body: "Hi [First name], a longer approved email.", status: "approved", channel: "email" },
+      { body: "Original history", edited_body: "Hi [First name], we're building a system.", status: "approved", channel: "email" },
+      { body: "Short", status: "approved", channel: "linkedin_message" },
+    ] } as unknown as DemoSnapshot;
+    expect(storyData(snap).email?.body).toBe("Hi [First name], a longer approved email.");
+    snap.outreach_drafts[1]["status"] = "rejected";
+    expect(storyData(snap).email?.body).toBe("Hi [First name], we're building a system.");
+  });
+  it("does not substitute an unapproved email when there are no approved emails", () => {
+    const snap = { facts: [], citations: [], sales_dna: [], personas: [], targets: [], contacts: [], documents: [], outreach_drafts: [{ body: "Pending text", status: "pending", channel: "email", all_claims_verified: true }] } as unknown as DemoSnapshot;
+    expect(storyData(snap).email).toBeNull();
   });
   it("shows only verified verbatim document quotes", () => {
     const snap = {

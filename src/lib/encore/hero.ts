@@ -122,9 +122,11 @@ export function storyData(s: DemoSnapshot): StoryData {
   } : null;
 
   const contactIds = new Set(s.contacts.filter((c) => c["target_id"] === withContacts?.["id"]).map((c) => c["id"]));
-  const drafts = s.outreach_drafts.filter((x) => (x["body"] as string | null)?.trim());
-  const good = drafts.filter((x) => x["all_claims_verified"] && x["channel"] === "email");
-  const dr = good.find((x) => contactIds.has(x["contact_id"])) ?? good[0];
+  const bodyOf = (x: Row) => String(x["edited_body"] ?? x["body"] ?? "");
+  const drafts = s.outreach_drafts.filter((x) => bodyOf(x).trim());
+  const good = drafts.filter((x) => x["status"] === "approved" && x["channel"] === "email")
+    .sort((a, b) => bodyOf(a).length - bodyOf(b).length || Number(contactIds.has(b["contact_id"])) - Number(contactIds.has(a["contact_id"])));
+  const dr = good[0];
   let email: StoryData["email"] = null;
   if (dr) {
     const body = String(dr["edited_body"] ?? dr["body"]);

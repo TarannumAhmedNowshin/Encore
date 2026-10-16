@@ -66,8 +66,8 @@ export function EchoHero() {
           <h1 className="mt-5 font-display text-[44px] font-semibold leading-[.95] tracking-[-0.045em] md:text-[clamp(44px,6.4vw,92px)]">
             Your last{" "}
             <span className="relative ml-[.35em] inline-block text-[#3D3BF3]">
-              <span aria-hidden className="absolute inset-0 -translate-x-[.32em] opacity-[.12]">win</span>
-              <span aria-hidden className="absolute inset-0 -translate-x-[.16em] opacity-[.28]">win</span>
+              <span aria-hidden="true" className="absolute inset-0 -translate-x-[.32em] opacity-[.12]">win</span>
+              <span aria-hidden="true" className="absolute inset-0 -translate-x-[.16em] opacity-[.28]">win</span>
               <span className="relative">win</span>
             </span>{" "}
             already knows who to sell to next.
