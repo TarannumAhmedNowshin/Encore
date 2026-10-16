@@ -114,10 +114,24 @@ export function StatusDot({ status, className }: { status: StageStatus; classNam
   return <span aria-hidden className={cn("inline-block size-2 rounded-full", cls, className)} />;
 }
 
+/** Small line illustration for empty states — a document with a magnifier finding a quote. */
+function EmptyArt() {
+  return (
+    <svg width="72" height="56" viewBox="0 0 72 56" fill="none" aria-hidden className="text-muted-foreground/60">
+      <rect x="6" y="4" width="34" height="44" rx="4" className="stroke-current" strokeWidth="1.5" />
+      <path d="M13 14h20M13 21h20M13 28h12" className="stroke-current" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="50" cy="32" r="10" className="stroke-current" strokeWidth="1.5" />
+      <path d="M57 39l7 7" className="stroke-current" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M45 32h10" className="stroke-verified" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function EmptyState({ title, line, action }: { title: string; line: string; action?: ReactNode }) {
   return (
     <div className="surface dot-grid flex flex-col items-center justify-center px-6 py-16 text-center">
-      <h3 className="text-lg font-semibold">{title}</h3>
+      <EmptyArt />
+      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">{line}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>
