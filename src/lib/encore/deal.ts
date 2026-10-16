@@ -85,3 +85,8 @@ export function checkDocQuote(quote: string | null | undefined, text: string): Q
   if (words < DOC_QUOTE_MIN_WORDS) return "too_short";
   return quoteVerified(quote ?? "", text, DOC_QUOTE_MIN_WORDS) ? "found" : "not_found";
 }
+
+/** Model-returned index is valid for a list of the given length. */
+export function inRange(i: number, length: number): boolean {
+  return Number.isInteger(i) && i >= 0 && i < length;
+}

@@ -50,3 +50,10 @@ describe("document quote rule", () => {
     expect(checkDocQuote("blue whales", "route planning")).toBe("not_found");
   });
 });
+
+describe("playbook index guard", () => {
+  it("keeps 0..length-1 and drops the rest", async () => {
+    const { inRange } = await import("@/lib/encore/deal");
+    expect([inRange(0, 2), inRange(1, 2), inRange(2, 2), inRange(-1, 2)]).toEqual([true, true, false, false]);
+  });
+});

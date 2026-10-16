@@ -16,3 +16,4 @@
 - AI usage is recorded only after a call returns a usable answer; why: failed calls must not consume the daily limit.
 - Journey-rail stage statuses are computed by the pure `computeStages` in `src/lib/encore/deal.ts` from live counts (`stages-query.ts`); why: one tested rule set, no hard-coded statuses.
 - Never use window.prompt/alert/confirm (blocked in the preview); use inline editors or `ConfirmDialog` in `src/components/encore/`; why: native dialogs silently fail there.
+- Smart-tier pipeline AI calls fall back to the fast model on 503 (`generateJsonWithFallback`) and set `runs.used_fallback_model` so the page can say so; why: the main model is often overloaded.
