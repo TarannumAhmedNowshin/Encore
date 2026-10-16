@@ -29,7 +29,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border">
       <div className="mx-auto max-w-6xl px-gutter py-8 text-sm text-muted-foreground">
-        Built for SheBuilds · Data from the public web (Serper) and LinkedIn via Apify · For B2B research only
+        Built on Lovable for SheBuilds · Data from the public web (Serper) and LinkedIn via Apify · For B2B research only
       </div>
     </footer>
   );
