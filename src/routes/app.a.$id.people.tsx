@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown, Linkedin, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -58,7 +58,12 @@ type Bulk = { kind: "find" | "score"; done: number; total: number; running: bool
 
 function PeoplePage() {
   const { id } = Route.useParams();
+  const qc = useQueryClient();
   const q = useQuery(peopleQuery(id));
+  const refresh = async () => {
+    await q.refetch();
+    await qc.invalidateQueries({ queryKey: ["stages", id] });
+  };
   const usage = useQuery(usageTodayQuery);
   const findFn = useServerFn(findPeople);
   const scoreFn = useServerFn(scoreContacts);
