@@ -72,7 +72,7 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
 /* ---------- 1 Hero ---------- */
 function HeroOrbit() {
   const dots = Array.from({ length: 28 }, (_, i) => {
-    const ring = [180, 280, 380][i % 3];
+    const ring = [180, 280, 380][i % 3] ?? 180;
     const a = (i * 137.5 * Math.PI) / 180;
     return { x: 500 + ring * Math.cos(a), y: 500 + ring * Math.sin(a), r: 2 + (i % 4) * 1.5, o: 0.25 + (i % 5) * 0.12 };
   });
@@ -164,7 +164,7 @@ function MiniFact({ p, i }: { p: MotionValue<number>; i: number }) {
   const opacity = useTransform(p, [0.3, 0.45], [1, 0]);
   return (
     <motion.div style={{ x, y, opacity }} className="absolute left-1/2 top-1/2 w-56 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-3 font-mono text-[11px] shadow-sm">
-      “{SOW_QUOTES[i].text.slice(0, 60)}…”
+      “{SOW_QUOTES[i]!.text.slice(0, 60)}…”
     </motion.div>
   );
 }
@@ -209,7 +209,7 @@ function DnaScene({ p }: { p: MotionValue<number> }) {
 function Bubble({ p, i, name }: { p: MotionValue<number>; i: number; name: string }) {
   const s = 0.15 + i * 0.055;
   const qualified = i < 11;
-  const ring = [110, 150, 190][i % 3];
+  const ring = [110, 150, 190][i % 3] ?? 110;
   const a = (i / COMPANIES.length) * Math.PI * 2 - Math.PI / 2;
   const cx = 250 + ring * Math.cos(a), cy = 250 + ring * Math.sin(a);
   const opacity = useTransform(p, [s, s + 0.05], [0, qualified ? 1 : 0.4]);
@@ -251,7 +251,7 @@ function OrbitScene({ p }: { p: MotionValue<number> }) {
 }
 
 /* ---------- 5 Committee ---------- */
-const ROLES = [
+const ROLES: Array<[string, string]> = [
   ["Executive buyer", "Claims Executive Sponsor"],
   ["Business sponsor", "VP Claims Operations"],
   ["Operational buyer", "Intake Team Lead"],
