@@ -18,7 +18,7 @@ import {
 
 export const Route = createFileRoute("/app/new")({
   validateSearch: (s: Record<string, unknown>): { sample?: 1 } => (s["sample"] === 1 || s["sample"] === "1" ? { sample: 1 } : {}),
-  head: () => ({ meta: [{ title: "New analysis — Encore" }, { name: "description", content: "Start an Encore analysis from a won deal document." }] }),
+  head: () => ({ meta: [{ title: "New analysis — Encore" }, { name: "description", content: "Start an Encore analysis from a won deal document." }, { property: "og:title", content: "New analysis — Encore" }, { property: "og:description", content: "Start an evidence-backed pipeline from your won deal document." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: NewAnalysis,
 });
 
