@@ -8,9 +8,9 @@ export type AccountFilter = "qualified" | "watch" | "rejected" | "failed";
 
 export function matchesFilter(t: AccountRow, f: AccountFilter): boolean {
   if (f === "watch") return t.on_watch_list;
-  if (f === "failed") return t.status === "failed" && !t.on_watch_list;
-  if (f === "rejected") return t.status === "rejected" && !t.on_watch_list;
-  return t.status === "qualified" && !t.on_watch_list;
+  if (f === "failed") return t.status === "failed";
+  if (f === "rejected") return t.status === "rejected";
+  return t.status === "qualified";
 }
 
 /** Default order: qualified first, in-region first, then opportunity score (high to low). */
@@ -27,8 +27,9 @@ export function summarize(ts: AccountRow[]) {
     found: ts.length,
     qualified: ts.filter((t) => t.status === "qualified").length,
     watch: ts.filter((t) => t.on_watch_list).length,
-    rejected: ts.filter((t) => t.status === "rejected" && !t.on_watch_list).length,
-    failed: ts.filter((t) => t.status === "failed" && !t.on_watch_list).length,
+    rejected: ts.filter((t) => t.status === "rejected").length,
+    rejectedOnWatch: ts.filter((t) => t.status === "rejected" && t.on_watch_list).length,
+    failed: ts.filter((t) => t.status === "failed").length,
   };
 }
 
