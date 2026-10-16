@@ -4,6 +4,14 @@ export const MIN_TEXT_CHARS = 300;
 export const DOC_TYPES = ["SOW", "Proposal", "Project document", "Architecture", "Other"] as const;
 export const REGIONS = ["United States", "UK & Ireland", "European Union", "Global"] as const;
 
+export const DOC_TYPE_CODE: Record<(typeof DOC_TYPES)[number], string> = {
+  SOW: "sow", Proposal: "proposal", "Project document": "project_doc", Architecture: "architecture", Other: "other",
+};
+export const REGION_CODE: Record<(typeof REGIONS)[number], string> = {
+  "United States": "us", "UK & Ireland": "uk_ie", "European Union": "eu", Global: "global",
+};
+export const REGION_LABEL: Record<string, string> = Object.fromEntries(Object.entries(REGION_CODE).map(([k, v]) => [v, k]));
+
 export type FileKind = "pdf" | "docx";
 
 /** Returns the file kind, or throws a friendly message. */

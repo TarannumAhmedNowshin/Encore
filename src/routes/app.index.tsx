@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Pill } from "@/components/encore/primitives";
+import { REGION_LABEL } from "@/lib/encore/intake";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/")({
@@ -52,7 +53,7 @@ function Dashboard() {
               <h2 className="font-semibold">{r.title ?? "Untitled analysis"}</h2>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Pill tone="primary">{STAGE_LABEL[r.status] ?? "Deal"}</Pill>
-                <span>{r.target_region}</span>
+                <span>{REGION_LABEL[r.target_region] ?? r.target_region}</span>
                 <span aria-hidden>·</span>
                 <span className="font-mono">{new Date(r.created_at).toLocaleDateString()}</span>
               </div>

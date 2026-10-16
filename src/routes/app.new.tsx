@@ -12,7 +12,7 @@ import { Card, Pill } from "@/components/encore/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { SAMPLE_DEAL } from "@/data/sampleDeal";
 import {
-  DOC_TYPES, REGIONS, LITTLE_TEXT_MESSAGE, analysisTitle, checkFile, isTooLittleText, sha256Hex, storagePath,
+  DOC_TYPES, REGIONS, DOC_TYPE_CODE, REGION_CODE, LITTLE_TEXT_MESSAGE, analysisTitle, checkFile, isTooLittleText, sha256Hex, storagePath,
 } from "@/lib/encore/intake";
 
 export const Route = createFileRoute("/app/new")({
@@ -106,7 +106,7 @@ function NewAnalysis() {
       const { data: a, error: ae } = await supabase.from("analyses").insert({
         user_id: userId, title: analysisTitle(customer, docType), status: "draft",
         customer_name: customer.trim(), department: department.trim() || null, existing_solution: existing.trim() || null,
-        document_type: docType, target_region: region, anonymise_customer: anon,
+        document_type: DOC_TYPE_CODE[docType as keyof typeof DOC_TYPE_CODE], target_region: REGION_CODE[region as keyof typeof REGION_CODE], anonymise_customer: anon,
       }).select("id").single();
       if (ae || !a) throw new Error("We couldn't create the analysis. Please try again.");
       let filePath: string | null = null;

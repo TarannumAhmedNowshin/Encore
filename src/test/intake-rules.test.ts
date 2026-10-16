@@ -11,3 +11,8 @@ describe("intake rules", () => {
   it("storage path is user/analysis/file", () => expect(storagePath("u", "a", "f.pdf")).toBe("u/a/f.pdf"));
   it("sha256 hex", async () => expect(await sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
 });
+import { DOC_TYPE_CODE, REGION_CODE } from "@/lib/encore/intake";
+describe("stored codes", () => {
+  it("SOW stored as sow", () => expect(DOC_TYPE_CODE.SOW).toBe("sow"));
+  it("UK & Ireland stored as uk_ie", () => expect(REGION_CODE["UK & Ireland"]).toBe("uk_ie"));
+});
