@@ -23,6 +23,11 @@ export function domainOf(url: unknown): string {
   try { return new URL(String(url)).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
+/** Echo quotes must show the problem… */
+const PROBLEM_RE = /claim|intake|document|triage|fraud|routing|backlog|automat|digital|adjuster/i;
+/** …and never be an address/headquarters line or a product-page title. */
+const BAD_RE = /headquart|home office|custom plans|contact us|all rights reserved|^\S+(\s\S+){0,4}\s*[-–|]/i;
+
 /** The phrase to highlight: around the first number, else the middle of the sentence. Returns [start, end) offsets. */
 export function keyPhrase(s: string): [number, number] {
   const words = [...s.matchAll(/\S+/g)].map((m) => ({ i: m.index!, w: m[0] }));
@@ -49,9 +54,17 @@ export function heroData(s: DemoSnapshot): HeroData | null {
   const echoes: Echo[] = [];
   for (const t of [...qualified].sort((x, y) => Number(y["opportunity_score"] ?? 0) - Number(x["opportunity_score"] ?? 0))) {
     const ev = (Array.isArray(t["evidence"]) ? (t["evidence"] as Row[]) : []).filter((e) => e["verified"] === true && typeof e["quote"] === "string" && (e["quote"] as string).trim());
-    const best = ev.find((e) => e["strength"] === "direct") ?? ev[0];
-    if (!best) continue;
-    echoes.push({ name: String(t["name"]), quote: trimQuote(best["quote"] as string), domain: domainOf(best["source_url"]) || domainOf(t["website"]) });
+    // Only quotes that actually show the problem — never address lines or page titles.
+    const good = ev.filter((e) => {
+      const q = (e["quote"] as string).trim();
+      return q.length >= 40 && PROBLEM_RE.test(q) && !BAD_RE.test(q);
+    });
+    if (!good.length) continue;
+    const own = domainOf(t["website"]);
+    const best = good.find((e) => own && domainOf(e["source_url"]) === own)
+      ?? good.find((e) => e["strength"] === "direct")
+      ?? good[0]!;
+    echoes.push({ name: String(t["name"]), quote: trimQuote(best["quote"] as string), domain: domainOf(best["source_url"]) || own });
   }
   return {
     filename: String(s.documents[0]?.["filename"] ?? "Won SOW"),
@@ -70,7 +83,7 @@ export type StoryData = {
   filename: string; quotes: StoryQuote[];
   dna: { problem: string; outcome: string; owner: string } | null;
   personas: string[];
-  companies: { name: string; qualified: boolean }[]; found: number; qualified: number;
+  companies: { name: string; status: string }[]; found: number; qualified: number;
   committee: { company: string; slots: { role: string; who: string | null }[] } | null;
   email: { subject: string; body: string; claims: string[] } | null;
   groundedPct: number; sent: number;
@@ -104,7 +117,7 @@ export function storyData(s: DemoSnapshot): StoryData {
 
   const score = (t: Record<string, unknown>) => Number(t["opportunity_score"] ?? 0);
   const targets = [...s.targets].filter((t) => t["status"] !== "failed").sort((a, b) => Number(b["status"] === "qualified") - Number(a["status"] === "qualified") || score(b) - score(a));
-  const companies = targets.slice(0, 12).map((t) => ({ name: String(t["name"]), qualified: t["status"] === "qualified" }));
+  const companies = targets.slice(0, 12).map((t) => ({ name: String(t["name"]), status: String(t["status"] ?? "") }));
   const qualified = s.targets.filter((t) => t["status"] === "qualified");
 
   const withContacts = qualified.filter((t) => s.contacts.some((c) => c["target_id"] === t["id"])).sort((a, b) => score(b) - score(a))[0];
