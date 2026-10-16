@@ -37,7 +37,7 @@ function Scene({ cinematic, vh, eyebrow, title, children }: {
   const done = useMotionValue(1);
   const head = (
     <div className="mx-auto max-w-3xl text-center">
-      <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+      <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-accent">{eyebrow}</p>
       <h2 className="mt-4 text-[32px] font-semibold leading-[1.1] sm:text-5xl">{title}</h2>
     </div>
   );
@@ -69,7 +69,7 @@ function Sticky({ vh, head, children }: { vh: number; head: ReactNode; children:
 /* ---------- 2 Document ---------- */
 function QuoteLine({ p, i, text }: { p: MotionValue<number>; i: number; text: string }) {
   const s = 0.12 + i * 0.25;
-  const bg = useTransform(p, [s, s + 0.08], ["color-mix(in oklab, var(--primary) 0%, transparent)", "color-mix(in oklab, var(--primary) 18%, transparent)"]);
+  const bg = useTransform(p, [s, s + 0.08], ["color-mix(in oklab, var(--accent) 0%, transparent)", "color-mix(in oklab, var(--accent) 18%, transparent)"]);
   return <motion.span style={{ backgroundColor: bg }} className="rounded px-0.5 text-foreground">{text}</motion.span>;
 }
 function FactCard({ p, i, q }: { p: MotionValue<number>; i: number; q: StoryQuote }) {
@@ -135,7 +135,7 @@ function DnaCard({ p }: { p: MotionValue<number> }) {
   const scale = useTransform(p, [0.35, 0.5], [0.85, 1]);
   return (
     <motion.div style={{ opacity, scale }} className="mx-auto w-full max-w-md rounded-xl border border-primary/30 bg-card p-6 shadow-sm">
-      <div className="flex items-center justify-between gap-2"><p className="font-mono text-[13px] text-primary">Sales DNA</p><EvidenceChip kind="inference" /></div>
+      <div className="flex items-center justify-between gap-2"><p className="font-mono text-[13px] text-accent">Sales DNA</p><EvidenceChip kind="inference" /></div>
       <dl className="mt-3 space-y-2 text-sm">
         {dna && <>
           <div><dt className="text-muted-foreground">Problem</dt><dd>{dna.problem}</dd></div>
@@ -203,7 +203,7 @@ function OrbitScene({ p }: { p: MotionValue<number> }) {
       </svg>
       <div className="flex justify-center gap-10 lg:flex-col lg:gap-6">
         <div><p className="text-5xl font-semibold"><Counter p={p} from={0.15} to={end} max={d?.found ?? 0} /></p><p className="text-sm text-muted-foreground">found</p></div>
-        <div><p className="text-5xl font-semibold text-primary"><Counter p={p} from={0.15} to={end - 0.055} max={d?.qualified ?? 0} /></p><p className="text-sm text-muted-foreground">qualified with verified evidence</p></div>
+        <div><p className="text-5xl font-semibold text-accent"><Counter p={p} from={0.15} to={end - 0.055} max={d?.qualified ?? 0} /></p><p className="text-sm text-muted-foreground">qualified with verified evidence</p></div>
       </div>
     </div>
   );
@@ -236,7 +236,7 @@ function CommitteeScene({ p }: { p: MotionValue<number> }) {
   const boardScale = useTransform(p, [0.25, 0.38], [0.9, 1]);
   return (
     <div className="relative grid place-items-center">
-      <motion.div style={{ scale: bubbleScale, opacity: bubbleOpacity }} className="absolute hidden size-16 place-items-center rounded-full bg-primary font-mono text-primary-foreground lg:grid" aria-hidden>{c ? initials(c.company) : ""}</motion.div>
+      <motion.div style={{ scale: bubbleScale, opacity: bubbleOpacity }} className="absolute hidden size-16 place-items-center rounded-full bg-accent font-mono text-accent-foreground lg:grid" aria-hidden>{c ? initials(c.company) : ""}</motion.div>
       <motion.div style={{ opacity: boardOpacity, scale: boardScale }} className="w-full rounded-xl border border-border bg-card p-5 shadow-sm">
         <p className="mb-4 font-display font-semibold">{c?.company ?? "Top account"} · buying committee</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
