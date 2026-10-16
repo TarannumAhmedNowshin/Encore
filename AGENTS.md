@@ -18,3 +18,4 @@
 - Never use window.prompt/alert/confirm (blocked in the preview); use inline editors or `ConfirmDialog` in `src/components/encore/`; why: native dialogs silently fail there.
 - Smart-tier pipeline AI calls fall back to the fast model on 503 (`generateJsonWithFallback`) and set `runs.used_fallback_model` so the page can say so; why: the main model is often overloaded.
 - Discovery is orchestrated in the browser (`src/hooks/useDiscoveryRun.ts`): research → leads → one `qualifyCompany` call per target with low concurrency, then `endDiscovery` closes the run; why: each server call must stay under the worker time cap.
+- The People stage (`src/lib/encore/people.functions.ts`: findPeople, scoreContacts) maps LinkedIn candidates to personas/slots with the fast model; pure rules (titleKeywords, ROLE_SLOTS, isCreditError) live in `src/lib/encore/people.ts`; why: bulk runs go one company at a time on the free provider tiers, so rules must be testable without provider calls.
