@@ -34,18 +34,22 @@ const overviewQuery = (id: string) => queryOptions({
   queryKey: ["overview", id],
   queryFn: async () => {
     const db = dbFor(id);
-    const [an, targets, depts, contacts, scores, drafts, facts, cites, personas, dna, runs] = await Promise.all([
+    const [an, targets, depts, contacts, drafts, facts, personas, dna, runs] = await Promise.all([
       db.from("analyses").select("customer_name").eq("id", id).maybeSingle(),
       db.from("targets").select("id, name, status, opportunity_score, in_target_region").eq("analysis_id", id),
       db.from("departments").select("target_id").eq("analysis_id", id),
       db.from("contacts").select("id, title, buying_role_slot, target_id").eq("analysis_id", id),
-      db.from("contact_scores").select("contact_id, total_score"),
       db.from("outreach_drafts").select("status").eq("analysis_id", id),
       db.from("facts").select("id, confidence, origin, attribute").eq("analysis_id", id).eq("status", "active"),
-      db.from("citations").select("fact_id, quote, verified"),
       db.from("personas").select("label").eq("analysis_id", id).order("created_at"),
       db.from("sales_dna").select("id").eq("analysis_id", id).maybeSingle(),
       db.from("runs").select("id, step, status, message, error, created_at, updated_at, used_fallback_model").eq("analysis_id", id).order("created_at", { ascending: false }).limit(5),
+    ]);
+    const fIds = ((facts.data ?? []) as { id: string }[]).map((f) => f.id);
+    const cIds = ((contacts.data ?? []) as { id: string }[]).map((c) => c.id);
+    const [cites, scores] = await Promise.all([
+      fIds.length ? db.from("citations").select("fact_id, quote, verified").in("fact_id", fIds) : Promise.resolve({ data: [] }),
+      cIds.length ? db.from("contact_scores").select("contact_id, total_score").in("contact_id", cIds) : Promise.resolve({ data: [] }),
     ]);
     const T = (targets.data ?? []) as { id: string; name: string; status: string | null; opportunity_score: number | null; in_target_region: boolean | null }[];
     const Q = T.filter((t) => t.status === "qualified");
