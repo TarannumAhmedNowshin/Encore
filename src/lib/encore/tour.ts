@@ -1,5 +1,6 @@
 // Guided-demo tour: steps, what each one spotlights, and the numbers it narrates.
 import type { DemoSnapshot } from "./demo";
+import { ACCOUNT_ORBIT_EVENT } from "@/hooks/use-account-view";
 
 export type DemoStats = { facts: number; verifiedPct: number; personas: number; signals: number; targets: number; qualified: number; contacts: number; drafts: number; grounded: number };
 
@@ -71,7 +72,7 @@ export const TOUR_STEPS: TourStep[] = [
     find: () => document.querySelector('svg[aria-label^="Companies arranged"]')?.closest(".surface") ?? null,
     action: async ({ waitFor, note, stats, reduced, alive }) => {
       const tab = await waitFor(() => [...document.querySelectorAll<HTMLElement>('[role="tab"]')].find((t) => t.textContent?.trim().toLowerCase() === "orbit") ?? null);
-      if (tab?.getAttribute("aria-selected") !== "true") tab?.click();
+      if (tab) window.dispatchEvent(new Event(ACCOUNT_ORBIT_EVENT));
       await waitFor(() => document.querySelector('svg[aria-label^="Companies arranged"]'));
       if (!alive()) return;
       window.dispatchEvent(new Event("encore:replay-orbit"));
