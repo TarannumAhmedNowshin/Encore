@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { dbFor } from "@/lib/encore/demo-db";
 import { AccountOrbit, GROUP_COLOR, OrbitLegend } from "@/components/encore/AccountOrbit";
 import { useAccountView } from "@/hooks/use-account-view";
