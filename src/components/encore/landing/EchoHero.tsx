@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { loadDemo } from "@/lib/encore/demo-db";
-import { heroData, keyPhrase, numberWord, type HeroData } from "@/lib/encore/hero";
+import { heroData, keyPhrase, type HeroData } from "@/lib/encore/hero";
 
 const initials = (n: string) => n.split(/[\s&]+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 const INDENT = ["ml-0", "ml-[10px] md:ml-[18px]", "ml-[20px] md:ml-[36px]"];
@@ -59,9 +59,9 @@ export function EchoHero() {
     <section className="hero-ruled relative overflow-hidden">
       <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-gutter pb-16 pt-8 min-[1100px]:grid-cols-[1.05fr_1fr] md:gap-10 md:pb-20 md:pt-12 min-[1100px]:min-h-[calc(100svh-4rem)]">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-wider text-muted-foreground md:whitespace-nowrap">
+          <p className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-wider text-muted-foreground">
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-verified" />
-            {data ? `One signed deal · ${numberWord(data.qualified)} look-alikes · every claim sourced` : "One signed deal · look-alikes · every claim sourced"}
+            Upload a deal you won · find look-alike companies · see the proof
           </p>
           <h1 className="mt-5 font-display text-[44px] font-semibold leading-[.95] tracking-[-0.045em] md:text-[clamp(44px,6.4vw,92px)]">
             Your last{" "}
@@ -73,7 +73,7 @@ export function EchoHero() {
             already knows who to sell to next.
           </h1>
           <p className="mt-6 max-w-[34em] text-[17px] leading-relaxed text-muted-foreground md:text-[19px]">
-            Drop in one won statement of work. Encore reads why they bought, finds companies saying the same thing in public, quotes them word for word and drafts outreach you approve.
+            You already won one customer. Encore finds other companies with the same problem, shows you the public proof, and writes the first email for you. You decide what gets sent.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row [&>a]:whitespace-nowrap">
             <Link to="/demo" className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-6 text-[15px] font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">

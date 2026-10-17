@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { dbFor } from "@/lib/encore/demo-db";
 import { AccountOrbit, GROUP_COLOR, OrbitLegend } from "@/components/encore/AccountOrbit";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useAccountView } from "@/hooks/use-account-view";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ArrowUpDown, Building2, Download, ExternalLink, Linkedin, RotateCw } from "lucide-react";
@@ -49,9 +49,7 @@ function AccountsPage() {
   const { id } = Route.useParams();
   const d = useDiscoveryRun(id);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
-  const [view, setView] = useState<"orbit" | "quadrant" | "list">("orbit");
-  const mobile = useIsMobile();
-  useEffect(() => { if (mobile) setView("list"); }, [mobile]);
+  const [view, setView] = useAccountView(id);
   const [filter, setFilter] = useState<AccountFilter>("qualified");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "default", dir: 1 });
   const [openId, setOpenId] = useState<string | null>(null);
@@ -162,8 +160,8 @@ function AccountsPage() {
 
           <div className="mt-6 inline-flex rounded-lg border border-border p-0.5" role="tablist">
             {(["orbit", "quadrant", "list"] as const).map((v) => (
-              <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
-                className={cn("rounded-md px-3 py-1 text-sm capitalize", view === v ? "bg-secondary font-medium" : "text-muted-foreground")}>{v}</button>
+              <Button key={v} variant="ghost" size="sm" role="tab" aria-selected={view === v} onClick={() => setView(v)}
+                className={cn("rounded-md px-3 py-1 text-sm capitalize", view === v ? "bg-secondary font-medium" : "text-muted-foreground")}>{v}</Button>
             ))}
           </div>
 
